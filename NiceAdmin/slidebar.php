@@ -19,8 +19,8 @@
               <i class="bi bi-circle"></i><span>member</span>
             </a>
           </li>
-          <a href="shopping-cart.php">
-            <i class="bi bi-circle"></i><span>สั่งสินค้า</span>
+          <a href="forms_staff.php">
+            <i class="bi bi-circle"></i><span>staff</span>
           </a>
         </li>
           <li>
@@ -42,8 +42,8 @@
             </a>
           </li>
           <li>
-            <a href="tables-data-orders.php">
-              <i class="bi bi-circle"></i><span>ข้อมูลคำสั่งซื้อ</span>
+            <a href="tables_staff.php">
+              <i class="bi bi-circle"></i><span>staff</span>
             </a>
           </li>
         </li>

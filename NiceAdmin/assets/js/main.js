@@ -278,29 +278,33 @@
       }, false)
     })
 
-  /**
-   * Initiate Datatables
-   */
-  const datatables = select('.datatable', true)
-  datatables.forEach(datatable => {
-    new simpleDatatables.DataTable(datatable, {
-      perPageSelect: [5, 10, 15, ["All", -1]],
-      columns: [{
-          select: 2,
-          sortSequence: ["desc", "asc"]
-        },
-        {
-          select: 3,
-          sortSequence: ["desc"]
-        },
-        {
-          select: 4,
-          cellClass: "green",
-          headerClass: "red"
-        }
-      ]
-    });
-  })
+/**
+ * Initiate Datatables
+ */
+const datatables = select('.datatable', true)
+datatables.forEach(datatable => {
+  new simpleDatatables.DataTable(datatable, {
+    searchable: false,        // ❌ ปิดช่องค้นหา
+    perPageSelect: false,     // ❌ ปิด dropdown เปลี่ยนจำนวนแถว
+    perPage: 5,               // ✅ ตั้งค่า default per page ได้ตามต้องการ
+
+    columns: [
+      {
+        select: 2,
+        sortSequence: ["desc", "asc"]
+      },
+      {
+        select: 3,
+        sortSequence: ["desc"]
+      },
+      {
+        select: 4,
+        cellClass: "green",
+        headerClass: "red"
+      }
+    ]
+  });
+});
 
   /**
    * Autoresize echart charts

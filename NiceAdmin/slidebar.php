@@ -15,8 +15,8 @@
         </a>
         <ul id="forms-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
-            <a href="forms-layouts.php">
-              <i class="bi bi-circle"></i><span>ฟอร์มสมัครสมาชิก</span>
+            <a href="forms_member.php">
+              <i class="bi bi-circle"></i><span>member</span>
             </a>
           </li>
           <a href="shopping-cart.php">
@@ -37,8 +37,8 @@
         </a>
         <ul id="tables-nav" class="nav-content collapse " data-bs-parent="#sidebar-nav">
           <li>
-            <a href="tables-data-customer.php">
-              <i class="bi bi-circle"></i><span>ข้อมูลลูกค้า</span>
+            <a href="tables_member.php">
+              <i class="bi bi-circle"></i><span>member</span>
             </a>
           </li>
           <li>

@@ -9,6 +9,8 @@
 
     <div class="pagetitle">
       <h1>Member Table</h1>
+
+      
       <nav>
         <ol class="breadcrumb">
         </ol>
@@ -16,13 +18,16 @@
     </div><!-- End Page Title -->
 
     <section class="section">
+
       <div class="row">
         <div class="col-lg-12">
 
           <div class="card">
             <div class="card-body">
               <h5 class="card-title">Members</h5>
-              
+                    <div class="text-end mb-2">
+  <a href="form_member.php" class="btn btn-success mb-2">+ Member</a>
+</div>
 
               <?php 
                 require_once("connect_db.php");

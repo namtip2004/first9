@@ -24,8 +24,8 @@
           </a>
         </li>
           <li>
-            <a href="forms-product.php">
-              <i class="bi bi-circle"></i><span>ฟอร์มสินค้า</span>
+            <a href="forms_couse.php">
+              <i class="bi bi-circle"></i><span>course</span>
             </a>
           </li>
         </ul>
@@ -48,8 +48,8 @@
           </li>
         </li>
         <li>
-          <a href="tables-orders-complete.php">
-            <i class="bi bi-circle"></i><span>ประวัติคำสั่งซื้อ</span>
+          <a href="course_table.php">
+            <i class="bi bi-circle"></i><span>course</span>
         </a>
         </li>
         </ul>

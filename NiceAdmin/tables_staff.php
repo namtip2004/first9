@@ -9,6 +9,7 @@
 
     <div class="pagetitle">
       <h1>Staff Table</h1>
+     
       <nav>
         <ol class="breadcrumb"></ol>
       </nav>
@@ -20,8 +21,10 @@
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Staff List</h5>
-
+              <h5 class="card-title">Staff</h5>
+      <div class="text-end mb-2">
+   <a href="form_staff.php" class="btn btn-success mb-2">+ staff</a>
+</div>
               <?php 
               require_once("connect_db.php");
               $sql = "SELECT * FROM staff";

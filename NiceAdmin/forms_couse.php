@@ -1,101 +1,79 @@
-<?php
-session_start();
-?>
 <!DOCTYPE html>
 <html lang="en">
 
-
-
 <body>
-
   <?php include("header.php"); ?>
   <?php include("slidebar.php"); ?>
 
   <main id="main" class="main">
-
     <div class="pagetitle">
-      <h1>Member form</h1>
-      <nav>
-        <ol class="breadcrumb">
-         
-        </ol>
-      </nav>
-    </div><!-- End Page Title -->
+      <h1>เพิ่มข้อมูลคอร์ส</h1>
+    </div>
+
     <section class="section">
       <div class="row">
-        <div class="col-lg-12 ">
-
+        <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
               <h5 class="card-title"></h5>
+              <form action="insert_course.php" method="POST" class="row g-3">
 
-              <!-- Floating Labels Form -->
-              <form class="row g-3" action="insert_member.php" method="POST">
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatingfName" name="floatingfName" placeholder="first name">
-                    <label for="floatingfName">first name</label>
+                    <input type="text" class="form-control" name="course_name" placeholder="ชื่อคอร์ส" required>
+                    <label for="course_name">ชื่อคอร์ส</label>
                   </div>
                 </div>
-                <div class="col-md-6">
+
+                <div class="col-md-12">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatinglName" name="floatinglName" placeholder="last Name">
-                    <label for="floatinglName">last Name</label>
+                    <textarea class="form-control" name="course_detail" placeholder="รายละเอียดคอร์ส" style="height: 100px" required></textarea>
+                    <label for="course_detail">รายละเอียดคอร์ส</label>
                   </div>
                 </div>
+
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="email" class="form-control" id="floatingEmail" name="floatingEmail" placeholder="Your Email">
-                    <label for="floatingEmail">Your Email</label>
+                    <input type="number" step="0.01" class="form-control" name="course_price" placeholder="ราคา" required>
+                    <label for="course_price">ราคา</label>
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="text" class="form-control" id="floatingPhone" name="floatingPhone" placeholder="phone number">
-                    <label for="floatingPhone">phone number</label>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="date" class="form-control" id="floatingDate" name="floatingDate" placeholder="birthday">
-                    <label for="inputDate">birthday</label>
-                  </div>
-                </div>                
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="text" class="form-control" id="floatinggender" name="floatinggender" placeholder="gender">
-                    <label for="floatingPhone">gender</label>
-                  </div>
-                </div> 
-                 <div class="col-12">
-                  <div class="form-floating">
-                    <textarea class="form-control" placeholder="Address" id="floatingAddress" name="floatingAddress" style="height: 100px;"></textarea>
-                    <label for="floatingAddress">Address</label>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="password" class="form-control" id="floatingPassword" name="floatingPassword" placeholder="Password">
-                    <label for="floatingPassword">Password</label>
-                  </div>
-                </div>
+                <!-- ฟอร์มเวลาเพิ่มเติม -->
+
+<!-- อยู่ภายใน <form> เหมือนเดิม -->
+<h5>เพิ่มเวลาเรียน</h5>
+<div class="col-md-6" id="new-times">
+  <div class="input-group mb-2">
+    <input type="time" name="new_times[]" class="form-control" required>
+    <button type="button" class="btn btn-secondary" onclick="addTimeField()">+</button>
+  </div>
+</div>
+
+<script>
+function addTimeField() {
+  const container = document.getElementById('new-times');
+  const html = `
+    <div class="input-group mb-2">
+      <input type="time" name="new_times[]" class="form-control" required>
+      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">ลบ</button>
+    </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+}
+</script>
 
                 <div class="text-center">
                   <button type="submit" class="btn btn-primary">Submit</button>
                   <button type="reset" class="btn btn-secondary">Reset</button>
                 </div>
-              </form><!-- End floating Labels Form -->
-
+              </form>
             </div>
           </div>
-
         </div>
       </div>
     </section>
+  </main>
 
-  </main><!-- End #main -->
-
- <?php include("footer.php"); ?>
+  <?php include("footer.php"); ?>
 </body>
 
 </html>

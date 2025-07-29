@@ -18,6 +18,10 @@
             margin: 0;
             padding: 0;
         }
+
+        .navbar-custom .nav-links .icon {
+  display: none;
+}
         .nav-links .nav-item {
             margin-left: 20px;
         }

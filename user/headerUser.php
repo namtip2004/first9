@@ -26,7 +26,7 @@
             <li class="nav-item"><a class="nav-link" href="#promotion">Promotion</a></li>
             <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
         </ul>
-        <div class="profile-icon"></div>
+        <a class="profile-icon"></a>
     </nav>
     <!-- Vendor JS Files -->
     <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>

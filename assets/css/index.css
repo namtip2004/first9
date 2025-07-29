@@ -1,0 +1,44 @@
+        .navbar-custom {
+            background: linear-gradient(to right, #8a2be2, #7b68ee, #87cefa);
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+        .navbar-custom .navbar-brand {
+            color: #FFD700;
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .navbar-custom .nav-links {
+            list-style: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+        .nav-links .nav-item {
+            margin-left: 20px;
+        }
+        .nav-links .nav-link {
+            color: white;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        .nav-links .nav-link:hover {
+            color: #FFD700;
+        }
+        .profile-icon {
+            width: 30px;
+            height: 30px;
+            background: #000;
+            border-radius: 50%;
+        }
+
+        .logo-img {
+  height: 50px;
+  width: auto;
+}
+
+   

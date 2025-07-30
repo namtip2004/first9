@@ -6,11 +6,11 @@ if (isset($_GET['id'])) {
     $staff_id = (int)$_GET['id'];
 
     // คำสั่ง SQL สำหรับลบข้อมูล
-    $sql = "DELETE FROM staff WHERE staff_ID = $staff_id";
+    $sql = "DELETE FROM staff WHERE staff_id = $staff_id";
 
     if (mysqli_query($conn, $sql)) {
         // ลบสำเร็จ กลับไปหน้าตาราง
-        header("Location: tables_staff.php");
+        header("Location: table_staff.php");
         exit;
     } else {
         echo "เกิดข้อผิดพลาดในการลบข้อมูล: " . mysqli_error($conn);

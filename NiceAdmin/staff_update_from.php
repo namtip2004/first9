@@ -29,54 +29,53 @@ $staff = mysqli_fetch_assoc($result);
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">Edit Staff Info</h5>
+              <!-- <h5 class="card-title">Edit Staff Info</h5> -->
 
-              <form class="row g-3" action="update_staff.php?id=<?= $staff['staff_ID'] ?>" method="POST">
+              <form class="row g-3" action="update_staff.php?id=<?= $staff['staff_id'] ?>" method="POST">
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatingfName" name="floatingfName" value="<?= htmlspecialchars($staff['staff_F_name']) ?>">
-                    <label for="floatingfName">First Name</label>
+                    <input type="text" class="form-control" id="floatingName" name="floatingName" value="<?= htmlspecialchars($staff['staff_name']) ?>">
+                    <label for="floatingName">Name</label>
                   </div>
                 </div>
+
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatinglName" name="floatinglName" value="<?= htmlspecialchars($staff['staff_L_name']) ?>">
-                    <label for="floatinglName">Last Name</label>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="text" class="form-control" id="floatinggender" name="floatinggender" value="<?= htmlspecialchars($staff['staff_gender']) ?>">
+                    <input type="text" class="form-control" id="floatinggender" name="floatinggender" value="<?= htmlspecialchars($staff['st_gender']) ?>">
                     <label for="floatinggender">Gender</label>
                   </div>
                 </div>
+
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="number" class="form-control" id="floatingAge" name="floatingAge" value="<?= htmlspecialchars($staff['staff_age']) ?>">
+                    <input type="number" class="form-control" id="floatingAge" name="floatingAge" value="<?= htmlspecialchars($staff['st_age']) ?>">
                     <label for="floatingAge">Age</label>
                   </div>
                 </div>
+
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatingnation" name="floatingnation" value="<?= htmlspecialchars($staff['staff_nationality']) ?>">
-                    <label for="floatingnation">Nationality</label>
+                    <input type="date" class="form-control" name="birthday" value="<?= $data['st_birthday'] ?>">
+                    <label>Birthday</label>
                   </div>
                 </div>
+
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="email" class="form-control" id="floatingEmail" name="floatingEmail" value="<?= htmlspecialchars($staff['staff_mail']) ?>">
-                    <label for="floatingEmail">Email</label>
+                    <input type="email" class="form-control" id="floatingEmail" name="floatingEmail" value="<?= htmlspecialchars($staff['st_gmail']) ?>">
+                    <label for="floatingEmail">Gmail</label>
                   </div>
                 </div>
+
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatingPhone" name="floatingPhone" value="<?= htmlspecialchars($staff['staff_tel']) ?>">
+                    <input type="text" class="form-control" id="floatingPhone" name="floatingPhone" value="<?= htmlspecialchars($staff['st_tel']) ?>">
                     <label for="floatingPhone">Phone</label>
                   </div>
                 </div>
                 <div class="col-12">
                   <div class="form-floating">
-                    <textarea class="form-control" id="floatingAddress" name="floatingAddress" style="height: 100px;"><?= htmlspecialchars($staff['staff_address']) ?></textarea>
+                    <textarea class="form-control" id="floatingAddress" name="floatingAddress" style="height: 100px;"><?= htmlspecialchars($staff['st_address']) ?></textarea>
                     <label for="floatingAddress">Address</label>
                   </div>
                 </div>
@@ -95,15 +94,15 @@ $staff = mysqli_fetch_assoc($result);
                 <div class="col-md-6">
                   <div class="form-floating">
                     <select class="form-select" id="floatingStatus" name="floatingStatus">
-                      <option value="active" <?= $staff['staff_status'] === 'active' ? 'selected' : '' ?>>Active</option>
-                      <option value="inactive" <?= $staff['staff_status'] === 'inactive' ? 'selected' : '' ?>>Inactive</option>
+                      <option value="active" <?= $staff['st_status'] === 'active' ? 'selected' : '' ?>>Active</option>
+                      <option value="inactive" <?= $staff['st_status'] === 'inactive' ? 'selected' : '' ?>>Inactive</option>
                     </select>
                     <label for="floatingStatus">Status</label>
                   </div>
                 </div>
                 <div class="text-center">
                   <button type="submit" class="btn btn-primary">Update</button>
-                  <a href="staff_table.php" class="btn btn-secondary">Cancel</a>
+                  <a href="table_staff.php" class="btn btn-secondary">Cancel</a>
                 </div>
               </form>
 

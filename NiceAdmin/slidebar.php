@@ -23,7 +23,7 @@
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link collapsed" href="tables_member.php">
+        <a class="nav-link collapsed" href="table_staff.php">
           <i class="bi bi-layout-text-window-reverse"></i>
           <span>Staff Data Management</span>
         </a>

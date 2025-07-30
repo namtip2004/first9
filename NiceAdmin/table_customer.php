@@ -61,7 +61,7 @@
                       <td>
                         <a class="btn btn-outline-danger btn-sm" 
                            href="customer_delete.php?id=<?= $row['customer_id'] ?>" 
-                           onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสมาชิกนี้?');">Delete</a>
+                           onclick="return confirm('Are you sure you want to permanently delete this customer\'s data?');">Delete</a>
                       </td>
                     </tr>
                   <?php } ?>

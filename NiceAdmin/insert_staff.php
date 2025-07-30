@@ -2,47 +2,50 @@
 require_once("connect_db.php");
 
 // รับค่าจากฟอร์ม
-$first_name   = mysqli_real_escape_string($conn, $_POST['floatingfName']);
-$last_name    = mysqli_real_escape_string($conn, $_POST['floatinglName']);
+$name   = mysqli_real_escape_string($conn, $_POST['floatingName']);
 $gender       = mysqli_real_escape_string($conn, $_POST['floatinggender']);
 $age          = (int)$_POST['floatingAge'];
-$nationality  = mysqli_real_escape_string($conn, $_POST['floatingnation']);
-$email        = mysqli_real_escape_string($conn, $_POST['floatingEmail']);
+$birthday = $_POST['floatingDate'];
+$email        = mysqli_real_escape_string($conn, $_POST['floatingGmail']);
 $phone        = mysqli_real_escape_string($conn, $_POST['floatingPhone']);
 $address      = mysqli_real_escape_string($conn, $_POST['floatingAddress']);
+$password = md5( $_POST['floatingPassword']);
 $start_job    = mysqli_real_escape_string($conn, $_POST['floatingstdate']);
 
 // สถานะเริ่มต้นของพนักงาน
 $status = 'active';
+$role = 'staff';
 
 // คำสั่ง SQL สำหรับ insert
 $sql = "INSERT INTO staff (
-            staff_F_name, 
-            staff_L_name, 
-            staff_gender, 
-            staff_age, 
-            staff_nationality, 
-            staff_mail, 
-            staff_tel, 
-            staff_address, 
+            staff_name, 
+            st_gender, 
+            st_age,
+            st_birthday, 
+            st_gmail, 
+            st_tel, 
+            st_address,
+            st_pass, 
             start_job, 
-            staff_status
+            st_status,
+            st_level
         ) VALUES (
-            '$first_name', 
-            '$last_name', 
+            '$name', 
             '$gender', 
-            $age, 
-            '$nationality', 
+            '$age',
+            '$birthday',  
             '$email', 
             '$phone', 
-            '$address', 
+            '$address',
+            '$password', 
             '$start_job', 
-            '$status'
+            '$status',
+            '$role'
         )";
 
 // บันทึกข้อมูล
 if (mysqli_query($conn, $sql)) {
-    header("Location: forms_staff.php"); // กลับไปหน้าฟอร์มหรือรายการ staff
+    header("Location: table_staff.php"); // กลับไปหน้ารายการ staff
     exit;
 } else {
     echo "เกิดข้อผิดพลาดในการเพิ่มข้อมูล: " . mysqli_error($conn);

@@ -14,7 +14,7 @@ session_start();
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Member form</h1>
+      <h1>Customer Form</h1>
       <nav>
         <ol class="breadcrumb">
          
@@ -27,50 +27,38 @@ session_start();
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title"></h5>
+              <!-- <h5 class="card-title"></h5> -->
 
               <!-- Floating Labels Form -->
-              <form class="row g-3" action="insert_member.php" method="POST">
+              <form class="row g-3" action="insert_customer.php" method="POST">
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatingfName" name="floatingfName" placeholder="first name">
-                    <label for="floatingfName">first name</label>
+                    <input type="text" class="form-control" id="floatingName" name="floatingName" placeholder="name">
+                    <label for="floatingfName">Name</label>
                   </div>
                 </div>
                 <div class="col-md-6">
                   <div class="form-floating">
-                    <input type="text" class="form-control" id="floatinglName" name="floatinglName" placeholder="last Name">
-                    <label for="floatinglName">last Name</label>
+                    <input type="text" class="form-control" id="floatinggender" name="floatinggender" placeholder="gender">
+                    <label for="floatingPhone">Gender</label>
                   </div>
-                </div>
+                </div> 
+                <div class="col-md-6">
+                  <div class="form-floating">
+                    <input type="date" class="form-control" id="floatingDate" name="floatingDate" placeholder="birthday">
+                    <label for="inputDate">Birthday</label>
+                  </div>
+                </div> 
                 <div class="col-md-6">
                   <div class="form-floating">
                     <input type="email" class="form-control" id="floatingEmail" name="floatingEmail" placeholder="Your Email">
-                    <label for="floatingEmail">Your Email</label>
+                    <label for="floatingEmail">Your Gmail</label>
                   </div>
                 </div>
                 <div class="col-md-6">
                   <div class="form-floating">
                     <input type="text" class="form-control" id="floatingPhone" name="floatingPhone" placeholder="phone number">
-                    <label for="floatingPhone">phone number</label>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="date" class="form-control" id="floatingDate" name="floatingDate" placeholder="birthday">
-                    <label for="inputDate">birthday</label>
-                  </div>
-                </div>                
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="text" class="form-control" id="floatinggender" name="floatinggender" placeholder="gender">
-                    <label for="floatingPhone">gender</label>
-                  </div>
-                </div> 
-                 <div class="col-12">
-                  <div class="form-floating">
-                    <textarea class="form-control" placeholder="Address" id="floatingAddress" name="floatingAddress" style="height: 100px;"></textarea>
-                    <label for="floatingAddress">Address</label>
+                    <label for="floatingPhone">Phone number</label>
                   </div>
                 </div>
                 <div class="col-md-6">

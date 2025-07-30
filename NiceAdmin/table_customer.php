@@ -20,28 +20,26 @@
           <div class="card">
             <div class="card-body">
              <div class="text-end mb-2">
-            <a href="form_member.php" class="btn btn-success mb-2">+ Member</a>
+            <a href="form_customer.php" class="btn btn-success mb-2">+ add customer</a>
           </div>
               <?php 
                 require_once("connect_db.php");
-                $sql = "SELECT * FROM member";
+                $sql = "SELECT * FROM customer";
                 $result = mysqli_query($conn, $sql);
               ?>
 
               <table class="table table-bordered table-striped">
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>ชื่อ</th>
-                    <th>นามสกุล</th>
-                    <th>อีเมล</th>
-                    <th>เบอร์โทร</th>
-                    <th>วันเกิด</th>
-                    <th>เพศ</th>
-                    <th>ที่อยู่</th>
-                    <th>สถานะ</th>
-                    <th>แก้ไข</th>
-                    <th>ลบ</th>
+                    <th>NO.</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Birthday</th>
+                    <th>Gmail</th>
+                    <th>Tel</th>
+                    <th>Status</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -51,21 +49,19 @@
                   ?>
                     <tr>
                       <td><?= $i++ ?></td>
-                      <td><?= htmlspecialchars($row['mb_first_name']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_last_name']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_gmail']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_tel']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_birthday']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_gender']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_address']) ?></td>
-                      <td><?= htmlspecialchars($row['mb_status']) ?></td>
+                      <td><?= htmlspecialchars($row['customer_name']) ?></td>
+                      <td><?= htmlspecialchars($row['gender']) ?></td>
+                      <td><?= htmlspecialchars($row['birthday']) ?></td>
+                      <td><?= htmlspecialchars($row['gmail']) ?></td>
+                      <td><?= htmlspecialchars($row['tel']) ?></td>
+                      <td><?= htmlspecialchars($row['account_status']) ?></td>
                       <td>
-                        <a class="btn btn-outline-primary btn-sm" href="forms_update_member.php?id=<?= $row['member_ID'] ?>">แก้ไข</a>
+                        <a class="btn btn-outline-primary btn-sm" href="customer_update_form.php?id=<?= $row['customer_id'] ?>">Edit</a>
                       </td>
                       <td>
                         <a class="btn btn-outline-danger btn-sm" 
-                           href="delete_member.php?id=<?= $row['member_ID'] ?>" 
-                           onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสมาชิกนี้?');">ลบ</a>
+                           href="customer_delete.php?id=<?= $row['customer_id'] ?>" 
+                           onclick="return confirm('คุณแน่ใจหรือไม่ว่าต้องการลบสมาชิกนี้?');">Delete</a>
                       </td>
                     </tr>
                   <?php } ?>

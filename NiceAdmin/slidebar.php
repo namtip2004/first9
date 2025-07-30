@@ -29,7 +29,7 @@
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link collapsed" href="tables_member.php">
+        <a class="nav-link collapsed" href="table_service.php">
           <i class="bi bi-layout-text-window-reverse"></i>
           <span>Service Data Management</span>
         </a>

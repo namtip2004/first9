@@ -68,7 +68,7 @@ if (!$result) {
             <a class="btn btn-outline-primary btn-sm" href="service_detail.php?id=<?= $row['service_id'] ?>">Detail</a>
         </td>
         <td>
-            <a class="btn btn-outline-primary btn-sm" href="service_update_from.php?id=<?= $row['service_id'] ?>">Edit</a>
+            <a class="btn btn-outline-primary btn-sm" href="service_update_form.php?id=<?= $row['service_id'] ?>">Edit</a>
         </td>
         <td>
             <a class="btn btn-outline-danger btn-sm" href="service_delete.php?id=<?= $row['service_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this service\'s data?');">Delete</a>

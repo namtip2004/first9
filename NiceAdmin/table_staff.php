@@ -68,7 +68,7 @@
                       <td><?= htmlspecialchars($row['end_job']) ?></td>
                       <td><?= htmlspecialchars($row['st_status']) ?></td>
                       <td>
-                        <a class="btn btn-outline-primary btn-sm" href="staff_update_from.php?id=<?= $row['staff_id'] ?>">Edit</a>
+                        <a class="btn btn-outline-primary btn-sm" href="staff_update_form.php?id=<?= $row['staff_id'] ?>">Edit</a>
                       </td>
                       <td>
                         <a class="btn btn-outline-danger btn-sm" href="staff_delete.php?id=<?= $row['staff_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this staff\'s data?');">Delete</a>

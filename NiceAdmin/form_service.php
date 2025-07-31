@@ -8,7 +8,7 @@
 
   <main id="main" class="main">
     <div class="pagetitle">
-      <h1>Service From</h1>
+      <h1>Service Form</h1>
     </div>
 
     <section class="section">

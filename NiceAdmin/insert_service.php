@@ -34,5 +34,37 @@ if (!empty($_POST['new_times']) && !empty($_POST['new_prices'])) {
   }
 }
 
+$tags_string = $_POST['tags'] ?? '';
+$tag_array = array_filter(array_map('trim', explode(',', $tags_string)));
+
+foreach ($tag_array as $tag_name) {
+  // ตรวจสอบว่าแท็กมีอยู่หรือยัง
+  $stmt = $conn->prepare("SELECT tag_id FROM tag WHERE tag_name = ?");
+  $stmt->bind_param("s", $tag_name);
+  $stmt->execute();
+  $result = $stmt->get_result();
+
+  if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+    $tag_id = $row['tag_id'];
+  } else {
+    // ถ้ายังไม่มี ให้เพิ่มแท็กใหม่
+    $stmt_insert = $conn->prepare("INSERT INTO tag (tag_name) VALUES (?)");
+    $stmt_insert->bind_param("s", $tag_name);
+    $stmt_insert->execute();
+    $tag_id = $stmt_insert->insert_id;
+    $stmt_insert->close();
+  }
+
+  $stmt->close();
+
+  // บันทึกลง tag_service
+  $stmt_link = $conn->prepare("INSERT INTO tag_service (service_id, tag_id) VALUES (?, ?)");
+  $stmt_link->bind_param("ii", $service_id, $tag_id);
+  $stmt_link->execute();
+  $stmt_link->close();
+}
+
+
 echo "<script>alert('add completed'); window.location='table_service.php';</script>";
 ?>

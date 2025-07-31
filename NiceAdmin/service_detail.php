@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="en">
+
 <?php
 require_once("connect_db.php");
 
@@ -21,10 +24,14 @@ if (!$service) {
 // ดึง service options (เวลา + ราคา)
 $sql_options = "SELECT * FROM service_option WHERE service_id = '$service_id'";
 $res_options = mysqli_query($conn, $sql_options);
+
+$sql_tags = "SELECT tag.tag_name 
+             FROM tag_service
+             INNER JOIN tag ON tag_service.tag_id = tag.tag_id 
+             WHERE tag_service.service_id = '$service_id'";
+$res_tags = mysqli_query($conn, $sql_tags);
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
 
 <body>
   <?php include("header.php"); ?>
@@ -58,8 +65,22 @@ $res_options = mysqli_query($conn, $sql_options);
                 <?= nl2br(htmlspecialchars($service['s_updated_at'])) ?>
               </p>
 
-              <hr>
+              
 
+<h5 class="mt-3">Tags</h5>
+<?php if (mysqli_num_rows($res_tags) > 0): ?>
+  <div class="tag-box1">
+    <?php while ($tag = mysqli_fetch_assoc($res_tags)): ?>
+      <span class="tag-pill">
+        <?= htmlspecialchars($tag['tag_name']) ?>
+      </span>
+    <?php endwhile; ?>
+  </div>
+<?php else: ?>
+  <p class="text-muted">No tags assigned.</p>
+<?php endif; ?>
+
+<hr>
               <h5>Time Options</h5>
               <?php if (mysqli_num_rows($res_options) > 0): ?>
                 <table class="table table-bordered">

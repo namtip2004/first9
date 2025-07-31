@@ -12,6 +12,10 @@ $id = $_GET['id'];
 $sql_time = "DELETE FROM service_option WHERE service_id = '$id'";
 mysqli_query($conn, $sql_time);
 
+// ลบข้อมูลแท็ก (child) ด้วย
+$sql_tag = "DELETE FROM tag_service WHERE service_id = '$id'";
+mysqli_query($conn, $sql_tag);
+
 // ลบคอร์ส (parent)
 $sql_course = "DELETE FROM service WHERE service_id = '$id'";
 

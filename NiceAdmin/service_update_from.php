@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="en">
 <?php
 require_once("connect_db.php");
 
@@ -19,10 +21,15 @@ if (!$data) {
 // ดึงข้อมูลเวลา-ราคา
 $sql_time = "SELECT * FROM service_option WHERE service_id = '$id'";
 $res_time = mysqli_query($conn, $sql_time);
+
+$sql_tag = "SELECT t.tag_name FROM tag_service ts JOIN tag t ON ts.tag_id = t.tag_id WHERE ts.service_id = '$id'";
+$res_tag = mysqli_query($conn, $sql_tag);
+$existing_tags = [];
+while ($row = mysqli_fetch_assoc($res_tag)) {
+  $existing_tags[] = $row['tag_name'];
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
 
 <body>
   <?php include("header.php"); ?>
@@ -64,6 +71,17 @@ $res_time = mysqli_query($conn, $sql_time);
                     <label class="form-check-label" for="active_status">Active Status</label>
                   </div>
                 </div>
+
+                <div class="col-md-12">
+  <label for="tagInput" class="form-label">Tags</label>
+  <div class="position-relative">
+    <input type="text" id="tagInput" class="form-control" placeholder="Type to search or add tag...">
+    <div class="autocomplete-suggestions" id="suggestionBox" hidden></div>
+  </div>
+  <div class="tag-box mt-2" id="tagsDisplay"></div>
+  <input type="hidden" name="tags" id="tagsHidden" value="<?= htmlspecialchars(implode(',', $existing_tags)) ?>">
+</div>
+
 
                 <!-- เวลาที่มีอยู่ -->
                 <div class="col-md-12 mb-2">
@@ -125,6 +143,105 @@ $res_time = mysqli_query($conn, $sql_time);
                       </div>`;
                     container.insertAdjacentHTML('beforeend', html);
                   }
+                  const tagInput = document.getElementById('tagInput');
+const tagsDisplay = document.getElementById('tagsDisplay');
+const tagsHidden = document.getElementById('tagsHidden');
+
+const existingTags = tagsHidden.value ? tagsHidden.value.split(',') : [];
+const tags = [];
+
+// ฟังก์ชันเพิ่ม tag โดยไม่ซ้ำ
+function addTag(text) {
+  const cleaned = text.trim();
+  if (cleaned && !tags.includes(cleaned)) {
+    tags.push(cleaned);
+
+    const tagEl = document.createElement('span');
+    tagEl.classList.add('tag');
+    tagEl.textContent = cleaned;
+
+    const removeBtn = document.createElement('span');
+    removeBtn.classList.add('remove-tag');
+    removeBtn.innerHTML = '&times;';
+    removeBtn.onclick = () => removeTag(cleaned);
+
+    tagEl.appendChild(removeBtn);
+    tagsDisplay.appendChild(tagEl);
+
+    updateHiddenInput();
+  }
+  tagInput.value = '';
+}
+
+// ฟังก์ชันลบ tag
+function removeTag(text) {
+  const index = tags.indexOf(text);
+  if (index > -1) {
+    tags.splice(index, 1);
+
+    const tagElements = document.querySelectorAll('.tag');
+    tagElements.forEach(tag => {
+      if (tag.textContent.includes(text)) tag.remove();
+    });
+
+    updateHiddenInput();
+  }
+}
+
+// อัปเดตค่าใน hidden input ให้ส่งไปกับฟอร์ม
+function updateHiddenInput() {
+  tagsHidden.value = tags.join(',');
+}
+
+// โหลด tag เดิม (ถ้ามี)
+existingTags.forEach(tag => addTag(tag));
+
+// กด Enter ในช่อง tagInput จะเพิ่ม tag และไม่ submit form
+tagInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addTag(tagInput.value);
+  }
+});
+
+const suggestionBox = document.getElementById('suggestionBox'); // ต้องมี div สำหรับแสดงคำแนะนำใน HTML ด้วย
+
+tagInput.addEventListener('input', async () => {
+  const query = tagInput.value.trim();
+  if (!query) {
+    suggestionBox.hidden = true;
+    return;
+  }
+  try {
+    const res = await fetch(`tag_input.php?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new Error('Network error');
+    const results = await res.json();
+
+    showSuggestions(results);
+  } catch (err) {
+    console.error(err);
+    suggestionBox.hidden = true;
+  }
+});
+
+function showSuggestions(results) {
+  suggestionBox.innerHTML = '';
+  results.forEach(tag => {
+    const div = document.createElement('div');
+    div.textContent = tag.tag_name;
+    div.onclick = () => {
+      addTag(tag.tag_name);
+      suggestionBox.innerHTML = '';
+      suggestionBox.hidden = true;
+      tagInput.value = '';
+    };
+    suggestionBox.appendChild(div);
+  });
+  suggestionBox.hidden = results.length === 0;
+}
+
+
+
                 </script>
 
                 <div class="text-center mt-4">

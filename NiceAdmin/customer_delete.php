@@ -4,7 +4,9 @@ require_once "connect_db.php"; // เชื่อมต่อฐานข้อ�
 
     $customer_id = $_GET['id'];
 
-    $sql="delete from customer where customer_id=$customer_id";
+    $sql = "UPDATE customer SET 
+            account_status = 'inactive'
+        WHERE customer_id = $customer_id";
 
     
 if (mysqli_query($conn, $sql)) {

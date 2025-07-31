@@ -65,7 +65,34 @@ $res_tags = mysqli_query($conn, $sql_tags);
                 <?= nl2br(htmlspecialchars($service['s_updated_at'])) ?>
               </p>
 
-              
+<?php if (!empty($service['coverimg'])): ?>
+  <div class="my-3">
+    <h5>Service Image</h5>
+    <div style="width: 150px; height: 150px; overflow: hidden; border: 1px solid #ccc; border-radius: 8px; cursor: pointer;"
+         data-bs-toggle="modal" data-bs-target="#imageModal">
+      <img src="assets/img/<?= htmlspecialchars($service['coverimg']) ?>" 
+           alt="Service Image" 
+           style="width: 100%; height: 100%; object-fit: contain;">
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body p-0 d-flex justify-content-center align-items-center" style="min-height: 300px;">
+  <img src="assets/img/<?= htmlspecialchars($service['coverimg']) ?>" alt="Large Image" style="max-width: 300px; height: auto;">
+</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+<?php else: ?>
+  <p class="text-muted">No image uploaded.</p>
+<?php endif; ?>
+  
 
 <h5 class="mt-3">Tags</h5>
 <?php if (mysqli_num_rows($res_tags) > 0): ?>
@@ -103,7 +130,7 @@ $res_tags = mysqli_query($conn, $sql_tags);
                 <p class="text-muted">No time options available.</p>
               <?php endif; ?>
                 <div class="text-center mt-4">
-              <a href="service_update_from.php?id=<?= $service['service_id'] ?>" class="btn btn-primary mt-3">Edit</a>
+              <a href="service_update_form.php?id=<?= $service['service_id'] ?>" class="btn btn-primary mt-3">Edit</a>
               <a href="table_service.php" class="btn btn-secondary mt-3">Back</a>
                 </div>
             </div>

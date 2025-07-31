@@ -5,11 +5,28 @@ $service_id = $_POST['service_id'];
 $name = $_POST['service_name'];
 $detail = $_POST['service_detail'];
 $active = $_POST['active_status'];
+$targetDir = "assets/img/";
+$updateCoverImg = ""; // สำหรับเตรียม SQL เงื่อนไข coverimg
+
+if (isset($_FILES["imgservice"]) && $_FILES["imgservice"]["error"] === UPLOAD_ERR_OK) {
+    $fileName = basename($_FILES["imgservice"]["name"]);
+    $targetFilePath = $targetDir . $fileName;
+
+    if (move_uploaded_file($_FILES["imgservice"]["tmp_name"], $targetFilePath)) {
+        $updateCoverImg = ", coverimg = '$fileName'";
+    } else {
+        die("Error uploading new image.");
+    }
+}
 
 // 1. อัปเดตข้อมูล service
 $sql = "UPDATE service 
-        SET service_name = '$name', description = '$detail', is_active = '$active'
+        SET service_name = '$name', 
+            description = '$detail', 
+            is_active = '$active' 
+            $updateCoverImg
         WHERE service_id = '$service_id'";
+
 mysqli_query($conn, $sql);
 
 // 2. อัปเดตเวลา-ราคาที่มีอยู่เดิม

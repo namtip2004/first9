@@ -28,6 +28,8 @@ $existing_tags = [];
 while ($row = mysqli_fetch_assoc($res_tag)) {
   $existing_tags[] = $row['tag_name'];
 }
+
+$imagePath = !empty($data['coverimg']) ? 'assets/img/' . htmlspecialchars($data['coverimg']) : '';
 ?>
 
 
@@ -46,7 +48,7 @@ while ($row = mysqli_fetch_assoc($res_tag)) {
           <div class="card">
             <div class="card-body">
 
-              <form action="update_service.php" method="POST" class="row g-3">
+              <form action="update_service.php" method="POST" enctype="multipart/form-data" class="row g-3">
                 <input type="hidden" name="service_id" value="<?= $data['service_id'] ?>">
 
                 <div class="col-md-6">
@@ -55,6 +57,25 @@ while ($row = mysqli_fetch_assoc($res_tag)) {
                     <label for="service_name">Service Name</label>
                   </div>
                 </div>
+
+<div class="col-md-12">
+  <label class="form-label">Upload Image</label>
+  <div class="upload-box" id="uploadBox">
+    <div class="upload-text" id="uploadText" style="<?= $imagePath ? 'display:none;' : '' ?>">
+      คลิกหรือลากไฟล์รูปภาพมาที่นี่
+    </div>
+    <input type="file" id="imgservice" name="imgservice" accept="image/*" />
+    <img 
+      id="previewImage"
+      src="<?= $imagePath ?>" 
+      style="<?= $imagePath ? 'display:block;' : 'display:none;' ?>" 
+      alt="Preview"
+    />
+  </div>
+  <input type="hidden" name="old_image" value="<?= htmlspecialchars($data['coverimg']) ?>">
+</div>
+
+
 
                 <div class="col-md-12">
                   <div class="form-floating">
@@ -240,6 +261,46 @@ function showSuggestions(results) {
   suggestionBox.hidden = results.length === 0;
 }
 
+
+
+const uploadBox = document.getElementById('uploadBox');
+const fileInput = document.getElementById('imgservice');
+const previewImage = document.getElementById('previewImage');
+const uploadText = document.getElementById('uploadText');
+
+uploadBox.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadBox.classList.add('dragover');
+});
+
+uploadBox.addEventListener('dragleave', () => {
+  uploadBox.classList.remove('dragover');
+});
+
+uploadBox.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadBox.classList.remove('dragover');
+  if (e.dataTransfer.files.length > 0) {
+    fileInput.files = e.dataTransfer.files;
+    showPreview(fileInput.files[0]);
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) {
+    showPreview(fileInput.files[0]);
+  }
+});
+
+function showPreview(file) {
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    previewImage.src = e.target.result;
+    previewImage.style.display = 'block';
+    uploadText.style.display = 'none';
+  }
+  reader.readAsDataURL(file);
+}
 
 
                 </script>

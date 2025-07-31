@@ -32,6 +32,13 @@
 <!-- Tagify JS -->
 <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
 
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- Bootstrap Bundle JS (includes Popper) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
 
   <!-- =======================================================
   * Template Name: NiceAdmin

@@ -80,8 +80,54 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
+    .upload-box {
+    border: 2px dashed #666;
+    border-radius: 8px;
+    width: 300px;
+    height: 300px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    text-align: center;
+    transition: border-color 0.3s;
+  }
 
+  .upload-box.dragover {
+    border-color: #007bff;
+    background-color: #e9f5ff;
+    color: #007bff;
+  }
 
+  .upload-box input[type="file"] {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    z-index: 2;
+  }
+
+  .upload-box img {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: none;
+    z-index: 1;
+  }
+
+  .upload-text {
+    z-index: 1;
+    padding: 10px;
+    pointer-events: none;
+  }
 
 /*--------------------------------------------------------------
 # General

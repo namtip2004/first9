@@ -28,11 +28,11 @@ if (!empty($_POST['new_times']) && !empty($_POST['new_prices'])) {
       $price = floatval($p);
 
       // ใช้ prepared statement จะปลอดภัยกว่าครับ แต่ถ้าใช้แบบนี้ก็พอได้
-      $sql = "INSERT INTO service_option (service_id, duration, price) VALUES ('$service_id', '$time', '$prices')";
+      $sql = "INSERT INTO service_option (service_id, duration, price) VALUES ('$service_id', '$time', '$price')";
       mysqli_query($conn, $sql);
     }
   }
 }
 
-echo "<script>alert('เพิ่มข้อมูลคอร์สเรียบร้อย'); window.location='table_service.php';</script>";
+echo "<script>alert('add completed'); window.location='table_service.php';</script>";
 ?>

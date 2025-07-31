@@ -36,6 +36,6 @@ if (mysqli_query($conn, $sql)) {
     header("Location: table_staff.php");
     exit;
 } else {
-    echo "เกิดข้อผิดพลาดในการอัปเดตข้อมูล: " . mysqli_error($conn);
+    echo "error: " . mysqli_error($conn);
 }
 ?>

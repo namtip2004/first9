@@ -22,6 +22,6 @@ if (mysqli_query($conn, $sql)) {
   header("Location: table_customer.php"); // กลับไปหน้ารายชื่อสมาชิก
   exit;
 } else {
-  echo "เกิดข้อผิดพลาด: " . mysqli_error($conn);
+  echo "error: " . mysqli_error($conn);
 }
 ?>

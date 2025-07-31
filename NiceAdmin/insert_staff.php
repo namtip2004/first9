@@ -48,6 +48,6 @@ if (mysqli_query($conn, $sql)) {
     header("Location: table_staff.php"); // กลับไปหน้ารายการ staff
     exit;
 } else {
-    echo "เกิดข้อผิดพลาดในการเพิ่มข้อมูล: " . mysqli_error($conn);
+    echo "error: " . mysqli_error($conn);
 }
 ?>

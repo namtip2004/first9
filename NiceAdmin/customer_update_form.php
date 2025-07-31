@@ -89,7 +89,7 @@ if (!$data) {
 
   <div class="text-center">
     <button type="submit" class="btn btn-primary">Update</button>
-    <button type="reset" class="btn btn-secondary">Reset</button>
+    <a href="table_customer.php" class="btn btn-secondary">Cancel</a>
   </div>
               </form>
 

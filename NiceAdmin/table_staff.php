@@ -1,3 +1,6 @@
+<?php
+session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -27,7 +30,8 @@
 </div>
               <?php 
               require_once("connect_db.php");
-              $sql = "SELECT * FROM staff";
+              $sql = "SELECT * FROM staff 
+              where st_level != 'admin'";
               $result = mysqli_query($conn, $sql);
               ?>
 
@@ -46,6 +50,7 @@
                     <th>Start Job</th>
                     <th>End Job</th>
                     <th>Status</th>
+                    <th>Detail</th>
                     <th>Edit</th>
                     <th>Delete</th>
                   </tr>
@@ -67,6 +72,9 @@
                       <td><?= htmlspecialchars($row['start_job']) ?></td>
                       <td><?= htmlspecialchars($row['end_job']) ?></td>
                       <td><?= htmlspecialchars($row['st_status']) ?></td>
+                                 <td>
+            <a class="btn btn-outline-primary btn-sm" href="staff_detail.php?id=<?= $row['staff_id'] ?>">Detail</a>
+        </td>
                       <td>
                         <a class="btn btn-outline-primary btn-sm" href="staff_update_form.php?id=<?= $row['staff_id'] ?>">Edit</a>
                       </td>

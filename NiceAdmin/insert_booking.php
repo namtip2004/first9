@@ -1,80 +1,171 @@
 <?php
-include("connect_db.php"); // เปลี่ยนตามชื่อจริงของคุณ
+require_once("../connect_db.php");
+session_start();
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    if (
-        isset($_POST['member_ID']) &&
-        isset($_POST['booking_date']) &&
-        isset($_POST['staff_ID']) &&
-        isset($_POST['time_start']) &&
-        isset($_POST['courses']) &&
-        is_array($_POST['courses'])
-    ) {
-        $member_ID = $_POST['member_ID'];
-        $booking_date = $_POST['booking_date'];
-        $staff_ID = $_POST['staff_ID'];
-        $time_start = $_POST['time_start'];
-        $course_IDs = $_POST['courses'];
+header("Content-Type: application/json");
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST");
+header("Access-Control-Allow-Headers: Content-Type");
 
-        $total_time = "00:00:00";
-        $total_price = 0.0;
-        $course_times = [];
+$data = json_decode(file_get_contents("php://input"), true);
+if (json_last_error() !== JSON_ERROR_NONE) {
+  echo json_encode(["success" => false, "message" => "JSON ไม่ถูกต้อง: " . json_last_error_msg()]);
+  exit;
+}
+if (!$data) {
+  echo json_encode(["success" => false, "message" => "ไม่ได้รับข้อมูล"]);
+  exit;
+}
 
-        foreach ($course_IDs as $course_ID) {
-            $cid = intval($course_ID);
+// ตรวจสอบข้อมูล
+$customer_id = $data['customer_id'] ?? null;
+$staff_id = $data['staff_id'] ?? null;
+$date = $data['date'] ?? null;
+$time_start = $data['time_start'] ?? null;
+$duration = $data['duration'] ?? null;
+$price = $data['price'] ?? null;
+$service_options = $data['service_options'] ?? null;
 
-            // ดึงเวลาและราคา
-            $sql = "SELECT c.course_price, t.Time FROM course c JOIN time t ON c.course_ID = t.course_ID WHERE c.course_ID = $cid";
-            $result = mysqli_query($conn, $sql);
+$missing_fields = [];
+if (!$customer_id) $missing_fields[] = "customer_id";
+if (!$staff_id) $missing_fields[] = "staff_id";
+if (!$date) $missing_fields[] = "date";
+if (!$time_start) $missing_fields[] = "time_start";
+if (!$duration) $missing_fields[] = "duration";
+if (!$price) $missing_fields[] = "price";
+if (!is_array($service_options) || empty($service_options)) $missing_fields[] = "service_options";
 
-            if ($row = mysqli_fetch_assoc($result)) {
-                $total_price += floatval($row['course_price']);
-                $total_time = sumTimes($total_time, $row['Time']);
-                $course_times[] = ['id' => $cid, 'time' => $row['Time']];
-            } else {
-                echo "ไม่พบข้อมูลคอร์ส ID: $cid";
-                exit();
-            }
-        }
+if (!empty($missing_fields)) {
+  echo json_encode(["success" => false, "message" => "ข้อมูลไม่ครบ: " . implode(", ", $missing_fields)]);
+  exit;
+}
 
-        // บันทึกลง booking
-        $sql_booking = "INSERT INTO booking (member_ID, booking_date, total, booking_status, staff_ID, time_total, time_start)
-                        VALUES (?, ?, ?, 'pending', ?, ?, ?)";
-        $stmt = $conn->prepare($sql_booking);
-        $stmt->bind_param("isdiss", $member_ID, $booking_date, $total_price, $staff_ID, $total_time, $time_start);
-        $stmt->execute();
+// ตรวจสอบว่าเป็น admin
+if (!isset($_SESSION['admin_id'])) {
+  echo json_encode(["success" => false, "message" => "ต้องล็อกอินในฐานะแอดมิน"]);
+  exit;
+}
 
-        $booking_ID = $stmt->insert_id;
+try {
+  // ตรวจสอบ customer_id
+  $stmt = $conn->prepare("SELECT COUNT(*) as count FROM customer WHERE customer_id = ? AND is_active = 1");
+  $stmt->bind_param("i", $customer_id);
+  $stmt->execute();
+  if ($stmt->get_result()->fetch_assoc()['count'] == 0) {
+    echo json_encode(["success" => false, "message" => "รหัสลูกค้าไม่ถูกต้อง"]);
+    exit;
+  }
+  $stmt->close();
 
-        // บันทึก booking_detail
-        foreach ($course_times as $ct) {
-            $stmt_d = $conn->prepare("INSERT INTO booking_detail (course_ID, booking_ID, Book_D_time) VALUES (?, ?, ?)");
-            $stmt_d->bind_param("iis", $ct['id'], $booking_ID, $ct['time']);
-            $stmt_d->execute();
-        }
+  if (!DateTime::createFromFormat('Y-m-d', $date) || !DateTime::createFromFormat('H:i', $time_start)) {
+    echo json_encode(["success" => false, "message" => "รูปแบบวันที่หรือเวลาไม่ถูกต้อง"]);
+    exit;
+  }
 
-        echo "✅ จองสำเร็จ!";
-        header("Location: booking_success.php");
-        exit();
+  // คำนวณเวลา
+  $start_datetime = new DateTime("$date $time_start");
+  $end_datetime = clone $start_datetime;
+  $end_datetime->modify("+$duration minutes");
+  $start_datetime_str = $start_datetime->format("Y-m-d H:i:s");
+  $end_datetime_str = $end_datetime->format("Y-m-d H:i:s");
 
+  // ตรวจสอบว่า option_id มีอยู่ในตาราง
+  $stmt = $conn->prepare("SELECT COUNT(*) as count FROM service_option WHERE option_id IN (" . implode(',', array_fill(0, count($service_options), '?')) . ")");
+  $stmt->bind_param(str_repeat('i', count($service_options)), ...$service_options);
+  $stmt->execute();
+  if ($stmt->get_result()->fetch_assoc()['count'] != count($service_options)) {
+    echo json_encode(["success" => false, "message" => "ตัวเลือกบริการไม่ถูกต้อง"]);
+    exit;
+  }
+  $stmt->close();
+
+  // ตรวจสอบราคาและส่วนลด
+  $stmt = $conn->prepare("SELECT SUM(price) as total FROM service_option WHERE option_id IN (" . implode(',', array_fill(0, count($service_options), '?')) . ")");
+  $stmt->bind_param(str_repeat('i', count($service_options)), ...$service_options);
+  $stmt->execute();
+  $result = $stmt->get_result()->fetch_assoc();
+  $calculated_price = $result['total'] ?? 0;
+  $stmt->close();
+
+  $current_date = new DateTime();
+  $current_date_str = $current_date->format("Y-m-d H:i:s");
+  $stmt = $conn->prepare("SELECT promotion_id, discount, service_ids, apply_to_all FROM promotion WHERE active = 1 AND pm_start_date <= ? AND pm_end_date >= ?");
+  $stmt->bind_param("ss", $current_date_str, $current_date_str);
+  $stmt->execute();
+  $promotions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+  $stmt->close();
+
+  $best_discount = 0;
+  $selected_promotion_id = null;
+  $selected_service_ids = [];
+  $stmt = $conn->prepare("SELECT service_id FROM service_option WHERE option_id IN (" . implode(',', array_fill(0, count($service_options), '?')) . ")");
+  $stmt->bind_param(str_repeat('i', count($service_options)), ...$service_options);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  while ($row = $result->fetch_assoc()) {
+    $selected_service_ids[] = $row['service_id'];
+  }
+  $stmt->close();
+
+  foreach ($promotions as $pm) {
+    $applies = false;
+    if ($pm['apply_to_all'] == 1 || $pm['service_ids'] === "all") {
+      $applies = true;
     } else {
-        echo "❌ ข้อมูลไม่ครบ!";
-        print_r($_POST); // DEBUG
-        exit();
+      $service_ids = json_decode($pm['service_ids'], true);
+      if (is_array($service_ids) && array_intersect($service_ids, $selected_service_ids)) {
+        $applies = true;
+      }
     }
+    if ($applies && floatval($pm['discount']) > $best_discount) {
+      $best_discount = floatval($pm['discount']);
+      $selected_promotion_id = $pm['promotion_id'];
+    }
+  }
+
+  $calculated_price = $calculated_price * (1 - $best_discount / 100);
+  if (abs($calculated_price - $price) > 0.1) {
+    echo json_encode([
+      "success" => false,
+      "message" => "ราคาไม่ตรงกัน (Frontend: $price, Backend: $calculated_price, Discount: $best_discount%, Promotion ID: $selected_promotion_id)",
+      "selected_service_ids" => $selected_service_ids
+    ]);
+    exit;
+  }
+
+  // ตรวจสอบความว่างของพนักงาน
+  $stmt = $conn->prepare("SELECT COUNT(*) as count FROM booking WHERE staff_id = ? AND start_time < ? AND end_time > ?");
+  $stmt->bind_param("iss", $staff_id, $end_datetime_str, $start_datetime_str);
+  $stmt->execute();
+  if ($stmt->get_result()->fetch_assoc()['count'] > 0) {
+    echo json_encode(["success" => false, "message" => "พนักงานไม่ว่างในเวลานี้"]);
+    exit;
+  }
+  $stmt->close();
+
+  $conn->begin_transaction();
+  try {
+    $stmt = $conn->prepare("INSERT INTO booking (customer_id, staff_id, start_time, end_time, total_price, status) VALUES (?, ?, ?, ?, ?, 'pending')");
+    $stmt->bind_param("iissd", $customer_id, $staff_id, $start_datetime_str, $end_datetime_str, $price);
+    $stmt->execute();
+    $booking_id = $stmt->insert_id;
+    $stmt->close();
+
+    $stmt2 = $conn->prepare("INSERT INTO booking_serviceop (booking_id, option_id) VALUES (?, ?)");
+    foreach ($service_options as $option_id) {
+      $stmt2->bind_param("ii", $booking_id, $option_id);
+      $stmt2->execute();
+    }
+    $stmt2->close();
+
+    $conn->commit();
+    echo json_encode(["success" => true, "message" => "สร้างการจองสำเร็จ", "booking_id" => $booking_id]);
+  } catch (Exception $e) {
+    $conn->rollback();
+    echo json_encode(["success" => false, "message" => "ข้อผิดพลาดฐานข้อมูล: " . $e->getMessage()]);
+  }
+} catch (Exception $e) {
+  echo json_encode(["success" => false, "message" => "ข้อผิดพลาด: " . $e->getMessage()]);
 }
-
-// ฟังก์ชันรวมเวลา
-function sumTimes($time1, $time2) {
-    [$h1, $m1, $s1] = explode(':', $time1);
-    [$h2, $m2, $s2] = explode(':', $time2);
-
-    $total = ($h1*3600 + $m1*60 + $s1) + ($h2*3600 + $m2*60 + $s2);
-
-    $hours = floor($total / 3600);
-    $minutes = floor(($total % 3600) / 60);
-    $seconds = $total % 60;
-
-    return sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
-}
+$conn->close();
 ?>

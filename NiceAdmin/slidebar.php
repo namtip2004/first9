@@ -21,7 +21,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </li>
 
     <li class="nav-item">
-      <a class="nav-link collapsed<?php if ($current_page == 'tables_member.php') echo 'active'; ?>" href="tables_member.php">
+      <a class="nav-link collapsed<?php if ($current_page == 'table_booking.php') echo 'active'; ?>" href="table_booking.php">
         <i class="bi bi-layout-text-window-reverse"></i>
         <span>Booking Data Management</span>
       </a>
@@ -49,7 +49,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </li>
 
     <li class="nav-item">
-      <a class="nav-link collapsed<?php if ($current_page == 'tables_member.php') echo 'active'; ?>" href="tables_member.php">
+      <a class="nav-link collapsed<?php if ($current_page == 'table_promotion.php') echo 'active'; ?>" href="table_promotion.php">
         <i class="bi bi-layout-text-window-reverse"></i>
         <span>Promotion Data Management</span>
       </a>
@@ -72,7 +72,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     </li>
 
     <li class="nav-item">
-      <a class="nav-link collapsed<?php if ($current_page == 'pages-login.php') echo 'active'; ?>" href="pages-login.php">
+      <a class="nav-link collapsed<?php if ($current_page == 'loginadmin.php') echo 'active'; ?>" href="loginadmin.php">
         <i class="bi bi-box-arrow-in-right"></i>
         <span>Login</span>
       </a>

@@ -1,3 +1,6 @@
+<?php
+session_start();
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -86,7 +89,7 @@
                       <td><?= htmlspecialchars($tag['tag_name']) ?></td>
                       <td><?= $tag['in_use'] ? '✅ in use' : '❌ not use' ?></td>
                       <td>
-  <button class="btn btn-info btn-sm btn-detail" data-tag-id="<?= $tag['tag_id'] ?>">Detail</button>
+  <button class="btn btn-outline-primary btn-sm" data-tag-id="<?= $tag['tag_id'] ?>">Detail</button>
 </td>
                       <td>
                         <a class="btn btn-outline-primary btn-sm" href="tag_update_form.php?id=<?= $tag['tag_id'] ?>">Edit</a>

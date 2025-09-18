@@ -24,8 +24,8 @@ if (isset($_FILES["imgservice"]) && $_FILES["imgservice"]["error"] === UPLOAD_ER
 $sql = "UPDATE service
         SET service_name = '$name',
             description = '$detail',
-            is_active = '$active',
-            discount_percent = '$service_discount'" .
+            is_active = '$active'
+            " .
         $updateCoverImg . "
         WHERE service_id = '$service_id'";
 
@@ -40,7 +40,7 @@ if (isset($_POST['existing_times']) && isset($_POST['existing_prices'])) {
     $p = floatval($price);
 
     $sql = "UPDATE service_option
-            SET duration = '$d', price = '$p', discount_percent = '0'
+            SET duration = '$d', price = '$p'
             WHERE option_id = '$time_id' AND service_id = '$service_id'";
     mysqli_query($conn, $sql);
   }
@@ -56,8 +56,8 @@ if (!empty($_POST['new_times']) && !empty($_POST['new_prices'])) {
     $p = floatval($new_prices[$i]);
  
     if ($t > 0 && $p > 0) {
-      $sql = "INSERT INTO service_option (service_id, duration, price, discount_percent)
-              VALUES ('$service_id', '$t', '$p', '0')";
+      $sql = "INSERT INTO service_option (service_id, duration, price)
+              VALUES ('$service_id', '$t', '$p')";
       mysqli_query($conn, $sql);
     }
   }

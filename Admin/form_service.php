@@ -56,16 +56,7 @@
                   </div>
                 </div>
 
-               <!-- Tag Cloud -->
-<div class="col-md-12">
-  <label for="tagInput" class="form-label">Tags</label>
-  <div class="position-relative">
-    <input type="text" id="tagInput" class="form-control" placeholder="Type to search or add tag...">
-    <div class="autocomplete-suggestions" id="suggestionBox" hidden></div>
-  </div>
-  <div class="tag-box mt-2" id="tagsDisplay"></div>
-  <input type="hidden" name="tags" id="tagsHidden">
-</div>
+
                 <!-- ฟอร์มเวลาเพิ่มเติม -->
 
 <!-- อยู่ภายใน <form> เหมือนเดิม -->
@@ -95,9 +86,7 @@
     </div>
   </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
-  <script>
+ <script>
 
 function addTimePriceField() {
   const container = document.getElementById('new-time-price');
@@ -123,84 +112,6 @@ function addTimePriceField() {
 }
 </script>
 <script>
-  const tagInput = document.getElementById('tagInput');
-  const suggestionBox = document.getElementById('suggestionBox');
-  const tagsDisplay = document.getElementById('tagsDisplay');
-  const tagsHidden = document.getElementById('tagsHidden');
-  const tags = [];
-
-  tagInput.addEventListener('input', async () => {
-    const query = tagInput.value.trim();
-    if (query === '') {
-      suggestionBox.hidden = true;
-      return;
-    }
-
-    const res = await fetch(`tag_input.php?q=${encodeURIComponent(query)}`);
-    const results = await res.json();
-    showSuggestions(results);
-  });
-
-  tagInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addTag(tagInput.value.trim());
-      suggestionBox.hidden = true;
-    }
-  });
-
-  function showSuggestions(results) {
-    suggestionBox.innerHTML = '';
-    results.forEach(tag => {
-      const div = document.createElement('div');
-      div.textContent = tag.tag_name;
-      div.onclick = () => {
-        addTag(tag.tag_name);
-        suggestionBox.innerHTML = '';
-        suggestionBox.hidden = true;
-      };
-      suggestionBox.appendChild(div);
-    });
-    suggestionBox.hidden = results.length === 0;
-  }
-
-  function addTag(text) {
-    const cleaned = text.trim();
-    if (cleaned && !tags.includes(cleaned)) {
-      tags.push(cleaned);
-      const tagEl = document.createElement('span');
-      tagEl.classList.add('tag');
-      tagEl.textContent = cleaned;
-
-      const removeBtn = document.createElement('span');
-      removeBtn.classList.add('remove-tag');
-      removeBtn.innerHTML = '&times;';
-      removeBtn.onclick = () => removeTag(cleaned);
-
-      tagEl.appendChild(removeBtn);
-      tagsDisplay.appendChild(tagEl);
-
-      updateHiddenInput();
-    }
-    tagInput.value = '';
-  }
-
-  function removeTag(text) {
-    const index = tags.indexOf(text);
-    if (index > -1) {
-      tags.splice(index, 1);
-      const tagElements = document.querySelectorAll('.tag');
-      tagElements.forEach(tag => {
-        if (tag.textContent.includes(text)) tag.remove();
-      });
-      updateHiddenInput();
-    }
-  }
-
-  function updateHiddenInput() {
-    tagsHidden.value = tags.join(',');
-  }
-
 
   const uploadBox = document.getElementById('uploadBox');
   const fileInput = document.getElementById('imgservice');

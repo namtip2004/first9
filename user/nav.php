@@ -12,7 +12,7 @@
     <!-- Vendor CSS Files -->
     <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
      <!-- CSS File -->
-  <link href="assets/css/index.css" rel="stylesheet">
+  
 </head>
 <body>
    

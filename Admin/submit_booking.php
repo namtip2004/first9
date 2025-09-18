@@ -10,7 +10,6 @@ try {
     $start_time = $_POST['start_time'];
     $services = $_POST['services'];
     $options = $_POST['options'];
-    $promotion_id = $_POST['promotion_id'] ?: null;
     $targetDir = "assets/img/";
 
     // File upload handling
@@ -38,18 +37,7 @@ try {
     $total_duration = 0;
     $total_price = 0;
     $total_discount = 0;
-    $discount_name = null; // To store promotion name for discount_detail
-
-    if ($promotion_id) {
-        // Fetch promotion details including name
-        $stmt = $pdo->prepare("SELECT discount, apply_to_all, pm_name FROM promotion WHERE promotion_id = ?");
-        $stmt->execute([$promotion_id]);
-        $promo = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$promo) {
-            throw new Exception("Invalid promotion_id: $promotion_id");
-        }
-        $discount_name = $promo['pm_name']; // Store promotion name
-    }
+   $discount_name = null;
 
     foreach ($options as $index => $option_id) {
         $stmt = $pdo->prepare("SELECT duration, price FROM service_option WHERE option_id = ?");
@@ -61,23 +49,12 @@ try {
         $total_duration += $option['duration'];
         $total_price += $option['price'];
 
-        if ($promotion_id && $promo) {
-            $apply_discount = $promo['apply_to_all'];
-            if (!$apply_discount) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM promotion_service WHERE promotion_id = ? AND service_id = ?");
-                $stmt->execute([$promotion_id, $services[$index]]);
-                $apply_discount = $stmt->fetchColumn() > 0;
-            }
-            if ($apply_discount) {
-                $total_discount += $option['price'] * ($promo['discount'] / 100);
-            }
-        }
     }
 
     $end_time = date("H:i", strtotime("+$total_duration minutes", strtotime($start_time)));
     $final_price = $total_price - $total_discount;
 
-    // Insert into booking with evidence and discount_detail as promotion name
+    // Insert into booking with evidence
     $stmt = $pdo->prepare("
         INSERT INTO booking (customer_id, staff_id, booking_date, time_start, time_end, total_price, total_discount, final_price, status, discount_detail, evidence)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?, ?)
@@ -94,17 +71,7 @@ try {
             throw new Exception("Invalid option_id: $option_id");
         }
         $discount = 0;
-        if ($promotion_id && $promo) {
-            $apply_discount = $promo['apply_to_all'];
-            if (!$apply_discount) {
-                $stmt = $pdo->prepare("SELECT COUNT(*) FROM promotion_service WHERE promotion_id = ? AND service_id = ?");
-                $stmt->execute([$promotion_id, $services[$index]]);
-                $apply_discount = $stmt->fetchColumn() > 0;
-            }
-            if ($apply_discount) {
-                $discount = $price * ($promo['discount'] / 100);
-            }
-        }
+
         $net_price = $price - $discount;
         $stmt = $pdo->prepare("INSERT INTO booking_seviceop (booking_id, option_id, price_booking, discount_booking, net_price) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$booking_id, $option_id, $price, $discount, $net_price]);

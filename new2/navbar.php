@@ -25,9 +25,9 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center <?php echo $current_page === 'booking.php' ? 'active' : ''; ?>" href="booking.php">Booking</a>
                 </li>
-                <!-- <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center <?php echo $current_page === 'offers.php' ? 'active' : ''; ?>" href="offers.php">promotion</a>
-                </li> -->
+
+
+                
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center <?php echo $current_page === 'contact.php' ? 'active' : ''; ?>" href="contact.php">Contact</a>
                 </li>

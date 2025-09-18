@@ -70,9 +70,7 @@ function getKPIData($pdo, $dateRange) {
     $stmt = $pdo->query("SELECT COUNT(*) as active_staff FROM staff WHERE st_status = 'active' OR st_status = ''");
     $data['active_staff'] = $stmt->fetch()['active_staff'];
     
-    // Active promotions
-    $stmt = $pdo->query("SELECT COUNT(*) as active_promotions FROM promotion WHERE active = '1' AND pm_end_date >= NOW()");
-    $data['active_promotions'] = $stmt->fetch()['active_promotions'];
+
     
     // Cancellation rate (assuming we can identify cancelled bookings by status)
     $stmt = $pdo->prepare("SELECT 
@@ -305,21 +303,6 @@ for ($i = 6; $i >= 0; $i--) {
                         </div>
                     </div>
 
-                    <div class="col-xl-3 col-md-6 mb-4">
-                        <div class="card border-left-dark kpi-card h-100">
-                            <div class="card-body">
-                                <div class="row no-gutters align-items-center">
-                                    <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-dark text-uppercase mb-1">โปรโมชั่น Active</div>
-                                        <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $kpiData['active_promotions'] ?></div>
-                                    </div>
-                                    <div class="col-auto">
-                                        <i class="bi bi-tag fa-2x text-dark"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="col-xl-3 col-md-6 mb-4">
                         <div class="card border-left-danger kpi-card h-100">
@@ -563,41 +546,6 @@ for ($i = 6; $i >= 0; $i--) {
                         </div>
                     </div>
 
-                    <!-- Active Promotions -->
-                    <div class="col-lg-4 mb-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-tags me-2"></i>โปรโมชั่นที่ใช้งาน</h5>
-                            </div>
-                            <div class="card-body">
-                                <?php
-                                $stmt = $pdo->query("SELECT p.pm_name, p.discount, p.pm_end_date,
-                                    COUNT(b.booking_id) as usage_count
-                                    FROM promotion p
-                                    LEFT JOIN booking b ON p.pm_name = b.discount_detail
-                                    WHERE p.active = '1' AND p.pm_end_date >= NOW()
-                                    GROUP BY p.promotion_id
-                                    ORDER BY usage_count DESC
-                                    LIMIT 5");
-                                $activePromotions = $stmt->fetchAll();
-                                
-                                foreach ($activePromotions as $promo): ?>
-                                <div class="mb-3 p-3 bg-light rounded">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h6 class="mb-0"><?= htmlspecialchars($promo['pm_name']) ?></h6>
-                                        <span class="badge bg-success"><?= $promo['discount'] ?>% ลด</span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <small class="text-muted">สิ้นสุด: <?= date('d/m/Y', strtotime($promo['pm_end_date'])) ?></small>
-                                        <small class="text-<?= $promo['usage_count'] > 0 ? 'success' : 'muted' ?>">
-                                            ใช้ <?= $promo['usage_count'] ?> ครั้ง
-                                        </small>
-                                    </div>
-                                </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Customer Insights -->
                     <div class="col-lg-4 mb-4">
@@ -681,9 +629,6 @@ for ($i = 6; $i >= 0; $i--) {
                 </a></li>
                 <li><a class="dropdown-item" href="add_service.php">
                     <i class="bi bi-spa me-2"></i>เพิ่มบริการ
-                </a></li>
-                <li><a class="dropdown-item" href="add_promotion.php">
-                    <i class="bi bi-tag-fill me-2"></i>เพิ่มโปรโมชั่น
                 </a></li>
             </ul>
         </div>

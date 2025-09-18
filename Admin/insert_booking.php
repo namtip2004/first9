@@ -87,48 +87,10 @@ try {
   $calculated_price = $result['total'] ?? 0;
   $stmt->close();
 
-  $current_date = new DateTime();
-  $current_date_str = $current_date->format("Y-m-d H:i:s");
-  $stmt = $conn->prepare("SELECT promotion_id, discount, service_ids, apply_to_all FROM promotion WHERE active = 1 AND pm_start_date <= ? AND pm_end_date >= ?");
-  $stmt->bind_param("ss", $current_date_str, $current_date_str);
-  $stmt->execute();
-  $promotions = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-  $stmt->close();
-
-  $best_discount = 0;
-  $selected_promotion_id = null;
-  $selected_service_ids = [];
-  $stmt = $conn->prepare("SELECT service_id FROM service_option WHERE option_id IN (" . implode(',', array_fill(0, count($service_options), '?')) . ")");
-  $stmt->bind_param(str_repeat('i', count($service_options)), ...$service_options);
-  $stmt->execute();
-  $result = $stmt->get_result();
-  while ($row = $result->fetch_assoc()) {
-    $selected_service_ids[] = $row['service_id'];
-  }
-  $stmt->close();
-
-  foreach ($promotions as $pm) {
-    $applies = false;
-    if ($pm['apply_to_all'] == 1 || $pm['service_ids'] === "all") {
-      $applies = true;
-    } else {
-      $service_ids = json_decode($pm['service_ids'], true);
-      if (is_array($service_ids) && array_intersect($service_ids, $selected_service_ids)) {
-        $applies = true;
-      }
-    }
-    if ($applies && floatval($pm['discount']) > $best_discount) {
-      $best_discount = floatval($pm['discount']);
-      $selected_promotion_id = $pm['promotion_id'];
-    }
-  }
-
-  $calculated_price = $calculated_price * (1 - $best_discount / 100);
   if (abs($calculated_price - $price) > 0.1) {
     echo json_encode([
       "success" => false,
-      "message" => "ราคาไม่ตรงกัน (Frontend: $price, Backend: $calculated_price, Discount: $best_discount%, Promotion ID: $selected_promotion_id)",
-      "selected_service_ids" => $selected_service_ids
+      "message" => "ราคาไม่ตรงกัน (Frontend: $price, Backend: $calculated_price)",
     ]);
     exit;
   }

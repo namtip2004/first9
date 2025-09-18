@@ -53,13 +53,6 @@ $isAdmin2 = isset($_SESSION['staff_level']) && $_SESSION['staff_level'] === 'sta
         </a>
       </li>
 
-      <li class="nav-item">
-        <a class="nav-link collapsed<?php if ($current_page == 'table_promotion.php') echo ' active'; ?>" href="table_promotion.php">
-          <i class="bi bi-layout-text-window-reverse"></i>
-          <span>Promotion Data</span>
-        </a>
-      </li>
-
       <li class="nav-item">       
           <a> <span>Reports</span> </a>
       </li>

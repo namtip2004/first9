@@ -15,7 +15,7 @@ $service_id = $_GET['id'];
 $sql = "SELECT * FROM service WHERE service_ID = '$service_id'";
 $result = mysqli_query($conn, $sql);
 $service = mysqli_fetch_assoc($result);
-
+$serviceDiscount = isset($service['discount_percent']) ? (float)$service['discount_percent'] : 0;
 if (!$service) {
   echo "ไม่พบข้อมูลบริการ";
   exit;
@@ -50,6 +50,9 @@ $res_options = mysqli_query($conn, $sql_options);
 
               <p><strong>Description:</strong><br>
                 <?= nl2br(htmlspecialchars($service['description'])) ?>
+              </p>
+              <p><strong>Service Discount:</strong>
+                <?= number_format($serviceDiscount, 2) ?>%
               </p>
 
               <p><strong>Create at:</strong><br>
@@ -96,13 +99,23 @@ $res_options = mysqli_query($conn, $sql_options);
                     <tr>
                       <th>Duration (Minutes)</th>
                       <th>Price (€)</th>
+                      <th>Discount (%)</th>
+                      <th>Final Price (€)</th>
                     </tr>
                   </thead>
                   <tbody>
                     <?php while ($row = mysqli_fetch_assoc($res_options)): ?>
+                      <?php
+                        $optionDiscount = isset($row['discount_percent']) ? (float)$row['discount_percent'] : 0;
+                        $appliedDiscount = $optionDiscount > 0 ? $optionDiscount : $serviceDiscount;
+                        $discountAmount = $row['price'] * ($appliedDiscount / 100);
+                        $finalPrice = max($row['price'] - $discountAmount, 0);
+                      ?>
                       <tr>
                         <td><?= $row['duration'] ?></td>
                         <td><?= number_format($row['price'], 2) ?></td>
+                        <td><?= number_format($appliedDiscount, 2) ?></td>
+                        <td><?= number_format($finalPrice, 2) ?></td>
                       </tr>
                     <?php endwhile; ?>
                   </tbody>

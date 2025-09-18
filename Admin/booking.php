@@ -114,34 +114,6 @@
                 </select>
             </div>
 
-            <!-- Promotion Selection -->
-            <div class="mb-3">
-                <label for="promotion" class="form-label">Select Promotion</label>
-                <select class="form-select" id="promotion" name="promotion_id" onchange="calculatePrices()">
-                    <option value="">No Promotion</option>
-                    <?php
-                    $today = date('Y-m-d H:i:s');
-                    $promotions = $pdo->query("
-    SELECT DISTINCT p.promotion_id, p.pm_name, p.discount, p.apply_to_all 
-    FROM promotion p
-    LEFT JOIN promotion_service ps ON p.promotion_id = ps.promotion_id
-    WHERE 
-        p.active = 1 
-        AND p.pm_start_date <= '$today' 
-        AND p.pm_end_date >= '$today'
-        AND (p.apply_to_all = 1 OR ps.service_id IN (
-            SELECT service_id FROM service WHERE is_active = 1
-        ))
-")->fetchAll(PDO::FETCH_ASSOC);
-
-                    foreach ($promotions as $promo) {
-                        echo "<option value='{$promo['promotion_id']}' data-discount='{$promo['discount']}' data-apply-to-all='{$promo['apply_to_all']}'>{$promo['pm_name']} ({$promo['discount']}%)</option>";
-                    }
-                    ?>
-                </select>
-            </div>
-
-
 
             <!-- Price Summary -->
             <div class="summary-card">
@@ -277,7 +249,7 @@
             button.closest('.service-row').remove();
             calculateTotalDuration();
             calculatePrices();
-            updatePromotionOptions();
+
 
         }
 
@@ -296,7 +268,7 @@
                         });
                         calculateTotalDuration();
                         calculatePrices();
-                        updatePromotionOptions();
+
 
                     });
             } else {
@@ -355,15 +327,14 @@
             }
         }
 
-        // Calculate prices and discounts
+        // Calculate price summary
         function calculatePrices() {
-            const promotion = document.getElementById('promotion');
-            const applyToAll = promotion.options[promotion.selectedIndex]?.dataset.applyToAll === '1';
-            const discountPercent = parseFloat(promotion.options[promotion.selectedIndex]?.dataset.discount || 0);
-            let totalPrice = 0, totalDiscount = 0;
-
+            let totalPrice = 0;
+            let totalDiscount = 0;
             const priceTable = document.getElementById('priceTable');
-            priceTable.innerHTML = '';
+            if (priceTable) {
+                priceTable.innerHTML = '';
+            }
 
             document.querySelectorAll('.service-row').forEach(row => {
                 const serviceSelect = row.querySelector('.service-select');
@@ -371,75 +342,32 @@
                 const serviceName = serviceSelect.options[serviceSelect.selectedIndex]?.text || '';
                 const optionText = optionSelect.options[optionSelect.selectedIndex]?.text || '';
                 const price = parseFloat(optionSelect.options[optionSelect.selectedIndex]?.dataset.price || 0);
-                let discount = 0;
 
-                if (applyToAll) {
-                    discount = price * (discountPercent / 100);
-                } else if (promotion.value) {
-                    fetch(`check_promotion.php?promotion_id=${promotion.value}&service_id=${serviceSelect.value}`)
-                        .then(response => response.json())
-                        .then(applies => {
-                            if (applies) discount = price * (discountPercent / 100);
-                            updatePriceRow(serviceName, optionText, price, discount);
-                        });
+                if (!serviceName || !optionText) {
                     return;
                 }
 
-                updatePriceRow(serviceName, optionText, price, discount);
                 totalPrice += price;
-                totalDiscount += discount;
-            });
 
-            function updatePriceRow(serviceName, optionText, price, discount) {
-                if (serviceName && optionText) {
-                    const netPrice = price - discount;
+                if (priceTable) {
                     priceTable.innerHTML += `
                         <tr>
                             <td>${serviceName}</td>
                             <td>${optionText}</td>
                             <td>€${price.toFixed(2)}</td>
-                            <td>€${discount.toFixed(2)}</td>
-                            <td>€${netPrice.toFixed(2)}</td>
+                            <td>€0.00</td>
+                            <td>€${price.toFixed(2)}</td>
                         </tr>`;
-                    totalPrice += price;
-                    totalDiscount += discount;
-                    document.getElementById('totalPrice').textContent = `€${totalPrice.toFixed(2)}`;
-                    document.getElementById('totalDiscount').textContent = `€${totalDiscount.toFixed(2)}`;
-                    document.getElementById('finalPrice').textContent = `€${(totalPrice - totalDiscount).toFixed(2)}`;
-                }
-            }
+                 }
+
+            });
+
+            const finalPrice = totalPrice - totalDiscount;
+            document.getElementById('totalPrice').textContent = `€${totalPrice.toFixed(2)}`;
+            document.getElementById('totalDiscount').textContent = `€${totalDiscount.toFixed(2)}`;
+            document.getElementById('finalPrice').textContent = `€${finalPrice.toFixed(2)}`;
         }
 
-function updatePromotionOptions() {
-    const selectedServiceIds = Array.from(document.querySelectorAll('.service-select'))
-        .map(select => select.value)
-        .filter(id => id); // Remove empty values
-
-    const promotionSelect = document.getElementById('promotion');
-    promotionSelect.innerHTML = '<option value="">Loading...</option>';
-
-    if (selectedServiceIds.length === 0) {
-        promotionSelect.innerHTML = '<option value="">No Promotion</option>';
-        return;
-    }
-
-    const queryString = selectedServiceIds.join(',');
-
-    fetch(`get_promotions.php?service_ids=${queryString}`)
-        .then(res => res.json())
-        .then(promotions => {
-            promotionSelect.innerHTML = '<option value="">No Promotion</option>';
-            promotions.forEach(promo => {
-                const option = document.createElement('option');
-                option.value = promo.promotion_id;
-                option.dataset.discount = promo.discount;
-                option.dataset.applyToAll = promo.apply_to_all;
-                option.textContent = `${promo.pm_name} (${promo.discount}%)`;
-                promotionSelect.appendChild(option);
-            });
-            calculatePrices();
-        });
-}
 </script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>

@@ -147,13 +147,6 @@
             margin-top: 20px;
         }
 
-        .promotion-select {
-            background: var(--soft-cream);
-            border: 2px solid var(--luxury-gold);
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
     </style>
 </head>
 <body>
@@ -252,16 +245,6 @@
                                     <i class="fas fa-users me-2"></i>เลือกผู้ให้บริการ
                                 </button>
                                 <input type="hidden" name="staff_id" id="selectedStaffId">
-                            </div>
-
-                            <!-- Promotion Selection -->
-                            <div class="promotion-select">
-                                <label class="form-label">
-                                    <i class="fas fa-tags me-2"></i>โปรโมชั่น
-                                </label>
-                                <select class="form-control" id="promotion" name="promotion_id">
-                                    <option value="">ไม่ใช้โปรโมชั่น</option>
-                                </select>
                             </div>
 
                             <!-- Duration Display -->
@@ -587,7 +570,7 @@ function addToCart(serviceId, option, serviceName) {
     
     updateCartDisplay();
     updateTotalDuration();
-    updatePromotions();
+    calculatePrices();
     calculatePrices();
 }
 
@@ -596,7 +579,7 @@ function addToCart(serviceId, option, serviceName) {
             selectedItems.splice(index, 1);
             updateCartDisplay();
             updateTotalDuration();
-            updatePromotions();
+            calculatePrices();
             calculatePrices();
         }
 
@@ -752,73 +735,16 @@ function updateCartDisplay() {
             return stars;
         }
 
-        // Update available promotions
-        function updatePromotions() {
-            if (selectedItems.length === 0) {
-                document.getElementById('promotion').innerHTML = '<option value="">ไม่ใช้โปรโมชั่น</option>';
-                return;
-            }
-            
-            const serviceIds = selectedItems.map(item => item.serviceId).join(',');
-            
-            fetch(`get_promotions.php?service_ids=${serviceIds}`)
-                .then(response => response.json())
-                .then(promotions => {
-                    const select = document.getElementById('promotion');
-                    select.innerHTML = '<option value="">ไม่ใช้โปรโมชั่น</option>';
-                    
-                    promotions.forEach(promo => {
-                        const option = document.createElement('option');
-                        option.value = promo.promotion_id;
-                        option.dataset.discount = promo.discount;
-                        option.dataset.applyToAll = promo.apply_to_all;
-                        option.textContent = `${promo.pm_name} (ลด ${promo.discount}%)`;
-                        select.appendChild(option);
-                    });
-                    
-                    select.addEventListener('change', calculatePrices);
-                })
-                .catch(error => console.error('Error loading promotions:', error));
-        }
+         // Calculate price summary without promotions
+        function calculatePrices() {
+            const totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
+            const totalDiscount = 0;
+            const finalPrice = totalPrice;
 
-        // Calculate prices with discounts
-        async function calculatePrices() {
-    const promotion = document.getElementById('promotion');
-    const discountPercent = parseFloat(promotion.options[promotion.selectedIndex]?.dataset.discount || 0);
-    const applyToAll = promotion.options[promotion.selectedIndex]?.dataset.applyToAll === '1';
-    const promotionId = promotion.value;
-    
-    let totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
-    let totalDiscount = 0;
-    
-    if (discountPercent > 0 && promotionId) {
-        if (applyToAll) {
-            // ใช้ส่วนลดกับทุกรายการ
-            totalDiscount = totalPrice * (discountPercent / 100);
-        } else {
-            // ตรวจสอบแต่ละบริการว่าสามารถใช้โปรโมชั่นได้หรือไม่
-            for (const item of selectedItems) {
-                try {
-                    const response = await fetch(`check_promotion.php?promotion_id=${promotionId}&service_id=${item.serviceId}`);
-                    const canApply = await response.json();
-                    
-                    if (canApply) {
-                        totalDiscount += item.price * (discountPercent / 100);
-                    }
-                } catch (error) {
-                    console.error('Error checking promotion:', error);
-                }
-            }
+            document.getElementById('totalPrice').textContent = `€${totalPrice.toLocaleString()}`;
+            document.getElementById('totalDiscount').textContent = `€${totalDiscount.toLocaleString()}`;
+            document.getElementById('finalPrice').textContent = `€${finalPrice.toLocaleString()}`;
         }
-    }
-    
-    const finalPrice = totalPrice - totalDiscount;
-    
-    // Update display
-    document.getElementById('totalPrice').textContent = `€${totalPrice.toLocaleString()}`;
-    document.getElementById('totalDiscount').textContent = `€${totalDiscount.toLocaleString()}`;
-    document.getElementById('finalPrice').textContent = `€${finalPrice.toLocaleString()}`;
-}
 
         // Form submission
 // แทนที่ส่วน Form submission เดิม
@@ -873,9 +799,7 @@ function generatePaymentSummary() {
     const date = document.getElementById('hiddenBookingDate').value;
     const time = document.getElementById('startTime').value;
     const staffName = selectedStaff ? selectedStaff.name : 'ไม่ระบุ';
-    const promotion = document.getElementById('promotion');
-    const promoText = promotion.options[promotion.selectedIndex]?.text || 'ไม่ใช้โปรโมชั่น';
-    
+
     let summaryHTML = `
         <div class="summary-item">
             <div class="summary-service">
@@ -909,19 +833,6 @@ function generatePaymentSummary() {
             </div>
         `;
     });
-    
-    // Add promotion
-    if (promoText !== 'ไม่ใช้โปรโมชั่น') {
-        summaryHTML += `
-            <div class="summary-item">
-                <div class="summary-service">
-                    <div class="summary-service-name">โปรโมชั่น</div>
-                    <div class="summary-service-details">${promoText}</div>
-                </div>
-                <div class="summary-price">-€${document.getElementById('totalDiscount').textContent.replace('€', '').replace(',', '')}</div>
-            </div>
-        `;
-    }
     
     // Total
     summaryHTML += `
@@ -1036,7 +947,6 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
     formData.append('start_time', document.getElementById('startTime').value);
     formData.append('services', selectedItems.map(item => item.serviceId).join(','));
     formData.append('options', selectedItems.map(item => item.optionId).join(','));
-    formData.append('promotion_id', document.getElementById('promotion').value);
     formData.append('special_requests', document.querySelector('textarea[name="special_requests"]').value);
     formData.append('evidence', evidenceFileInput.files[0]);
     

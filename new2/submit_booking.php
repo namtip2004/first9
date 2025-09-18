@@ -91,8 +91,7 @@ try {
     $total_duration = 0;
     $total_price = 0;
     $total_discount = 0;
-    $promotion_id = isset($_POST['promotion_id']) && is_numeric($_POST['promotion_id']) ? (int)$_POST['promotion_id'] : null;
-
+ 
     foreach ($options as $index => $option_id) {
         $stmt = $pdo->prepare("SELECT duration, price, service_id FROM service_option WHERE option_id = ?");
         $stmt->execute([(int)$option_id]);
@@ -103,22 +102,7 @@ try {
         $total_duration += $option['duration'];
         $total_price += $option['price'];
 
-        if ($promotion_id) {
-            $stmt = $pdo->prepare("SELECT discount, apply_to_all FROM promotion WHERE promotion_id = ?");
-            $stmt->execute([$promotion_id]);
-            $promo = $stmt->fetch();
-            if ($promo) {
-                $apply_discount = $promo['apply_to_all'];
-                if (!$apply_discount) {
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM promotion_service WHERE promotion_id = ? AND service_id = ?");
-                    $stmt->execute([$promotion_id, $services[$index]]);
-                    $apply_discount = $stmt->fetchColumn() > 0;
-                }
-                if ($apply_discount) {
-                    $total_discount += $option['price'] * ($promo['discount'] / 100);
-                }
-            }
-        }
+
     }
 
     $end_time = date("H:i", strtotime("+$total_duration minutes", strtotime($start_time)));
@@ -153,7 +137,7 @@ try {
         $total_price, 
         $total_discount, 
         $final_price, 
-        $promotion_id ? "Promotion ID: $promotion_id" : null,
+        null,
         $evidenceFileName
     ]);
     $booking_id = $pdo->lastInsertId();
@@ -165,22 +149,7 @@ try {
         $option = $stmt->fetch();
         $price = $option['price'];
         $discount = 0;
-        if ($promotion_id) {
-            $stmt = $pdo->prepare("SELECT discount, apply_to_all FROM promotion WHERE promotion_id = ?");
-            $stmt->execute([$promotion_id]);
-            $promo = $stmt->fetch();
-            if ($promo) {
-                $apply_discount = $promo['apply_to_all'];
-                if (!$apply_discount) {
-                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM promotion_service WHERE promotion_id = ? AND service_id = ?");
-                    $stmt->execute([$promotion_id, $option['service_id']]);
-                    $apply_discount = $stmt->fetchColumn() > 0;
-                }
-                if ($apply_discount) {
-                    $discount = $price * ($promo['discount'] / 100);
-                }
-            }
-        }
+
         $net_price = $price - $discount;
         $stmt = $pdo->prepare("INSERT INTO booking_seviceop (booking_id, option_id, price_booking, discount_booking, net_price) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$booking_id, (int)$option_id, $price, $discount, $net_price]);

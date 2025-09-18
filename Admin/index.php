@@ -214,7 +214,7 @@ for ($i = 6; $i >= 0; $i--) {
                         <div class="btn-group me-2">
                             <a href="?period=today" class="btn btn-sm btn-outline-secondary <?= $period == 'today' ? 'active' : '' ?>">Today</a>
                             <a href="?period=week" class="btn btn-sm btn-outline-secondary <?= $period == 'week' ? 'active' : '' ?>">This week</a>
-                            <a href="?period=month" class="btn btn-sm btn-outline-secondary <?= $period == 'month' ? 'active' : '' ?>">This mount</a>
+                            <a href="?period=month" class="btn btn-sm btn-outline-secondary <?= $period == 'month' ? 'active' : '' ?>">This month</a>
                             <a href="?period=year" class="btn btn-sm btn-outline-secondary <?= $period == 'year' ? 'active' : '' ?>">This year</a>
                         </div>
                     </div>

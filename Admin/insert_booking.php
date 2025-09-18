@@ -48,7 +48,7 @@ if (!isset($_SESSION['admin_id'])) {
 
 try {
   // ตรวจสอบ customer_id
-  $stmt = $conn->prepare("SELECT COUNT(*) as count FROM customer WHERE customer_id = ? AND is_active = 1");
+  $stmt = $conn->prepare("SELECT COUNT(*) as count FROM customer WHERE customer_id = ? AND account_status = 'active'");
   $stmt->bind_param("i", $customer_id);
   $stmt->execute();
   if ($stmt->get_result()->fetch_assoc()['count'] == 0) {

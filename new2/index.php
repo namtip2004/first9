@@ -43,7 +43,7 @@ $stmt = $pdo->prepare("
 $stmt->execute();
 $promotions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Function to format Thai date
+
 function formatEnglishDate($date) {
     $english_months = [
         1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',

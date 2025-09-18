@@ -95,21 +95,46 @@ function getPriceDisplay($discount, $apply_to_all) {
             </div>
             
             <div class="container">
-                <div class="row align-items-center">
-                    <div class="col-lg-7">
-                        <div class="hero-content">
-                            <!-- <div class="hero-subtitle-small fade-in">Luxury Wellness Sanctuary</div> -->
-                            <h1 class="hero-title font-display fade-in" style="animation-delay: 0.2s;">
+                <div class="row align-items-center gy-5">
+                    <div class="col-lg-6">
+                        <div class="hero-content fade-in" style="animation-delay: 0.2s;">
+                            <span class="hero-badge">
+                                <i class="fas fa-gem"></i>
+                                Luxury Wellness Sanctuary
+                            </span>
+                            <h1 class="hero-title font-display">
                                 First 9 <span class="hero-title-accent">thai Massage</span><br>
                                 And Spa
                             </h1>
-                            <p class="hero-description fade-in" style="animation-delay: 0.4s;">
-Experience premium spa treatments with the art of traditional Thai massage
-in a tranquil and luxurious setting, for true relaxation.
+                            <p class="hero-description">
+                                Experience premium spa treatments with the art of traditional Thai massage
+                                in a tranquil and luxurious setting, for true relaxation.
                             </p>
-                            <a href="booking.php" class="btn-luxury fade-in" style="animation-delay: 0.6s;">
-                                <i class="fas fa-calendar-check me-2"></i>Booking Now
-                            </a>
+                            <div class="hero-actions">
+                                <a href="booking.php" class="btn-luxury">
+                                    <i class="fas fa-calendar-check me-2"></i>Booking Now
+                                </a>
+                                <div class="hero-availability">
+                                    <i class="fas fa-clock me-2"></i>Daily 10:00 - 22:00
+                                </div>
+                            </div>
+                            <ul class="hero-benefits">
+                                <li><i class="fas fa-spa"></i>Signature Rituals</li>
+                                <li><i class="fas fa-leaf"></i>Organic Aromas</li>
+                                <li><i class="fas fa-heart"></i>Personalized Care</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="col-lg-5 ms-lg-auto">
+                        <div class="hero-image-wrapper fade-in" style="animation-delay: 0.5s;">
+                            <img src="assets/img/massage-therapy-1612308_1280.jpg" alt="Relaxing spa treatment" class="hero-image">
+                            <div class="hero-image-card">
+                                <div class="hero-image-card-icon"><i class="fas fa-feather"></i></div>
+                                <div class="hero-image-card-text">
+                                    <span>Signature Program</span>
+                                    <strong>Aromatic Candle Massage</strong>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

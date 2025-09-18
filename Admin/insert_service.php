@@ -15,8 +15,8 @@ if (isset($_FILES["imgservice"]) && $_FILES["imgservice"]["error"] === UPLOAD_ER
     // อัปโหลดไฟล์
     if (move_uploaded_file($_FILES["imgservice"]["tmp_name"], $targetFilePath)) {
 
-        $stmt = $conn->prepare("INSERT INTO service (service_name, description, is_active, coverimg) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssisd", $name, $detail, $active, $fileName);
+        $stmt = $conn->prepare("INSERT INTO service (service_name, description, is_active, coverimg) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssis", $name, $detail, $active, $fileName);
         $stmt->execute();
 
         $service_id = $stmt->insert_id; // ต้องได้ค่าที่แน่ชัด
@@ -46,9 +46,9 @@ if (!empty($service_id) && !empty($_POST['new_times']) && !empty($_POST['new_pri
         $d = 0;
 
         if ($t > 0 && $p > 0) {
-            $sql = "INSERT INTO service_option (service_id, duration, price, discount_percent) VALUES (?, ?, ?, ?)";
+            $sql = "INSERT INTO service_option (service_id, duration, price) VALUES (?, ?, ?)";
             $stmt = $conn->prepare($sql);
-            $stmt->bind_param("iidd", $service_id, $t, $p, $d);
+            $stmt->bind_param("iid", $service_id, $t, $p);
             $stmt->execute();
             $stmt->close();
         }

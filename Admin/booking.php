@@ -124,8 +124,6 @@
                             <th>Service</th>
                             <th>Option</th>
                             <th>Price (€)</th>
-                            <th>Discount (€)</th>
-                            <th>Net Price (€)</th>
                         </tr>
                     </thead>
                     <tbody id="priceTable"></tbody>
@@ -133,7 +131,9 @@
                         <tr>
                             <th colspan="2">Total</th>
                             <th id="totalPrice">0.00</th>
-                            <th id="totalDiscount">0.00</th>
+                        </tr>
+                        <tr>
+                            <th colspan="2">Final Price</th>
                             <th id="finalPrice">0.00</th>
                         </tr>
                     </tfoot>
@@ -330,7 +330,6 @@
         // Calculate price summary
         function calculatePrices() {
             let totalPrice = 0;
-            let totalDiscount = 0;
             const priceTable = document.getElementById('priceTable');
             if (priceTable) {
                 priceTable.innerHTML = '';
@@ -355,16 +354,13 @@
                             <td>${serviceName}</td>
                             <td>${optionText}</td>
                             <td>€${price.toFixed(2)}</td>
-                            <td>€0.00</td>
-                            <td>€${price.toFixed(2)}</td>
                         </tr>`;
                  }
 
             });
 
-            const finalPrice = totalPrice - totalDiscount;
+            const finalPrice = totalPrice;
             document.getElementById('totalPrice').textContent = `€${totalPrice.toFixed(2)}`;
-            document.getElementById('totalDiscount').textContent = `€${totalDiscount.toFixed(2)}`;
             document.getElementById('finalPrice').textContent = `€${finalPrice.toFixed(2)}`;
         }
 

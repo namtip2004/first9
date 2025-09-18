@@ -85,12 +85,6 @@ $imagePath = !empty($data['coverimg']) ? 'assets/img/' . htmlspecialchars($data[
                     <label class="form-check-label" for="active_status">Active Status</label>
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="number" step="0.01" min="0" max="100" class="form-control" name="service_discount" value="<?= isset($data['discount_percent']) ? $data['discount_percent'] : 0 ?>">
-                    <label for="service_discount">Service Discount (%)</label>
-                  </div>
-                </div>
 
                 <!-- เวลาที่มีอยู่ -->
                 <div class="col-md-12 mb-2">
@@ -98,27 +92,20 @@ $imagePath = !empty($data['coverimg']) ? 'assets/img/' . htmlspecialchars($data[
                   <?php while ($time = mysqli_fetch_assoc($res_time)) { ?>
                     <div class="row mb-2 align-items-center">
                       <input type="hidden" name="existing_time_ids[]" value="<?= $time['option_id'] ?>">
-                      <div class="col-md-3">
+                      <div class="col-md-4">
                         <div class="input-group">
                           <input type="number" name="existing_times[<?= $time['option_id'] ?>]" class="form-control"
                             value="<?= $time['duration'] ?>" min="0" required>
                           <span class="input-group-text">minute</span>
                         </div>
                       </div>
-                      <div class="col-md-3">
+                      <div class="col-md-4">
                         <div class="input-group">
                           <input type="number" name="existing_prices[<?= $time['option_id'] ?>]" class="form-control"
                             value="<?= $time['price'] ?>" min="0" step="0.01" required>
                           <span class="input-group-text">€</span>
                         </div>
-                      </div>
-                      <div class="col-md-3">
-                        <div class="input-group">
-                          <input type="number" name="existing_discounts[<?= $time['option_id'] ?>]" class="form-control"
-                            value="<?= isset($time['discount_percent']) ? $time['discount_percent'] : 0 ?>" min="0" max="100" step="0.01">
-                          <span class="input-group-text">%</span>
-                        </div>
-                      </div>                      
+                      </div>                   
                       <div class="col-md-2">
                         <a href="delete_service_time.php?id=<?= $time['option_id'] ?>&service=<?= $id ?>" class="btn btn-danger" onclick="return confirm('Are you sure you want to permanently delete this time option\'s data?');">Delete</a>
                       </div>
@@ -141,22 +128,16 @@ $imagePath = !empty($data['coverimg']) ? 'assets/img/' . htmlspecialchars($data[
                     const container = document.getElementById('new-time-price');
                     const html = `
                       <div class="row mb-2 align-items-center">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                           <div class="input-group">
                             <input type="number" name="new_times[]" class="form-control" min="0" required>
                             <span class="input-group-text">minute</span>
                           </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                           <div class="input-group">
                             <input type="number" name="new_prices[]" class="form-control" min="0" step="0.01" required>
                             <span class="input-group-text">€</span>
-                          </div>
-                        </div>
-                        <div class="col-md-3">
-                          <div class="input-group">
-                            <input type="number" name="new_discounts[]" class="form-control" min="0" max="100" step="0.01" placeholder="0">
-                            <span class="input-group-text">%</span>
                           </div>
                         </div>
                         <div class="col-md-2">

@@ -273,10 +273,7 @@
                                         <span>ราคารวม:</span>
                                         <span id="totalPrice">€0</span>
                                     </div>
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span>ส่วนลด:</span>
-                                        <span id="totalDiscount">€0</span>
-                                    </div>
+
                                     <hr style="border-color: rgba(255,255,255,0.3);">
                                     <div class="d-flex justify-content-between">
                                         <strong>ราคาสุทธิ:</strong>
@@ -738,11 +735,9 @@ function updateCartDisplay() {
          // Calculate price summary without promotions
         function calculatePrices() {
             const totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
-            const totalDiscount = 0;
             const finalPrice = totalPrice;
 
             document.getElementById('totalPrice').textContent = `€${totalPrice.toLocaleString()}`;
-            document.getElementById('totalDiscount').textContent = `€${totalDiscount.toLocaleString()}`;
             document.getElementById('finalPrice').textContent = `€${finalPrice.toLocaleString()}`;
         }
 

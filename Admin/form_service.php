@@ -55,12 +55,6 @@
                         <label class="form-check-label" for="active_status">Active Status</label>
                   </div>
                 </div>
-                <div class="col-md-6">
-                  <div class="form-floating">
-                    <input type="number" step="0.01" min="0" max="100" class="form-control" name="service_discount" placeholder="ส่วนลดบริการ (%)" value="0">
-                    <label for="service_discount">Service Discount (%)</label>
-                  </div>
-                </div>
 
                 <!-- ฟอร์มเวลาเพิ่มเติม -->
 
@@ -85,12 +79,7 @@
         <input type="number" name="new_prices[]" class="form-control" required min="0" step="0.01" placeholder="">
         <span class="input-group-text">€</span>
       </div>
-    </div>
-        <div class="col-md-3">
-      <div class="input-group">
-        <input type="number" name="new_discounts[]" class="form-control" min="0" max="100" step="0.01" placeholder="0">
-        <span class="input-group-text">%</span>
-      </div>
+
     </div>
     <div class="col-md-2">
       <button type="button" class="btn btn-danger" onclick="this.closest('.row').remove()">Delete</button>
@@ -109,16 +98,10 @@ function addTimePriceField() {
           <span class="input-group-text">minute</span>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-4">
         <div class="input-group">
           <input type="number" name="new_prices[]" class="form-control" required min="0" step="0.01" placeholder="">
           <span class="input-group-text">€</span>
-        </div>
-      </div>
-            <div class="col-md-3">
-        <div class="input-group">
-          <input type="number" name="new_discounts[]" class="form-control" min="0" max="100" step="0.01" placeholder="0">
-          <span class="input-group-text">%</span>
         </div>
       </div>
       <div class="col-md-2">

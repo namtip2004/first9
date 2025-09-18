@@ -88,15 +88,10 @@ function getPriceDisplay($discount, $apply_to_all) {
     <div id="home" class="page-section active">
         <!-- Hero Section -->
         <section class="hero-section">
-            <div class="hero-floating-elements">
-                <div class="floating-ornament"><i class="fas fa-leaf"></i></div>
-                <div class="floating-ornament"><i class="fas fa-spa"></i></div>
-                <div class="floating-ornament"><i class="fas fa-lotus"></i></div>
-            </div>
             
             <div class="container">
                 <div class="row align-items-center">
-                    <div class="col-lg-7">
+                    <div class="col-lg-6 col-xl-5">
                         <div class="hero-content">
                             <!-- <div class="hero-subtitle-small fade-in">Luxury Wellness Sanctuary</div> -->
                             <h1 class="hero-title font-display fade-in" style="animation-delay: 0.2s;">
@@ -107,9 +102,9 @@ function getPriceDisplay($discount, $apply_to_all) {
 Experience premium spa treatments with the art of traditional Thai massage
 in a tranquil and luxurious setting, for true relaxation.
                             </p>
-                            <a href="booking.php" class="btn-luxury fade-in" style="animation-delay: 0.6s;">
+                            <!-- <a href="booking.php" class="btn-luxury fade-in" style="animation-delay: 0.6s;">
                                 <i class="fas fa-calendar-check me-2"></i>Booking Now
-                            </a>
+                            </a> -->
                         </div>
                     </div>
                 </div>

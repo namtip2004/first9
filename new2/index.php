@@ -1,4 +1,66 @@
+<?php
+require_once 'connect_db.php';
 
+$hotServices = [];
+
+if (isset($conn) && $conn instanceof mysqli) {
+    $hotSql = "
+        SELECT
+            sv.service_id,
+            sv.service_name,
+            COALESCE(sv.description, '') AS description,
+            COALESCE(sv.coverimg, '') AS coverimg,
+            MIN(so.price) AS min_price,
+            COUNT(DISTINCT b.booking_id) AS total_bookings
+        FROM booking b
+        JOIN booking_seviceop bs ON b.booking_id = bs.booking_id
+        JOIN service_option so ON bs.option_id = so.option_id
+        JOIN service sv ON so.service_id = sv.service_id
+        WHERE b.status IN ('confirmed', 'completed')
+        GROUP BY sv.service_id, sv.service_name, sv.description, sv.coverimg
+        ORDER BY total_bookings DESC, sv.service_name ASC
+        LIMIT 3
+    ";
+
+    if ($result = $conn->query($hotSql)) {
+        while ($row = $result->fetch_assoc()) {
+            $row['min_price'] = $row['min_price'] !== null ? (float) $row['min_price'] : null;
+            $row['total_bookings'] = (int) ($row['total_bookings'] ?? 0);
+            $hotServices[] = $row;
+        }
+        $result->free();
+    }
+
+    if (empty($hotServices)) {
+        $fallbackSql = "
+            SELECT
+                s.service_id,
+                s.service_name,
+                COALESCE(s.description, '') AS description,
+                COALESCE(s.coverimg, '') AS coverimg,
+                (
+                    SELECT MIN(so.price)
+                    FROM service_option so
+                    WHERE so.service_id = s.service_id
+                ) AS min_price,
+                0 AS total_bookings
+            FROM service s
+            WHERE s.is_active = 1
+            ORDER BY s.service_name ASC
+            LIMIT 3
+        ";
+
+        if ($fallbackResult = $conn->query($fallbackSql)) {
+            while ($row = $fallbackResult->fetch_assoc()) {
+                $row['min_price'] = $row['min_price'] !== null ? (float) $row['min_price'] : null;
+                $row['total_bookings'] = (int) ($row['total_bookings'] ?? 0);
+                $hotServices[] = $row;
+            }
+            $fallbackResult->free();
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -44,6 +106,7 @@ in a tranquil and luxurious setting, for true relaxation.
             </div>
         </section>
 
+        
 
         <!-- Services Section -->
         <section class="services-section">
@@ -56,6 +119,8 @@ in a tranquil and luxurious setting, for true relaxation.
                         เพื่อประสบการณ์การผ่อนคลายที่เหนือระดับ
                     </p>
                 </div>
+
+
                 
                 <div class="row g-4">
                     <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.1s;">
@@ -87,6 +152,60 @@ in a tranquil and luxurious setting, for true relaxation.
                             <p>การดูแลแบบองค์รวมด้วยสมุนไพรธรรมชาติและเทคนิคสมัยใหม่ เพื่อความงามและสุขภาพที่ดีอย่างยั่งยืน</p>
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+                <!-- Hot Services Section -->
+        <section class="hot-services-section">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <div class="section-subtitle">Most Popular</div>
+                    <h2 class="section-title font-display">Hot Services</h2>
+                    <p class="section-description">
+                        บริการยอดนิยมที่ลูกค้าให้ความไว้วางใจและกลับมาใช้บริการอย่างต่อเนื่อง
+                    </p>
+                </div>
+                
+                <div class="row g-4">
+                    <?php if (!empty($hotServices)): ?>
+                        <?php foreach ($hotServices as $index => $service): ?>
+                            <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: <?= htmlspecialchars(number_format(0.1 + ($index * 0.1), 1)) ?>s;">
+                                <div class="hot-service-card">
+                                    <div class="hot-badge">
+                                        <i class="fas fa-fire"></i>
+                                        HOT
+                                    </div>
+                                    <div class="service-image-hot">
+                                        <?php if (!empty($service['coverimg'])): ?>
+                                            <img src="../Admin/assets/img/<?= htmlspecialchars($service['coverimg']) ?>" alt="<?= htmlspecialchars($service['service_name']) ?>">
+                                        <?php else: ?>
+                                            <i class="fas fa-spa"></i>
+                                        <?php endif; ?>
+                                    </div>
+                                    <h4 class="font-display"><?= htmlspecialchars($service['service_name']) ?></h4>
+                                    <p><?= htmlspecialchars($service['description'] ?: 'บริการสปาคุณภาพสูงสำหรับการผ่อนคลายอย่างแท้จริง') ?></p>
+                                    <div class="rating">
+                                        <i class="fas fa-calendar-check"></i>
+                                        <span>
+                                            <?= $service['total_bookings'] > 0
+                                                ? number_format($service['total_bookings']) . ' booking'
+                                                : 'พร้อมให้บริการ' ?>
+                                        </span>
+                                    </div>
+                                    <div class="price-hot">
+                                        <?= $service['min_price'] !== null
+                                            ? 'Start price €' . number_format($service['min_price'], 2)
+                                            : 'ติดต่อเพื่อสอบถามราคา' ?>
+                                    </div>
+                                </div>
+                            </div>
+              <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="col-12 text-center">
+                            <p class="text-muted">ไม่พบข้อมูลบริการยอดนิยมในขณะนี้</p>
+                        </div>
+  <?php endif; ?>
                 </div>
             </div>
         </section>
@@ -266,90 +385,6 @@ in a tranquil and luxurious setting, for true relaxation.
                                     <span>Foot Massage</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Hot Services Section -->
-        <section class="hot-services-section">
-            <div class="container">
-                <div class="section-header fade-in">
-                    <div class="section-subtitle">Most Popular</div>
-                    <h2 class="section-title font-display">Hot Services This Month</h2>
-                    <p class="section-description">
-                        บริการยอดนิยมที่ลูกค้าให้ความไว้วางใจและกลับมาใช้บริการอย่างต่อเนื่อง
-                    </p>
-                </div>
-                
-                <div class="row g-4">
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.1s;">
-                        <div class="hot-service-card">
-                            <div class="hot-badge">
-                                <i class="fas fa-fire"></i>
-                                HOT
-                            </div>
-                            <div class="service-image-hot">
-                                <i class="fas fa-hands"></i>
-                            </div>
-                            <h4 class="font-display">Royal Thai Massage</h4>
-                            <p>การนวดไทยโบราณแบบราชการ 90 นาที</p>
-                            <div class="rating">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <span>(4.9/5)</span>
-                            </div>
-                            <div class="price-hot">1,800 บาท</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.2s;">
-                        <div class="hot-service-card">
-                            <div class="hot-badge">
-                                <i class="fas fa-fire"></i>
-                                HOT
-                            </div>
-                            <div class="service-image-hot">
-                                <i class="fas fa-leaf"></i>
-                            </div>
-                            <h4 class="font-display">Aromatherapy Oil Massage</h4>
-                            <p>นวดด้วยน้ำมันหอมระเหย 60 นาที</p>
-                            <div class="rating">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <span>(4.8/5)</span>
-                            </div>
-                            <div class="price-hot">1,500 บาท</div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.3s;">
-                        <div class="hot-service-card">
-                            <div class="hot-badge">
-                                <i class="fas fa-fire"></i>
-                                HOT
-                            </div>
-                            <div class="service-image-hot">
-                                <i class="fas fa-gem"></i>
-                            </div>
-                            <h4 class="font-display">Couple Spa Package</h4>
-                            <p>แพ็คเกจสปาคู่รัก 120 นาที</p>
-                            <div class="rating">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <span>(5.0/5)</span>
-                            </div>
-                            <div class="price-hot">3,200 บาท</div>
                         </div>
                     </div>
                 </div>

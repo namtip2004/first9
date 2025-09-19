@@ -704,10 +704,10 @@ body {
 }
 
 .service-image-hot {
-    width: 80px;
-    height: 80px;
+    width: 250px;
+    height: 250px;
     background: linear-gradient(135deg, var(--luxury-gold), var(--deep-burgundy));
-    border-radius: 50%;
+    border-radius: 5%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -715,8 +715,14 @@ body {
     font-size: 2rem;
     color: white;
     transition: all 0.5s ease;
+    overflow: hidden;
 }
 
+.service-image-hot img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
 .hot-service-card:hover .service-image-hot {
     transform: scale(1.1);
 }

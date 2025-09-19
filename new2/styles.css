@@ -1,7 +1,7 @@
 
 /* styles.css */
 :root {
-    --luxury-gold: #C9A96E;
+    --luxury-gold: #f9a392;
     --deep-burgundy: #8B4B5C;
     --soft-cream: #F8F5F0;
     --pearl-white: #FEFCF9;
@@ -33,12 +33,12 @@ body {
 
 /* Elegant Navigation */
 .navbar {
-    background: rgba(254, 252, 249, 0.98);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(20px);
-    box-shadow: 0 1px 30px rgba(201, 169, 110, 0.15);
+    box-shadow: 0 1px 30px rgba(110, 201, 184, 0.15);
     transition: all 0.4s ease;
     padding: 0px 0;
-    border-bottom: 1px solid rgba(201, 169, 110, 0.1);
+    border-bottom: 1px solid rgba(110, 201, 184, 0.1);
 }
 
 .navbar-brand {
@@ -75,7 +75,7 @@ body {
     padding: 10px 15px !important;
     margin: 0 15px;
     font-size: 0.9rem;
-    color: var(--deep-brown) !important;
+    color: #100e0c !important;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     position: relative;
@@ -84,7 +84,7 @@ body {
 
 .navbar-nav .nav-link:hover,
 .navbar-nav .nav-link.active {
-    color: var(--luxury-gold) !important;
+    color: #f9a392 !important;
 }
 
 .navbar-nav .nav-link::after {
@@ -95,7 +95,7 @@ body {
     transform: translateX(-50%);
     width: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent, var(--luxury-gold), transparent);
+    background: linear-gradient(90deg, transparent, #f9a392, transparent);
     transition: width 0.4s ease;
 }
 
@@ -222,21 +222,21 @@ body {
 .hero-title {
     font-size: clamp(3.2rem, 5.5vw, 4.8rem);
     font-weight: 500;
-    color: #5d4a49;
+    color: #2d2625;
     margin-bottom: 18px;
     letter-spacing: 1px;
     line-height: 1.05;
 }
 
 .hero-title-accent {
-     color: #c7a996;
+     color: #f9a392;
     font-style: italic;
     font-weight: 500;
 }
 
 .hero-description {
     font-size: 1.1rem;
-    color: rgba(74, 63, 53, 0.85);
+    color: rgba(0, 0, 0, 0.85);
     margin-bottom: 38px;
     font-weight: 300;
     line-height: 1.85;

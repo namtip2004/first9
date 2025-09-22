@@ -234,7 +234,40 @@ $sql="
   ORDER BY $orderBy
 ";
 $rs=$conn->query($sql);
-$rows=[]; while($r=$rs->fetch_assoc()) $rows[]=$r;
+$rows=[];
+while($r=$rs->fetch_assoc()){
+  $rows[]=$r;
+}
+
+if ($search!=='') {
+  $rows = array_values(array_filter($rows, function($r) use ($search){
+    return mb_stripos($r['staff_name'] ?? '', $search) !== false;
+  }));
+}
+
+$totalRows = count($rows);
+$summary = [
+  'tx_total' => 0,
+  'tx_conf'  => 0,
+  'tx_pend'  => 0,
+  'tx_canc'  => 0,
+  'net_rev'  => 0.0,
+  'custs'    => 0,
+  'hrs'      => 0.0,
+  'aov'      => 0.0,
+  'avgdur'   => 0.0,
+];
+foreach ($rows as $row) {
+  $summary['tx_total'] += (int)($row['tx_total'] ?? 0);
+  $summary['tx_conf']  += (int)($row['tx_conf'] ?? 0);
+  $summary['tx_pend']  += (int)($row['tx_pend'] ?? 0);
+  $summary['tx_canc']  += (int)($row['tx_canc'] ?? 0);
+  $summary['net_rev']  += (float)($row['net_rev'] ?? 0);
+  $summary['custs']    += (int)($row['custs'] ?? 0);
+  $summary['hrs']      += (float)($row['hrs'] ?? 0);
+}
+$summary['aov']    = $summary['tx_conf'] > 0 ? $summary['net_rev'] / $summary['tx_conf'] : 0.0;
+$summary['avgdur'] = $summary['tx_total'] > 0 ? ($summary['hrs'] * 60) / $summary['tx_total'] : 0.0;
 
 // Dropdown options
 $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
@@ -323,6 +356,9 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
           <div class="col-md-auto">
             <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
           </div>
+                    <div class="ms-auto col-md-auto d-flex gap-2 align-items-center">
+            <span class="badge bg-primary">สตาฟที่พบ: <?=number_format($totalRows)?> คน</span>
+          </div>
         </form>
 
         <div class="table-responsive mt-3">
@@ -335,24 +371,17 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                 <th class="text-end">Pending</th>
                 <th class="text-end">Cancelled</th>
                 <th class="text-end">Net Revenue</th>
-                <th class="text-end">AOV</th>
-                <th class="text-end">Customers</th>
+                <!-- <th class="text-end">AOV</th> -->
+                <!-- <th class="text-end">Customers</th> -->
                 <th class="text-end">Hours</th>
-                <th class="text-end">Avg Duration (min)</th>
-                <th>First</th>
+                <!-- <th class="text-end">Avg Duration (min)</th> -->
+                <!-- <th>First</th>
                 <th>Last</th>
-                <th>Action</th>
+                <th>Action</th> -->
               </tr>
             </thead>
             <tbody>
-              <?php
-              // apply search on staff name client-side like server (for simplicity, we can filter array here)
-              if ($search!=='') {
-                $rows = array_values(array_filter($rows, function($r) use ($search){
-                  return mb_stripos($r['staff_name']??'', $search) !== false;
-                }));
-              }
-              if (empty($rows)): ?>
+              <?php if (empty($rows)): ?>
                 <tr><td colspan="13" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
               <?php else:
                 foreach($rows as $r):
@@ -364,12 +393,12 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                   <td class="text-end"><?=number_format((int)$r['tx_total'])?></td>
                   <td class="text-end"><span class="badge bg-success"><?=number_format((int)$r['tx_conf'])?></span></td>
                   <td class="text-end"><span class="badge bg-warning text-dark"><?=number_format((int)$r['tx_pend'])?></span></td>
-                  <td class="text-end"><span class="badge bg-secondary"><?=number_format((int)$r['tx_canc'])?></span></td>
+                  <td class="text-end"><span class="badge bg-danger"><?=number_format((int)$r['tx_canc'])?></span></td>
                   <td class="text-end fw-bold text-success">฿<?=number_format((float)$r['net_rev'],2)?></td>
-                  <td class="text-end">฿<?=number_format((float)$r['aov'],2)?></td>
-                  <td class="text-end"><?=number_format((int)$r['custs'])?></td>
+                  <!-- <td class="text-end">฿<?=number_format((float)$r['aov'],2)?></td>
+                  <td class="text-end"><?=number_format((int)$r['custs'])?></td> -->
                   <td class="text-end"><?=number_format($hrs,2)?></td>
-                  <td class="text-end"><?=number_format($avgdur,1)?></td>
+                  <!-- <td class="text-end"><?=number_format($avgdur,1)?></td>
                   <td><?=esc($r['first_bk']?:'-')?></td>
                   <td><?=esc($r['last_bk']?:'-')?></td>
                   <td>
@@ -377,10 +406,27 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                       <a href="staff_detail.php?id=<?= (int)$r['staff_id'] ?>" class="btn btn-sm btn-outline-primary" title="View Staff"><i class="bi bi-person"></i></a>
                       <a href="booking.php?staff=<?= (int)$r['staff_id'] ?>" class="btn btn-sm btn-outline-secondary" title="View Bookings"><i class="bi bi-calendar3"></i></a>
                     </div>
-                  </td>
+                  </td> -->
                 </tr>
               <?php endforeach; endif; ?>
             </tbody>
+                        <!-- <tfoot class="table-light">
+              <tr>
+                <th>รวม</th>
+                <th class="text-end fw-bold"><?=number_format($summary['tx_total'])?></th>
+                <th class="text-end"><span class="badge bg-success"><?=number_format($summary['tx_conf'])?></span></th>
+                <th class="text-end"><span class="badge bg-warning text-dark"><?=number_format($summary['tx_pend'])?></span></th>
+                <th class="text-end"><span class="badge bg-secondary"><?=number_format($summary['tx_canc'])?></span></th>
+                <th class="text-end fw-bold text-success">฿<?=number_format($summary['net_rev'],2)?></th>
+                <th class="text-end">฿<?=number_format($summary['aov'],2)?></th>
+                <th class="text-end"><?=number_format($summary['custs'])?></th>
+                <th class="text-end"><?=number_format($summary['hrs'],2)?></th>
+                <th class="text-end"><?=number_format($summary['avgdur'],1)?></th>
+                <th class="text-muted">-</th>
+                <th class="text-muted">-</th>
+                <th></th>
+              </tr>
+            </tfoot> -->
           </table>
         </div>
 

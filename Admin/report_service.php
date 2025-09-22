@@ -363,6 +363,17 @@ $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER B
                 </tr>
               <?php endforeach; endif; ?>
             </tbody>
+                        <tfoot class="table-light">
+              <tr>
+                <th>รวม</th>
+                <th class="text-end fw-bold"><?=number_format($summarySvc['tx'])?></th>
+                <th class="text-end"><?=number_format($summarySvc['customers'])?></th>
+                <th class="text-end"><?=number_format($summarySvc['gross'],2)?></th>
+                <th class="text-end text-danger">-<?=number_format($summarySvc['discount'],2)?></th>
+                <th class="text-end fw-bold text-success"><?=number_format($summarySvc['net'],2)?></th>
+                <th class="text-muted">-</th>
+              </tr>
+            </tfoot>
           </table>
         </div>
 

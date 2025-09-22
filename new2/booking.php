@@ -536,6 +536,8 @@ function loadServiceOptions(serviceId, serviceName) {
         });
 }
 
+
+
 function addToCart(serviceId, option, serviceName) {
     // Check if service already exists in cart (regardless of optionId)
     const existingIndex = selectedItems.findIndex(item => item.serviceId === serviceId);
@@ -550,7 +552,7 @@ function addToCart(serviceId, option, serviceName) {
             price: parseFloat(option.price),
             description: `${option.duration} min`
         });
-        showToast(`เพิ่ม ${serviceName} (${option.duration} min) ในรายการแล้ว`, 'success');
+        //showToast(`เพิ่ม ${serviceName} (${option.duration} min) ในรายการแล้ว`, 'success');
     } else {
         // If service exists, replace the existing option
         const oldDuration = selectedItems[existingIndex].duration;
@@ -562,7 +564,7 @@ function addToCart(serviceId, option, serviceName) {
             price: parseFloat(option.price),
             description: `${option.duration} min`
         };
-        showToast(`เปลี่ยน ${serviceName} จาก ${oldDuration} min เป็น ${option.duration} min`, 'info');
+        //showToast(`เปลี่ยน ${serviceName} จาก ${oldDuration} min เป็น ${option.duration} min`, 'info');
     }
     
     updateCartDisplay();

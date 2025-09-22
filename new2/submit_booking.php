@@ -34,44 +34,46 @@ try {
         throw new Exception('กรุณาเลือกบริการและตัวเลือก');
     }
 
+    // รับ Note จากฟอร์ม (textarea name="special_requests") แล้วทำความสะอาด
+    $note = '';
+    if (isset($_POST['special_requests'])) {
+        $note = trim($_POST['special_requests']);
+        $note = strip_tags($note);
+        $note = mb_substr($note, 0, 1000, 'UTF-8'); // จำกัดความยาวกันสแปม
+    }
+
     // Handle evidence file upload
     $evidenceFileName = null;
     if (isset($_FILES['evidence']) && $_FILES['evidence']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = '../admin/assets/img/';
-        
-        // Create directory if it doesn't exist
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
-        
-        // ใช้ชื่อไฟล์เดิม
+
+        // ใช้ชื่อไฟล์เดิม แต่กันชนกันชื่อซ้ำ
         $originalFileName = $_FILES['evidence']['name'];
         $fileInfo = pathinfo($originalFileName);
         $extension = strtolower($fileInfo['extension']);
-        
-        // Validate file type
+
         $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
         if (!in_array($extension, $allowedExtensions)) {
             throw new Exception('ประเภทไฟล์ไม่ถูกต้อง กรุณาอัพโหลดไฟล์ภาพ (jpg, png, gif)');
         }
-        
-        // Validate file size (max 5MB)
+
         if ($_FILES['evidence']['size'] > 5 * 1024 * 1024) {
             throw new Exception('ไฟล์ขนาดใหญ่เกินไป (สูงสุด 5MB)');
         }
-        
-        // ตรวจสอบว่าไฟล์มีชื่อซ้ำหรือไม่ ถ้าซ้ำให้เพิ่มเลขต่อท้าย
+
         $evidenceFileName = $originalFileName;
         $uploadPath = $uploadDir . $evidenceFileName;
         $counter = 1;
-        
         while (file_exists($uploadPath)) {
             $nameWithoutExt = $fileInfo['filename'];
             $evidenceFileName = $nameWithoutExt . '_' . $counter . '.' . $extension;
             $uploadPath = $uploadDir . $evidenceFileName;
             $counter++;
         }
-        
+
         if (!move_uploaded_file($_FILES['evidence']['tmp_name'], $uploadPath)) {
             throw new Exception('เกิดข้อผิดพลาดในการอัพโหลดไฟล์');
         }
@@ -81,7 +83,7 @@ try {
 
     // Convert comma-separated strings to arrays
     $services = array_filter(explode(',', $_POST['services']));
-    $options = array_filter(explode(',', $_POST['options']));
+    $options  = array_filter(explode(',', $_POST['options']));
 
     if (count($services) !== count($options)) {
         throw new Exception('ข้อมูลบริการและตัวเลือกไม่สอดคล้องกัน');
@@ -91,7 +93,7 @@ try {
     $total_duration = 0;
     $total_price = 0;
     $total_discount = 0;
- 
+
     foreach ($options as $index => $option_id) {
         $stmt = $pdo->prepare("SELECT duration, price, service_id FROM service_option WHERE option_id = ?");
         $stmt->execute([(int)$option_id]);
@@ -99,10 +101,8 @@ try {
         if (!$option || $option['service_id'] != $services[$index]) {
             throw new Exception('ตัวเลือกหรือบริการไม่ถูกต้อง');
         }
-        $total_duration += $option['duration'];
-        $total_price += $option['price'];
-
-
+        $total_duration += (int)$option['duration'];
+        $total_price    += (float)$option['price'];
     }
 
     $end_time = date("H:i", strtotime("+$total_duration minutes", strtotime($start_time)));
@@ -123,35 +123,42 @@ try {
         throw new Exception('ผู้ให้บริการไม่ว่างในช่วงเวลานี้');
     }
 
-    // Insert into booking with evidence
+    // Insert into booking (เพิ่ม note ลงไปด้วย)
     $stmt = $pdo->prepare("
-        INSERT INTO booking (customer_id, staff_id, booking_date, time_start, time_end, total_price, total_discount, final_price, status, discount_detail, evidence)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        INSERT INTO booking (
+            customer_id, staff_id, booking_date, time_start, time_end,
+            total_price, total_discount, final_price, note, status, discount_detail, evidence
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
     ");
     $stmt->execute([
-        $customer_id, 
-        $staff_id, 
-        $booking_date, 
-        $start_time, 
-        $end_time, 
-        $total_price, 
-        $total_discount, 
-        $final_price, 
+        $customer_id,
+        $staff_id,
+        $booking_date,
+        $start_time,
+        $end_time,
+        $total_price,
+        $total_discount,
+        $final_price,
+        $note,              // ✅ บันทึกลงคอลัมน์ note
         null,
         $evidenceFileName
     ]);
     $booking_id = $pdo->lastInsertId();
 
-    // Insert into booking_seviceop
+    // Insert into booking_seviceop (สะกดตามชื่อตารางที่คุณใช้อยู่)
     foreach ($options as $index => $option_id) {
         $stmt = $pdo->prepare("SELECT price, service_id FROM service_option WHERE option_id = ?");
         $stmt->execute([(int)$option_id]);
         $option = $stmt->fetch();
-        $price = $option['price'];
+        $price = (float)$option['price'];
         $discount = 0;
 
         $net_price = $price - $discount;
-        $stmt = $pdo->prepare("INSERT INTO booking_seviceop (booking_id, option_id, price_booking, discount_booking, net_price) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $pdo->prepare("
+            INSERT INTO booking_seviceop (booking_id, option_id, price_booking, discount_booking, net_price)
+            VALUES (?, ?, ?, ?, ?)
+        ");
         $stmt->execute([$booking_id, (int)$option_id, $price, $discount, $net_price]);
     }
 
@@ -159,15 +166,15 @@ try {
     echo json_encode(['success' => true, 'message' => 'จองสำเร็จ รอการตรวจสอบการชำระเงิน']);
 
 } catch (Exception $e) {
-    if (isset($pdo)) {
+    if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    
-    // Delete uploaded file if there's an error
+
+    // ลบไฟล์ที่อัปโหลดแล้วหากเกิดข้อผิดพลาด
     if (isset($evidenceFileName) && $evidenceFileName && file_exists('../admin/assets/img/' . $evidenceFileName)) {
-        unlink('../admin/assets/img/' . $evidenceFileName);
+        @unlink('../admin/assets/img/' . $evidenceFileName);
     }
-    
+
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

@@ -168,7 +168,7 @@
                 <div class="col-lg-7 mb-4">
                     <div class="services-section">
                         <h4 class="font-display mb-4" style="color: var(--charcoal);">
-                            <i class="fas fa-spa me-2"></i>เลือกบริการของคุณ
+                            <i class="fas fa-spa me-2"></i>Select Service
                         </h4>
                         <div id="servicesContainer">
                             <!-- Services will be loaded here -->
@@ -181,11 +181,11 @@
                     <div class="cart-section">
                          <div id="cartDisplaySection">
                         <h4 class="font-display mb-4" style="color: var(--charcoal);">
-                            <i class="fas fa-shopping-cart me-2"></i>รายการที่เลือก
+                            <i class="fas fa-shopping-cart me-2"></i>Selected Services
                         </h4>
                         
                         <div id="cartItems" class="mb-4">
-                            <p class="text-center text-muted">ยังไม่ได้เลือกบริการ</p>
+                            <p class="text-center text-muted">No Services Selected</p>
                         </div>
                         </div>
 
@@ -216,7 +216,7 @@
                           <!-- Date Selection -->
 <div class="form-group mb-3">
     <label class="form-label">
-        <i class="fas fa-calendar me-1"></i>เลือกวันที่
+        <i class="fas fa-calendar me-1"></i>Date
     </label>
     <div class="d-flex justify-content-center">
     <div id="bookingDate" class="calendar-container">
@@ -229,20 +229,20 @@
                             <!-- Time Selection -->
                             <div class="form-group mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-clock me-2"></i>เลือกเวลา
+                                    <i class="fas fa-clock me-2"></i>Time
                                 </label>
                                 <select class="form-control" id="startTime" name="start_time" required>
-                                    <option value="">เลือกเวลา</option>
+                                    <option value="">Select Time</option>
                                 </select>
                             </div>
 
                             <!-- Staff Selection -->
                             <div class="form-group mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-user me-2"></i>เลือกผู้ให้บริการ
+                                    <i class="fas fa-user me-2"></i>Therapist
                                 </label>
                                 <button type="button" class="btn btn-outline-primary w-100" id="selectStaffBtn" data-bs-toggle="modal" data-bs-target="#staffModal">
-                                    <i class="fas fa-users me-2"></i>เลือกผู้ให้บริการ
+                                    <i class="fas fa-users me-2"></i>Select Therapist
                                 </button>
                                 <input type="hidden" name="staff_id" id="selectedStaffId">
                             </div>
@@ -250,7 +250,7 @@
                             <!-- Duration Display -->
                             <div class="mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-hourglass-half me-2"></i>ระยะเวลารวม
+                                    <i class="fas fa-hourglass-half me-2"></i>Total Duration
                                 </label>
                                 <input type="text" class="form-control" id="totalDuration" readonly>
                             </div>
@@ -258,7 +258,7 @@
                             <!-- Special Requests -->
                             <div class="form-group mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-comment me-2"></i>ข้อมูลเพิ่มเติม
+                                    <i class="fas fa-comment me-2"></i>Note
                                 </label>
                                 <textarea class="form-control" name="special_requests" rows="3" placeholder="ความต้องการพิเศษ หรือข้อมูลสุขภาพที่ควรทราบ"></textarea>
                             </div>
@@ -266,17 +266,17 @@
                             <!-- Price Summary -->
                             <div class="summary-card">
                                 <h5 class="font-display mb-3">
-                                    <i class="fas fa-receipt me-2"></i>สรุปราคา
+                                    <i class="fas fa-receipt me-2"></i>Total Summary
                                 </h5>
                                 <div id="priceSummary">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span>ราคารวม:</span>
+                                        <span>Total:</span>
                                         <span id="totalPrice">€0</span>
                                     </div>
 
                                     <hr style="border-color: rgba(255,255,255,0.3);">
                                     <div class="d-flex justify-content-between">
-                                        <strong>ราคาสุทธิ:</strong>
+                                        <strong>Grand Total:</strong>
                                         <strong id="finalPrice" style="color: var(--luxury-gold);">€0</strong>
                                     </div>
                                 </div>
@@ -284,7 +284,7 @@
 
                             <!-- Submit Button -->
 <button type="button" class="btn-luxury w-100 mt-4" id="proceedToPaymentBtn" disabled>
-    <i class="fas fa-credit-card me-2"></i>ชำระเงิน
+    <i class="fas fa-credit-card me-2"></i>payment
 </button>
                         </form>
                         </div>
@@ -292,17 +292,17 @@
                         <div id="paymentSection" class="payment-section" style="display: none;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="font-display" style="color: var(--charcoal);">
-            <i class="fas fa-credit-card me-2"></i>ชำระเงิน
+            <i class="fas fa-credit-card me-2"></i>Payment
         </h4>
         <button type="button" class="btn btn-outline-secondary" id="backToBookingBtn">
-            <i class="fas fa-arrow-left me-2"></i>กลับ
+            <i class="fas fa-arrow-left me-2"></i>back
         </button>
     </div>
 
     <!-- สรุปการจอง -->
     <div class="booking-summary-card mb-4">
         <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">
-            <i class="fas fa-file-invoice me-2"></i>สรุปการจอง
+            <i class="fas fa-file-invoice me-2"></i>Booking Summary
         </h5>
         <div id="paymentSummaryDetails">
             <!-- จะแสดงรายละเอียดการจอง -->
@@ -312,7 +312,7 @@
     <!-- วิธีการชำระเงิน -->
     <div class="payment-methods-card mb-4">
         <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">
-            <i class="fas fa-money-check-alt me-2"></i>วิธีการชำระเงิน
+            <i class="fas fa-money-check-alt me-2"></i>Payment Options
         </h5>
         <div class="payment-methods">
             <div class="payment-method-item">
@@ -387,7 +387,7 @@
             <div class="modal-content">
                 <div class="modal-header" style="background: var(--luxury-gold); color: var(--charcoal);">
                     <h5 class="modal-title font-display">
-                        <i class="fas fa-users me-2"></i>เลือกผู้ให้บริการ
+                        <i class="fas fa-users me-2"></i>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -430,7 +430,7 @@
         dateFormat: "Y-m-d",
         minDate: "today",
         maxDate: new Date().fp_incr(90), // 90 days from today
-        locale: "th",
+        locale: "en",
         inline: true, // แสดงปฏิทินทันที
         onChange: function(selectedDates, dateStr) {
             if (dateStr) {
@@ -506,7 +506,7 @@ function loadServiceOptions(serviceId, serviceName) {
             container.innerHTML = '';
 
             if (options.length === 0) {
-                container.innerHTML = '<small style="color: var(--deep-brown);">ไม่มีตัวเลือก</small>';
+                container.innerHTML = '<small style="color: var(--deep-brown);">No Services</small>';
                 return;
             }
 
@@ -586,7 +586,7 @@ function updateCartDisplay() {
     const container = document.getElementById('cartItems');
     
     if (selectedItems.length === 0) {
-        container.innerHTML = '<p class="text-center text-muted">ยังไม่ได้เลือกบริการ</p>';
+        container.innerHTML = '<p class="text-center text-muted">No Services Selected</p>';
         document.getElementById('proceedToPaymentBtn').disabled = true;
         return;
     }
@@ -623,7 +623,7 @@ function updateCartDisplay() {
         // Update total duration
         function updateTotalDuration() {
             totalDuration = selectedItems.reduce((sum, item) => sum + item.duration, 0);
-            document.getElementById('totalDuration').value = `${totalDuration} นาที`;
+            document.getElementById('totalDuration').value = `${totalDuration} Min`;
             
             // Reload available times if date is selected
             const selectedDate = document.getElementById('hiddenBookingDate').value;
@@ -640,7 +640,7 @@ function updateCartDisplay() {
                 .then(response => response.json())
                 .then(times => {
                     const timeSelect = document.getElementById('startTime');
-                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.innerHTML = '<option value="">Select Time</option>';
                     
                     times.forEach(time => {
                         const option = document.createElement('option');
@@ -795,45 +795,74 @@ function generatePaymentSummary() {
     const time = document.getElementById('startTime').value;
     const staffName = selectedStaff ? selectedStaff.name : 'ไม่ระบุ';
 
+    const [hour, minute] = time.split(':').map(Number);
+    const startDate = new Date(`2000-01-01T${time}:00`); // วันอะไรก็ได้
+    const endDate   = new Date(startDate.getTime() + totalDuration * 60000); // บวกนาที
+    const endHour   = String(endDate.getHours()).padStart(2, '0');
+    const endMinute = String(endDate.getMinutes()).padStart(2, '0');
+    const endTime   = `${endHour}:${endMinute}`;
+
     let summaryHTML = `
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">วันที่และเวลา</div>
-                <div class="summary-service-details">${formatEnglishDate(date)} เวลา ${time}</div>
+                <div class="summary-service-name">Date - Time</div>
+                <div class="summary-service-details">${formatEnglishDate(date)}</div>
+                <div class="summary-service-details">Time ${time} - ${endTime}</div>
             </div>
         </div>
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ผู้ให้บริการ</div>
+                <div class="summary-service-name">Therapist</div>
                 <div class="summary-service-details">${staffName}</div>
-            </div>
-        </div>
-        <div class="summary-item">
-            <div class="summary-service">
-                <div class="summary-service-name">ระยะเวลารวม</div>
-                <div class="summary-service-details">${totalDuration} นาที</div>
             </div>
         </div>
     `;
     
-    // Add selected services
-    selectedItems.forEach(item => {
-        summaryHTML += `
-            <div class="summary-item">
-                <div class="summary-service">
-                    <div class="summary-service-name">${item.serviceName}</div>
-                    <div class="summary-service-details">${item.description}</div>
-                </div>
-                <div class="summary-price">€${item.price.toLocaleString()}</div>
+summaryHTML += `
+<div class="summary-item">
+<div class="summary-service">
+    <div class="summary-service-name">Service</div>
+    <div class="summary-subitem">
+`;
+
+selectedItems.forEach(item => {
+    summaryHTML += `
+ <div class="service-row">
+            <div class="col-name">
+            <div class="summary-service-details">${item.serviceName}</div>
             </div>
-        `;
-    });
+            <div class="col-time">
+            <div class="summary-service-details">${item.description}</div>
+            </div>
+            <div class="col-price">
+        <div class="summary-price">€${item.price.toLocaleString()}</div>
+    </div>
+        </div>
+    `;
+});
+
+
+
+
+summaryHTML += `
+</div>
+    </div>
+</div>
+`;
     
+    summaryHTML += `
+            <div class="summary-item">
+            <div class="summary-service">
+                <div class="summary-service-name">Total Duration</div>
+                <div class="summary-service-details">${totalDuration} นาที</div>
+            </div>
+        </div>
+    `;
     // Total
     summaryHTML += `
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ยอดรวมทั้งสิ้น</div>
+                <div class="summary-service-name">Grand Total</div>
             </div>
             <div class="summary-price">€${document.getElementById('finalPrice').textContent.replace('€', '').replace(',', '')}</div>
         </div>
@@ -1230,6 +1259,32 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
     align-items: center;
     padding: 10px 0;
     border-bottom: 1px solid rgba(201, 169, 110, 0.1);
+}
+
+.summary-subitem {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* ระยะห่างระหว่างแถว */
+    width: 100%;
+}
+
+/* บังคับ 3 คอลัมน์กว้างเท่ากันตลอด */
+.summary-subitem .service-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px; /* ชื่อ / เวลา / ราคา */
+    align-items: center;
+}
+
+/* จัดราคาให้ขวาและสีเด่น */
+.col-price {
+    text-align: right;
+    color: #e58b73;
+    font-weight: 600;
+}
+
+.summary-price {
+    color: #e58b73; /* ตัวอย่างสีราคา */
+    font-weight: 600;
 }
 
 .summary-item:last-child {

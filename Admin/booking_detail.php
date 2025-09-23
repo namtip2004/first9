@@ -55,7 +55,8 @@ if (!$booking) { echo "ไม่พบข้อมูลการจองนี
 
 /* ดึงรายการบริการที่จอง */
 $service_sql = "
-  SELECT sv.service_name, so.duration, so.price
+  SELECT sv.service_name, so.duration, so.price,
+         bs.price_booking, bs.discount_booking, bs.net_price
   FROM booking_seviceop bs
   JOIN service_option so ON bs.option_id = so.option_id
   JOIN service sv       ON so.service_id = sv.service_id
@@ -68,10 +69,14 @@ $service_result = $stmt2->get_result();
 $services = [];
 $totalMinutes = 0;
 $totalPrice   = 0.0;
+$totalDiscount = 0.0;
+$totalNet     = 0.0;
 while ($row = $service_result->fetch_assoc()) {
   $services[] = $row;
   $totalMinutes += (int)$row['duration'];
-  $totalPrice   += (float)$row['price'];
+  $totalPrice   += (float)($row['price_booking'] ?? $row['price']);
+  $totalDiscount += (float)($row['discount_booking'] ?? 0);
+  $totalNet     += (float)($row['net_price'] ?? ($row['price_booking'] ?? $row['price']));
 }
 $stmt2->close();
 
@@ -170,6 +175,8 @@ if ($status === 'pending') {
           <th>Service</th>
           <th class="text-center" style="width:120px;">Minutes</th>
           <th class="text-end" style="width:140px;">Price (฿)</th>
+          <th class="text-end" style="width:140px;">Discount (฿)</th>
+          <th class="text-end" style="width:140px;">Net (฿)</th>
         </tr>
       </thead>
       <tbody>
@@ -177,7 +184,9 @@ if ($status === 'pending') {
           <tr>
             <td><?= htmlspecialchars($srv['service_name']) ?></td>
             <td class="text-center"><?= (int)$srv['duration'] ?></td>
-            <td class="text-end"><?= number_format((float)$srv['price'], 2) ?></td>
+            <td class="text-end"><?= number_format((float)($srv['price_booking'] ?? $srv['price']), 2) ?></td>
+            <td class="text-end"><?= number_format((float)($srv['discount_booking'] ?? 0), 2) ?></td>
+            <td class="text-end"><?= number_format((float)($srv['net_price'] ?? ($srv['price_booking'] ?? $srv['price'])), 2) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
@@ -186,6 +195,8 @@ if ($status === 'pending') {
           <td class="text-end">Total</td>
           <td class="text-center"><?= (int)$totalMinutes ?></td>
           <td class="text-end">฿<?= number_format($totalPrice, 2) ?></td>
+          <td class="text-end">฿<?= number_format($totalDiscount, 2) ?></td>
+          <td class="text-end">฿<?= number_format($totalNet, 2) ?></td>
         </tr>
       </tfoot>
     </table>
@@ -198,11 +209,11 @@ if ($status === 'pending') {
       <table class="table table-bordered summary-table mb-4">
         <tr>
           <th>Total Discount</th>
-          <td><?= htmlspecialchars((string)$booking['total_discount']) !== '' ? htmlspecialchars($booking['total_discount']) : '—' ?></td>
+          <td>฿<?= number_format((float)($booking['total_discount'] ?? $totalDiscount), 2) ?></td>
         </tr>
         <tr>
           <th>Discount Detail</th>
-          <td><?= htmlspecialchars($booking['discount_detail'] ?: '—') ?></td>
+          <td><?= $booking['discount_detail'] ? nl2br(htmlspecialchars($booking['discount_detail'])) : '—' ?></td>
         </tr>
         <tr>
           <th>Final Price (€)</th>

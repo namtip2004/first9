@@ -135,6 +135,10 @@
                       <th id="totalPrice">€0.00</th>
                     </tr>
                     <tr>
+                      <th colspan="2">Discount</th>
+                      <th id="discountAmount">-€0.00</th>
+                    </tr>
+                    <tr>
                       <th colspan="2">Final Price</th>
                       <th id="finalPrice">€0.00</th>
                     </tr>
@@ -201,7 +205,10 @@
     flatpickr("#bookingDate", {
       dateFormat: "Y-m-d",
       minDate: "today",
-      onChange: function(selectedDates, dateStr){ loadAvailableTimes(dateStr); }
+      onChange: function(selectedDates, dateStr){
+        loadAvailableTimes(dateStr);
+        calculatePrices();
+      }
     });
 
     // ---------- Helpers ----------
@@ -334,13 +341,49 @@
           })
           .catch(() => {});
       }
+
+      calculatePrices();
     }
 
     // ---------- Price summary ----------
-    function calculatePrices(){
+    async function calculatePrices(){
       const priceTable = document.getElementById('priceTable');
       priceTable.innerHTML = '';
       let totalPrice = 0;
+      let totalDiscount = 0;
+      let optionIds = [];
+
+      const rows = document.querySelectorAll('.service-row');
+
+      rows.forEach(row => {
+        const oSel = row.querySelector('.option-select');
+        const optionId = parseInt(oSel?.value || '0', 10);
+        if (optionId > 0) {
+          optionIds.push(optionId);
+        }
+      });
+
+      let discountMap = {};
+      const bookingDate = document.getElementById('bookingDate').value;
+      const startTime = document.getElementById('startTime').value;
+
+      if (optionIds.length && bookingDate){
+        try {
+          const response = await fetch('get_applicable_promotions.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ option_ids: optionIds, date: bookingDate, time: startTime })
+          });
+          if (response.ok){
+            const data = await response.json();
+            if (data && typeof data === 'object'){
+              discountMap = data.option_discounts || {};
+            }
+          }
+        } catch (err) {
+          console.warn('Failed to fetch promotions', err);
+        }
+      }
 
       document.querySelectorAll('.service-row').forEach(row => {
         const sSel = row.querySelector('.service-select');
@@ -349,21 +392,34 @@
         const serviceName = sSel?.options[sSel.selectedIndex]?.text || '';
         const optionText  = oSel?.options[oSel.selectedIndex]?.text || '';
         const price = parseFloat(oSel?.options[oSel.selectedIndex]?.dataset.price || 0);
+        const optionId = parseInt(oSel?.value || '0', 10);
 
         if (serviceName && optionText && !isNaN(price) && price > 0){
+          const discountInfo = discountMap[optionId] || null;
+          const discountAmount = discountInfo ? parseFloat(discountInfo.discount_amount || 0) : 0;
+          const finalPrice = discountInfo ? parseFloat(discountInfo.final_price || (price - discountAmount)) : price;
+
           totalPrice += price;
+          totalDiscount += discountAmount;
+
+          let priceCell = `€${price.toFixed(2)}`;
+          if (discountAmount > 0){
+            priceCell = `€${finalPrice.toFixed(2)}<div class="text-muted small">ลด -€${discountAmount.toFixed(2)} จาก €${price.toFixed(2)}</div>`;
+          }
+
           priceTable.insertAdjacentHTML('beforeend', `
             <tr>
               <td>${serviceName}</td>
               <td>${optionText}</td>
-              <td>€${price.toFixed(2)}</td>
+              <td>${priceCell}</td>
             </tr>
           `);
         }
       });
 
       document.getElementById('totalPrice').textContent = `€${totalPrice.toFixed(2)}`;
-      document.getElementById('finalPrice').textContent = `€${totalPrice.toFixed(2)}`; // ยังไม่มีส่วนลด → final = total
+      document.getElementById('discountAmount').textContent = `-€${totalDiscount.toFixed(2)}`;
+      document.getElementById('finalPrice').textContent = `€${(totalPrice - totalDiscount).toFixed(2)}`;
     }
   </script>
 </main>

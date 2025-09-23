@@ -137,10 +137,10 @@
 
   function createServiceCard(service) {
     const card = document.createElement('div');
-    card.className = 'col-lg-6';
+    card.className = 'col-12 mb-3';
     card.dataset.serviceId = service.service_id;
     const header = document.createElement('div');
-    header.className = 'card border border-primary h-100';
+    header.className = 'card border border-primary';
     header.innerHTML = `
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">${service.service_name}</h5>

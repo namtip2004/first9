@@ -1,5 +1,7 @@
 <?php
 require_once 'connect_db.php';
+$confirmedStatus = BOOKING_STATUS_CONFIRMED;
+$completedStatus = BOOKING_STATUS_COMPLATE;
 
 $hotServices = [];
 
@@ -16,7 +18,7 @@ if (isset($conn) && $conn instanceof mysqli) {
         JOIN booking_seviceop bs ON b.booking_id = bs.booking_id
         JOIN service_option so ON bs.option_id = so.option_id
         JOIN service sv ON so.service_id = sv.service_id
-        WHERE b.status IN ('confirmed', 'completed')
+        WHERE b.status IN ($confirmedStatus, $completedStatus)
         GROUP BY sv.service_id, sv.service_name, sv.description, sv.coverimg
         ORDER BY total_bookings DESC, sv.service_name ASC
         LIMIT 3

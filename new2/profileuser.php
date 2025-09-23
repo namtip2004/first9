@@ -58,18 +58,10 @@ $english_months = [
 }
 
 function getStatusBadge($status) {
-    switch ($status) {
-        case 'confirmed':
-            return '<span class="badge bg-success">Confirmed</span>';
-        case 'pending':
-            return '<span class="badge bg-warning">Pending</span>';
-        case 'completed':
-            return '<span class="badge bg-primary">Completed</span>';
-        case 'cancelled':
-            return '<span class="badge bg-danger">Cancelled</span>';
-        default:
-            return '<span class="badge bg-secondary">' . ucfirst($status) . '</span>';
-    }
+    $code  = booking_status_code($status);
+    $class = booking_status_badge_class($code);
+    $label = booking_status_label($code);
+    return '<span class="badge ' . htmlspecialchars($class, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars($label, ENT_QUOTES, 'UTF-8') . '</span>';
 }
 ?>
 
@@ -261,7 +253,7 @@ function getStatusBadge($status) {
                                                     <div class="mb-2">
                                                         <?= getStatusBadge($booking['status']) ?>
                                                     </div>
-                                                    <?php if ($booking['status'] === 'pending'): ?>
+                                                    <?php if (booking_status_code($booking['status']) === BOOKING_STATUS_PENDING): ?>
                                                         <small class="text-muted">
                                                             <i class="fas fa-info-circle me-1"></i>
                                                             Waiting for confirmation

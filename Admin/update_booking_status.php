@@ -14,9 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $booking_id = (int)($_POST['booking_id'] ?? 0);
-$new_status = trim($_POST['new_status'] ?? '');
+$new_status = booking_status_code($_POST['new_status'] ?? null);
 
-if (!$booking_id || $new_status === '') {
+if (!$booking_id || $new_status === null) {
   exit('ข้อมูลไม่ครบ');
 }
 
@@ -28,23 +28,23 @@ $row = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$row) exit("ไม่พบการจอง");
-$current = trim((string)$row['status']);
+$current = booking_status_code($row['status']);
+if ($current === null) {
+  exit('ไม่สามารถระบุสถานะปัจจุบันได้');
+}
 
 // อนุญาตเฉพาะ transition: pending -> confirmed -> complate
 $allowed = false;
-if ($current === 'pending'   && $new_status === 'confirmed') $allowed = true;
-if ($current === 'confirmed' && $new_status === 'complate')  $allowed = true;
-
-// (ถ้าอนาคตจะเปลี่ยนมาใช้คำว่า completed ก็รองรับเพิ่ม)
-// if ($current === 'confirmed' && $new_status === 'completed') $allowed = true;
+if ($current === BOOKING_STATUS_PENDING   && $new_status === BOOKING_STATUS_CONFIRMED) $allowed = true;
+if ($current === BOOKING_STATUS_CONFIRMED && $new_status === BOOKING_STATUS_COMPLATE)  $allowed = true;
 
 if (!$allowed) {
-  exit("ไม่อนุญาตให้อัปเดตสถานะจาก '$current' เป็น '$new_status'");
+  exit("ไม่อนุญาตให้อัปเดตสถานะจาก '" . booking_status_label($current) . "' เป็น '" . booking_status_label($new_status) . "'");
 }
 
 // อัปเดต
 $upd = $conn->prepare("UPDATE booking SET status = ? WHERE booking_id = ?");
-$upd->bind_param("si", $new_status, $booking_id);
+$upd->bind_param("ii", $new_status, $booking_id);
 $upd->execute();
 $upd->close();
 

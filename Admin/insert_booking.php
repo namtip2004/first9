@@ -107,8 +107,9 @@ try {
 
   $conn->begin_transaction();
   try {
-    $stmt = $conn->prepare("INSERT INTO booking (customer_id, staff_id, start_time, end_time, total_price, status) VALUES (?, ?, ?, ?, ?, 'pending')");
-    $stmt->bind_param("iissd", $customer_id, $staff_id, $start_datetime_str, $end_datetime_str, $price);
+    $stmt = $conn->prepare("INSERT INTO booking (customer_id, staff_id, start_time, end_time, total_price, status) VALUES (?, ?, ?, ?, ?, ?)");
+    $pendingStatus = BOOKING_STATUS_PENDING;
+    $stmt->bind_param("iissdi", $customer_id, $staff_id, $start_datetime_str, $end_datetime_str, $price, $pendingStatus);
     $stmt->execute();
     $booking_id = $stmt->insert_id;
     $stmt->close();

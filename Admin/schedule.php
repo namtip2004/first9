@@ -152,9 +152,12 @@ while ($row = $schedule_result->fetch_assoc()) {
                         <td><?= htmlspecialchars($schedule['services']) ?></td>
                         <td>€<?= number_format($schedule['final_price'], 2) ?></td>
                         <td>
-                          <?= htmlspecialchars($schedule['status']) === 'confirmed' 
-                              ? '<span class="text-success">Confirmed</span>' 
-                              : '<span class="text-danger">' . htmlspecialchars($schedule['status']) . '</span>' ?>
+                          <?php
+                            $statusCode = booking_status_code($schedule['status']);
+                            $badgeClass = booking_status_badge_class($statusCode);
+                            $statusText = booking_status_label($statusCode);
+                          ?>
+                          <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($statusText); ?></span>
                         </td>
                         <td>
                           <button class="btn btn-info btn-sm" 
@@ -166,7 +169,7 @@ while ($row = $schedule_result->fetch_assoc()) {
                                   data-customer="<?= htmlspecialchars($schedule['customer_name']) ?>"
                                   data-services="<?= htmlspecialchars($schedule['services']) ?>"
                                   data-price="€<?= number_format($schedule['final_price'], 2) ?>"
-                                  data-status="<?= htmlspecialchars($schedule['status']) ?>">View</button>
+                                  data-status="<?= htmlspecialchars(booking_status_label($schedule['status'])) ?>">View</button>
                         </td>
                       </tr>
                     <?php endforeach; ?>
@@ -253,7 +256,7 @@ while ($row = $schedule_result->fetch_assoc()) {
               customer: <?= json_encode($schedule['customer_name'] ?? 'Unknown Customer') ?>,
               services: <?= json_encode($schedule['services'] ?? 'No Services') ?>,
               price: <?= json_encode('€' . number_format($schedule['final_price'] ?? 0, 2)) ?>,
-              status: <?= json_encode($schedule['status'] ?? 'Unknown') ?>,
+              status: <?= json_encode(booking_status_label($schedule['status']) ?? 'Unknown') ?>,
               time: <?= json_encode(($schedule['time_start'] ?? '') . ' - ' . ($schedule['time_end'] ?? '')) ?>
             }
           }<?= $index < $total_schedules - 1 ? ',' : '' ?>

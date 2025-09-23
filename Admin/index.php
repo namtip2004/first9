@@ -20,6 +20,8 @@ try {
     die("Connection failed: " . $e->getMessage());
 }
 
+require_once __DIR__ . '/../booking_status.php';
+
 // Get time period from URL parameter
 $period = $_GET['period'] ?? 'today';
 
@@ -73,10 +75,16 @@ function getKPIData($pdo, $dateRange) {
 
     
     // Cancellation rate (assuming we can identify cancelled bookings by status)
-    $stmt = $pdo->prepare("SELECT 
-        (SELECT COUNT(*) FROM booking WHERE booking_date BETWEEN ? AND ? AND status = 'cancelled') as cancelled,
+    $stmt = $pdo->prepare("SELECT
+        (SELECT COUNT(*) FROM booking WHERE booking_date BETWEEN ? AND ? AND status = ?) as cancelled,
         (SELECT COUNT(*) FROM booking WHERE booking_date BETWEEN ? AND ?) as total");
-    $stmt->execute([$dateRange['start'], $dateRange['end'], $dateRange['start'], $dateRange['end']]);
+    $stmt->execute([
+        $dateRange['start'],
+        $dateRange['end'],
+        BOOKING_STATUS_CANCELLED,
+        $dateRange['start'],
+        $dateRange['end']
+    ]);
     $cancelData = $stmt->fetch();
     $data['cancellation_rate'] = $cancelData['total'] > 0 ? round(($cancelData['cancelled'] / $cancelData['total']) * 100, 1) : 0;
     
@@ -411,20 +419,17 @@ for ($i = 6; $i >= 0; $i--) {
                                                 <td class="fw-bold">฿<?= number_format($booking['final_price'], 2) ?></td>
                                                 <td>
                                                     <?php
-                                                    $statusClass = match($booking['status']) {
-                                                        'confirmed' => 'success',
-                                                        'pending' => 'warning',
-                                                        'cancelled' => 'danger',
-                                                        default => 'secondary'
-                                                    };
-                                                    $statusText = match($booking['status']) {
-                                                        'confirmed' => 'ยืนยันแล้ว',
-                                                        'pending' => 'รอยืนยัน',
-                                                        'cancelled' => 'ยกเลิก',
-                                                        default => $booking['status']
-                                                    };
+                                                    $statusCode = booking_status_code($booking['status']);
+                                                    $statusTexts = [
+                                                        BOOKING_STATUS_CONFIRMED => 'ยืนยันแล้ว',
+                                                        BOOKING_STATUS_PENDING => 'รอยืนยัน',
+                                                        BOOKING_STATUS_CANCELLED => 'ยกเลิก',
+                                                        BOOKING_STATUS_COMPLATE => 'เสร็จสิ้น'
+                                                    ];
+                                                    $statusClass = booking_status_badge_class($statusCode);
+                                                    $statusText = $statusTexts[$statusCode] ?? booking_status_label($statusCode);
                                                     ?>
-                                                    <span class="badge bg-<?= $statusClass ?>"><?= $statusText ?></span>
+                                                    <span class="badge <?= $statusClass ?>"><?= htmlspecialchars($statusText) ?></span>
                                                 </td>
                                             </tr>
                                             <?php endforeach; ?>
@@ -523,11 +528,16 @@ for ($i = 6; $i >= 0; $i--) {
                                 </div>
                                 <?php
                                 // Get payment status data
-                                $stmt = $pdo->prepare("SELECT 
-                                    SUM(CASE WHEN status = 'confirmed' THEN final_price ELSE 0 END) as paid,
-                                    SUM(CASE WHEN status = 'pending' THEN final_price ELSE 0 END) as pending_payment
+                                $stmt = $pdo->prepare("SELECT
+                                    SUM(CASE WHEN status = ? THEN final_price ELSE 0 END) as paid,
+                                    SUM(CASE WHEN status = ? THEN final_price ELSE 0 END) as pending_payment
                                     FROM booking WHERE booking_date BETWEEN ? AND ?");
-                                $stmt->execute([$dateRange['start'], $dateRange['end']]);
+                                $stmt->execute([
+                                    BOOKING_STATUS_CONFIRMED,
+                                    BOOKING_STATUS_PENDING,
+                                    $dateRange['start'],
+                                    $dateRange['end']
+                                ]);
                                 $paymentData = $stmt->fetch();
                                 ?>
                                 <div class="mb-3 pb-3 border-bottom">

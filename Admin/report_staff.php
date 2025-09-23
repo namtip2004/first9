@@ -13,6 +13,10 @@
 //   service(service_id, service_name)
 //   customer(customer_id, customer_name, gmail)
 require_once("connect_db.php");
+$pendingStatus   = BOOKING_STATUS_PENDING;
+$confirmedStatus = BOOKING_STATUS_CONFIRMED;
+$completedStatus = BOOKING_STATUS_COMPLATE;
+$cancelledStatus = BOOKING_STATUS_CANCELLED;
 function esc($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // ---------------- Year meta for chart pickers ----------------
@@ -37,15 +41,15 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
 
   // ---------- KPI (GLOBAL; all time) ----------
   $total_staff = (int)$conn->query("SELECT COUNT(*) c FROM staff")->fetch_assoc()['c'];
-  $confirmed_rev = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE status='confirmed'")->fetch_assoc()['s'];
-  $confirmed_tx  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status='confirmed'")->fetch_assoc()['c'];
+  $confirmed_rev = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE status={$confirmedStatus}")->fetch_assoc()['s'];
+  $confirmed_tx  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status={$confirmedStatus}")->fetch_assoc()['c'];
   $avg_rev_per_staff = $total_staff>0 ? $confirmed_rev / $total_staff : 0.0;
 
   // Top performer overall
   $tp = $conn->query("
     SELECT s.staff_name, COALESCE(SUM(b.final_price),0) net
     FROM staff s
-    LEFT JOIN booking b ON b.staff_id=s.staff_id AND b.status='confirmed'
+    LEFT JOIN booking b ON b.staff_id=s.staff_id AND b.status={$confirmedStatus}
     GROUP BY s.staff_id
     ORDER BY net DESC
     LIMIT 1
@@ -83,11 +87,11 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
   // ---------- Time series: bookings count per status + net revenue ----------
   $sql="
     SELECT $groupExpr AS bucket,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
-           SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS pending,
-           SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
+           SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
+           SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled,
            COUNT(*) AS total,
-           COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net_rev
+           COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net_rev
     FROM booking b
     WHERE $where
     GROUP BY bucket
@@ -117,8 +121,8 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
   if ($serviceId>0) $ws .= " AND EXISTS (SELECT 1 FROM booking_seviceop bs2 JOIN service_option so2 ON bs2.option_id=so2.option_id WHERE bs2.booking_id=b.booking_id AND so2.service_id=".$serviceId.")";
 
   $sqlTopNet="
-    SELECT s.staff_name, COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS tx_conf
+    SELECT s.staff_name, COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net,
+           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf
     FROM staff s
     LEFT JOIN booking b ON b.staff_id=s.staff_id AND $ws
     GROUP BY s.staff_id
@@ -130,8 +134,8 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
 
   $sqlTopTx="
     SELECT s.staff_name,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS tx_conf,
-           COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net
+           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf,
+           COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net
     FROM staff s
     LEFT JOIN booking b ON b.staff_id=s.staff_id AND $ws
     GROUP BY s.staff_id
@@ -146,9 +150,9 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
   if ($staffId>0) $wm .= " AND b.staff_id=".$staffId;
   $mix = $conn->query("
     SELECT
-      SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
-      SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS cancelled
+      SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
+      SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled
     FROM booking b
     WHERE $wm
   ")->fetch_assoc();
@@ -191,6 +195,7 @@ $sortMap=[
   'net'    => "net_rev $dir",
   'tx'     => "tx_total $dir",
   'conf'   => "tx_conf $dir",
+  'comp'   => "tx_comp $dir",
   'pend'   => "tx_pend $dir",
   'canc'   => "tx_canc $dir",
   'aov'    => "aov $dir",
@@ -214,16 +219,17 @@ $sql="
   SELECT
     s.staff_id, s.staff_name,
     SUM(1)                                   AS tx_total,
-    SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS tx_conf,
-    SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS tx_pend,
-    SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS tx_canc,
-    COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net_rev,
-    CASE WHEN SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END)=0
+    SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf,
+    SUM(CASE WHEN b.status={$completedStatus} THEN 1 ELSE 0 END) AS tx_comp,
+    SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS tx_pend,
+    SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS tx_canc,
+    COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net_rev,
+    CASE WHEN SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END)=0
          THEN 0
-         ELSE COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) /
-              SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END)
+         ELSE COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) /
+              SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END)
     END AS aov,
-    COUNT(DISTINCT CASE WHEN b.status='confirmed' THEN b.customer_id END) AS custs,
+    COUNT(DISTINCT CASE WHEN b.status={$confirmedStatus} THEN b.customer_id END) AS custs,
     COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(b.time_end, b.time_start)))/3600,0) AS hrs,
     AVG(TIME_TO_SEC(TIMEDIFF(b.time_end, b.time_start))/60) AS avgdur,
     MIN(b.booking_date) AS first_bk,
@@ -249,6 +255,7 @@ $totalRows = count($rows);
 $summary = [
   'tx_total' => 0,
   'tx_conf'  => 0,
+  'tx_comp'  => 0,
   'tx_pend'  => 0,
   'tx_canc'  => 0,
   'net_rev'  => 0.0,
@@ -260,6 +267,7 @@ $summary = [
 foreach ($rows as $row) {
   $summary['tx_total'] += (int)($row['tx_total'] ?? 0);
   $summary['tx_conf']  += (int)($row['tx_conf'] ?? 0);
+  $summary['tx_comp']  += (int)($row['tx_comp'] ?? 0);
   $summary['tx_pend']  += (int)($row['tx_pend'] ?? 0);
   $summary['tx_canc']  += (int)($row['tx_canc'] ?? 0);
   $summary['net_rev']  += (float)($row['net_rev'] ?? 0);
@@ -337,6 +345,7 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                 <option value="net"   <?= $sort==='net'?'selected':'' ?>>Net Revenue</option>
                 <option value="tx"    <?= $sort==='tx'?'selected':'' ?>>Bookings (ทั้งหมด)</option>
                 <option value="conf"  <?= $sort==='conf'?'selected':'' ?>>Confirmed</option>
+                <option value="comp"  <?= $sort==='comp'?'selected':'' ?>>Complate</option>
                 <option value="pend"  <?= $sort==='pend'?'selected':'' ?>>Pending</option>
                 <option value="canc"  <?= $sort==='canc'?'selected':'' ?>>Cancelled</option>
                 <option value="aov"   <?= $sort==='aov'?'selected':'' ?>>AOV</option>
@@ -368,6 +377,7 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                 <th>Staff</th>
                 <th class="text-end">Bookings</th>
                 <th class="text-end">Confirmed</th>
+                <th class="text-end">Complate</th>
                 <th class="text-end">Pending</th>
                 <th class="text-end">Cancelled</th>
                 <th class="text-end">Net Revenue</th>
@@ -392,6 +402,7 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                   <td><?=esc($r['staff_name']?:'N/A')?></td>
                   <td class="text-end"><?=number_format((int)$r['tx_total'])?></td>
                   <td class="text-end"><span class="badge bg-success"><?=number_format((int)$r['tx_conf'])?></span></td>
+                  <td class="text-end"><span class="badge bg-primary"><?=number_format((int)$r['tx_comp'])?></span></td>
                   <td class="text-end"><span class="badge bg-warning text-dark"><?=number_format((int)$r['tx_pend'])?></span></td>
                   <td class="text-end"><span class="badge bg-danger"><?=number_format((int)$r['tx_canc'])?></span></td>
                   <td class="text-end fw-bold text-success">฿<?=number_format((float)$r['net_rev'],2)?></td>
@@ -415,6 +426,7 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
                 <th>รวม</th>
                 <th class="text-end fw-bold"><?=number_format($summary['tx_total'])?></th>
                 <th class="text-end"><span class="badge bg-success"><?=number_format($summary['tx_conf'])?></span></th>
+                <th class="text-end"><span class="badge bg-primary"><?=number_format($summary['tx_comp'])?></span></th>
                 <th class="text-end"><span class="badge bg-warning text-dark"><?=number_format($summary['tx_pend'])?></span></th>
                 <th class="text-end"><span class="badge bg-secondary"><?=number_format($summary['tx_canc'])?></span></th>
                 <th class="text-end fw-bold text-success">฿<?=number_format($summary['net_rev'],2)?></th>

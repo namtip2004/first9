@@ -86,31 +86,28 @@ $startStr = htmlspecialchars(substr($booking['time_start'], 0, 5));
 $endStr   = htmlspecialchars(substr($booking['time_end'],   0, 5));
 
 /* สถานะ & badge */
-$status = trim((string)$booking['status']);
-$badgeClass = 'bg-secondary';
-if ($status === 'confirmed') $badgeClass = 'bg-success';
-elseif ($status === 'pending') $badgeClass = 'bg-warning text-dark';
-elseif ($status === 'complate' || $status === 'completed') $badgeClass = 'bg-primary';
-elseif ($status === 'cancelled' || $status === 'rejected') $badgeClass = 'bg-danger';
+$statusCode  = booking_status_code($booking['status']);
+$statusLabel = booking_status_label($statusCode);
+$badgeClass  = booking_status_badge_class($statusCode);
 
 /* ปุ่มอัปเดตสถานะ (จะแสดงในแถว Status ของตารางเท่านั้น) */
 $statusActionBtn = '';
-if ($status === 'pending') {
+if ($statusCode === BOOKING_STATUS_PENDING) {
   $statusActionBtn = '
     <form action="update_booking_status.php" method="POST" class="d-inline"
           onsubmit="return confirm(\'ยืนยันเปลี่ยนสถานะเป็น Confirmed ?\');">
       <input type="hidden" name="booking_id" value="'.(int)$booking_id.'">
-      <input type="hidden" name="new_status" value="confirmed">
+      <input type="hidden" name="new_status" value="'.BOOKING_STATUS_CONFIRMED.'">
       <button type="submit" class="btn btn-success btn-sm">Mark as Confirmed</button>
     </form>
   ';
-} elseif ($status === 'confirmed') {
+} elseif ($statusCode === BOOKING_STATUS_CONFIRMED) {
   $statusActionBtn = '
     <form action="update_booking_status.php" method="POST" class="d-inline"
-          onsubmit="return confirm(\'ยืนยันเปลี่ยนสถานะเป็น Complate ?\');">
+          onsubmit="return confirm(\'ยืนยันเปลี่ยนสถานะเป็น Completed ?\');">
       <input type="hidden" name="booking_id" value="'.(int)$booking_id.'">
-      <input type="hidden" name="new_status" value="complate">
-      <button type="submit" class="btn btn-primary btn-sm">Mark as Complate</button>
+      <input type="hidden" name="new_status" value="'.BOOKING_STATUS_COMPLATE.'">
+      <button type="submit" class="btn btn-primary btn-sm">Mark as Completed</button>
     </form>
   ';
 }
@@ -154,7 +151,7 @@ if ($status === 'pending') {
       <td>
         <div class="d-flex align-items-center gap-2 flex-wrap">
           <span class="badge badge-status <?= $badgeClass ?>">
-            <?= htmlspecialchars($status ?: '—') ?>
+            <?= htmlspecialchars($statusLabel ?: '—') ?>
           </span>
           <?php if (!empty($statusActionBtn)): ?>
             <div class="ms-1"><?= $statusActionBtn ?></div>

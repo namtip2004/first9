@@ -174,7 +174,7 @@ try {
     $optionStmt->close();
 
     $conn->commit();
-    redirectUpdate('message', 'บันทึกการแก้ไขโปรโมชั่นเรียบร้อยแล้ว', $promotionId);
+    //redirectUpdate('message', 'บันทึกการแก้ไขโปรโมชั่นเรียบร้อยแล้ว', $promotionId);
 } catch (Throwable $e) {
     $conn->rollback();
     redirectUpdate('error', 'เกิดข้อผิดพลาดระหว่างบันทึกโปรโมชั่น', $promotionId);

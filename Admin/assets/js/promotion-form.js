@@ -91,80 +91,142 @@
     }
   }
 
-  function createOptionRow(option, enabled = true) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'promotion-option-row border rounded p-3 mb-2';
-    wrapper.dataset.optionId = option.option_id;
-    wrapper.dataset.price = option.price ?? 0;
-    wrapper.dataset.discount = option.discount_amount ?? 0;
-    wrapper.dataset.final = option.final_price ?? option.price ?? 0;
+function createOptionRow(option, enabled = true) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'promotion-option-row';
+  wrapper.dataset.optionId = option.option_id;
+  wrapper.dataset.price = option.price ?? 0;
+  wrapper.dataset.discount = option.discount_amount ?? 0;
+  wrapper.dataset.final = option.final_price ?? option.price ?? 0;
 
-    const isInitiallyEnabled = Boolean(enabled && (option.included !== false));
-    const percentValue = clampPercent(option.discount_percent ?? 0);
+  const isInitiallyEnabled = Boolean(enabled && (option.included !== false));
+  const percentValue = clampPercent(option.discount_percent ?? 0);
 
-    wrapper.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div class="form-check form-switch">
-          <input class="form-check-input promotion-option-toggle" type="checkbox" ${isInitiallyEnabled ? 'checked' : ''}>
-          <label class="form-check-label">
-            ระยะเวลา ${option.duration ?? '-'} นาที - ราคา ${formatCurrency(option.price)}
-          </label>
-        </div>
-        <div class="d-flex align-items-center gap-2 promotion-option-details ${isInitiallyEnabled ? '' : 'text-muted'}">
-          <div class="input-group input-group-sm">
-            <input type="number" min="0" max="100" step="0.01" class="form-control promotion-option-percent" value="${percentValue}" ${isInitiallyEnabled ? '' : 'disabled'}>
-            <span class="input-group-text">%</span>
-          </div>
-          <div class="text-nowrap">
-            ส่วนลด <span data-discount-amount>${formatCurrency(option.discount_amount ?? 0)}</span>
-          </div>
-          <div class="text-nowrap">
-            ราคาสุทธิ <span data-final-price>${formatCurrency(option.final_price ?? option.price)}</span>
-          </div>
-        </div>
+  // 1 แถว = 5 คอลัมน์ (ระยะเวลา, ราคาเดิม, % ส่วนลด, ราคาสุทธิ, เปิดใช้งาน)
+  // ใช้ inline style ทั้งหมด เพื่อตัดเส้นน้ำเงินตอน focus + ทำให้ดูเป็นตาราง
+ wrapper.innerHTML = `
+  <div style="display:grid;grid-template-columns:1.2fr .8fr .9fr .9fr .7fr;
+              gap:12px;align-items:center;
+              padding:10px 12px;border-top:1px solid #eee;">
+    <div style="min-width:0;">
+      <div style="font-weight:600;color:#2b2b2b;">
+        ${option.duration ?? '-'} นาที
       </div>
-    `;
+    </div>
 
-    const percentInput = wrapper.querySelector('.promotion-option-percent');
-    const toggle = wrapper.querySelector('.promotion-option-toggle');
-    percentInput.addEventListener('input', handlePercentInput);
-    toggle.addEventListener('change', handleToggleChange);
-    if (isInitiallyEnabled) {
-      recalcOptionRow(wrapper);
-    }
-    return wrapper;
+    <div style="text-align:center;white-space:nowrap;">
+      ${formatCurrency(option.price)}
+    </div>
+
+    <div style="text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:6px;">
+        <input type="number" min="0" max="100" step="0.01"
+               class="promotion-option-percent"
+               value="${percentValue}" ${isInitiallyEnabled ? '' : 'disabled'}
+               style="width:90px;text-align:center;padding:6px 8px;
+                      border:1px solid #ccc;border-radius:8px;
+                      outline:none;box-shadow:none;
+                      ${isInitiallyEnabled ? '' : 'background:#f2f2f2;color:#9a9a9a;'}">
+        <span style="color:#333;">%</span>
+      </div>
+    </div>
+
+    <div style="text-align:center;white-space:nowrap;">
+      <span data-final-price>
+        ${formatCurrency(option.final_price ?? option.price)}
+      </span>
+      <div style="font-size:12px;color:#7a7a7a;">
+        ส่วนลด <span data-discount-amount>
+          ${formatCurrency(option.discount_amount ?? 0)}
+        </span>
+      </div>
+    </div>
+
+    <!-- ช่องสวิตช์ เปิด/ปิด -->
+    <div style="text-align:center;display:flex;justify-content:center;align-items:center;">
+      <div class="form-check form-switch mb-0">
+        <input class="form-check-input promotion-option-toggle shadow-none"
+               type="checkbox"
+               role="switch"
+               ${isInitiallyEnabled ? 'checked' : ''}
+               style="width:3rem;height:1.5rem;cursor:pointer;">
+      </div>
+    </div>
+  </div>
+`;
+
+// ทำปุ่มสวิตช์มีปุ่มกลมเลื่อน
+const toggle = wrapper.querySelector('.promotion-option-toggle');
+
+// events
+const percentInput = wrapper.querySelector('.promotion-option-percent');
+percentInput.addEventListener('input', handlePercentInput);
+
+toggle.addEventListener('change', (e) => {
+  const on = e.target.checked;
+
+  // ✅ ปิด/เปิดการกรอกเปอร์เซ็นต์เมื่อสวิตช์เปลี่ยน
+  percentInput.disabled = !on;
+
+  // ถ้าปิดให้รีเซ็ตส่วนลดเป็น 0 และคำนวณราคาใหม่
+  if (!on) {
+    percentInput.value = 0;
+    recalcOptionRow(wrapper);
+  } else {
+    recalcOptionRow(wrapper);
   }
 
-  function createServiceCard(service) {
-    const card = document.createElement('div');
-    card.className = 'col-12 mb-3';
-    card.dataset.serviceId = service.service_id;
-    const header = document.createElement('div');
-    header.className = 'card border border-primary';
-    header.innerHTML = `
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">${service.service_name}</h5>
-        <button type="button" class="btn btn-sm btn-outline-danger" data-remove-service>&times;</button>
+  handleToggleChange(e);
+});
+
+  if (isInitiallyEnabled) recalcOptionRow(wrapper);
+  return wrapper;
+}
+
+
+function createServiceCard(service) {
+  const card = document.createElement('div');
+  card.className = 'col-12 mb-3';
+  card.dataset.serviceId = service.service_id;
+
+  const header = document.createElement('div');
+  header.className = 'card';
+  header.innerHTML = `
+    <div class="card-header d-flex justify-content-between align-items-center" style="background:#f8f9fa;border:1px solid #e0e0e0;border-top-left-radius:8px;border-top-right-radius:8px;">
+      <h5 class="mb-0" style="font-size:16px;">${service.service_name}</h5>
+      <button type="button" class="btn btn-sm btn-outline-danger" data-remove-service>&times;</button>
+    </div>
+    <div class="card-body p-0" style="border:1px solid #e0e0e0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;overflow:hidden;">
+      <!-- หัวตาราง -->
+      <div style="display:grid;grid-template-columns:1.2fr .8fr .9fr .9fr .7fr;gap:12px;align-items:center;
+                  padding:10px 12px;background:#f8f9fa;font-weight:600;">
+        <div>ระยะเวลา</div>
+        <div style="text-align:center;">ราคาเดิม</div>
+        <div style="text-align:center;">ส่วนลด (%)</div>
+        <div style="text-align:center;">ราคาสุทธิ</div>
+        <div style="text-align:center;">เปิดใช้งาน</div>
       </div>
-      <div class="card-body" data-option-container></div>
-    `;
-    card.appendChild(header);
+      <div data-option-container></div>
+    </div>
+  `;
+  card.appendChild(header);
 
-    const optionContainer = header.querySelector('[data-option-container]');
-    (service.options || []).forEach(option => {
-      const isIncluded = option.included !== false;
-      const row = createOptionRow(option, isIncluded);
-      optionContainer.appendChild(row);
-    });
+  const optionContainer = header.querySelector('[data-option-container]');
+  (service.options || []).forEach(option => {
+    const isIncluded = option.included !== false;
+    const row = createOptionRow(option, isIncluded);
+    optionContainer.appendChild(row);
+  });
 
-    header.querySelector('[data-remove-service]').addEventListener('click', () => {
-      selectedServiceIds.delete(service.service_id);
-      card.remove();
-      updateEmptyState();
-    });
+  header.querySelector('[data-remove-service]').addEventListener('click', () => {
+    selectedServiceIds.delete(service.service_id);
+    card.remove();
+    updateEmptyState();
+  });
 
-    return card;
-  }
+  return card;
+}
+
 
   function renderService(service) {
     if (selectedServiceIds.has(service.service_id)) {

@@ -345,6 +345,16 @@
       calculatePrices();
     }
 
+    // ---------- Helpers for promotion timing ----------
+    function getCurrentBookingMoment(){
+      const now = new Date();
+      const pad = (value) => value.toString().padStart(2, '0');
+      return {
+        date: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
+        time: `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
+      };
+    }
+
     // ---------- Price summary ----------
     async function calculatePrices(){
       const priceTable = document.getElementById('priceTable');
@@ -364,15 +374,14 @@
       });
 
       let discountMap = {};
-      const bookingDate = document.getElementById('bookingDate').value;
-      const startTime = document.getElementById('startTime').value;
+      const { date: bookingDate, time: bookingTime } = getCurrentBookingMoment();
 
-      if (optionIds.length && bookingDate){
+      if (optionIds.length){
         try {
           const response = await fetch('get_applicable_promotions.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ option_ids: optionIds, date: bookingDate, time: startTime })
+            body: JSON.stringify({ option_ids: optionIds, date: bookingDate, time: bookingTime })
           });
           if (response.ok){
             const data = await response.json();

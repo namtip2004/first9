@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 include("../connect_db.php");
+$cancelledStatus = BOOKING_STATUS_CANCELLED;
 
 $date = $_GET['date'] ?? '';
 $start_time = $_GET['time'] ?? '';
@@ -34,7 +35,7 @@ try {
         $conflict_query = "
             SELECT 1 FROM booking
             WHERE staff_ID = $staff_ID
-              AND booking_status != 'cancelled'
+              AND booking_status != {$cancelledStatus}
               AND time_start < '$end_str'
               AND ADDTIME(time_start, time_total) > '$start_str'
             LIMIT 1

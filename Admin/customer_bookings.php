@@ -1,5 +1,8 @@
 <?php
 require_once("connect_db.php");
+$confirmedStatus = BOOKING_STATUS_CONFIRMED;
+$pendingStatus   = BOOKING_STATUS_PENDING;
+$cancelledStatus = BOOKING_STATUS_CANCELLED;
 
 if (!isset($_GET['id'])) {
     echo "ไม่พบ Customer ID";
@@ -61,8 +64,8 @@ $stats_sql = "SELECT
     COUNT(*) as total_bookings,
     COALESCE(SUM(final_price), 0) as total_spent,
     COALESCE(AVG(final_price), 0) as avg_booking_value,
-    COUNT(CASE WHEN status = 'confirmed' THEN 1 END) as confirmed_bookings,
-    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bookings
+    COUNT(CASE WHEN status = {$confirmedStatus} THEN 1 END) as confirmed_bookings,
+    COUNT(CASE WHEN status = {$pendingStatus} THEN 1 END) as pending_bookings
 FROM booking 
 WHERE customer_id = ?";
 $stmt_stats = $conn->prepare($stats_sql);
@@ -239,13 +242,12 @@ $stats = $stats_result->fetch_assoc();
                         <td class="text-success fw-bold">€<?php echo number_format($booking['final_price'], 2); ?></td>
                         <td><?php echo htmlspecialchars($booking['discount_detail'] ?? 'N/A'); ?></td>
                         <td>
-                          <?php if ($booking['status'] === 'confirmed'): ?>
-                            <span class="badge bg-success">Confirmed</span>
-                          <?php elseif ($booking['status'] === 'pending'): ?>
-                            <span class="badge bg-warning">Pending</span>
-                          <?php else: ?>
-                            <span class="badge bg-secondary"><?php echo htmlspecialchars($booking['status'] ?? 'N/A'); ?></span>
-                          <?php endif; ?>
+                          <?php
+                            $statusCode = booking_status_code($booking['status']);
+                            $badgeClass = booking_status_badge_class($statusCode);
+                            $statusText = booking_status_label($statusCode);
+                          ?>
+                          <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($statusText); ?></span>
                         </td>
                         <td>
                           <?php if (!empty($booking['evidence'])): ?>

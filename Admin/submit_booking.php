@@ -81,7 +81,7 @@ try {
 
     $stmt = $pdo->prepare(
         'INSERT INTO booking (customer_id, staff_id, booking_date, time_start, time_end, total_price, total_discount, final_price, status, discount_detail, evidence)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, "confirmed", ?, ?)'
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     $stmt->execute([
         $customer_id,
@@ -92,6 +92,7 @@ try {
         $total_price,
         $total_discount,
         $final_price,
+        BOOKING_STATUS_CONFIRMED,
         $discount_detail,
         $evidence_image
     ]);

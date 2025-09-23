@@ -4,6 +4,8 @@
 $conn = new mysqli("127.0.0.1", "root","","first9");
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
-} 
+}
+
+require_once __DIR__ . '/../booking_status.php';
 
 ?>

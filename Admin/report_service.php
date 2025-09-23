@@ -11,6 +11,7 @@
 //   customer(customer_id, ...), staff(staff_id, ...)
 
 require_once("connect_db.php");
+$confirmedStatus = BOOKING_STATUS_CONFIRMED;
 function esc($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // ----------------------- Year range meta for pickers -----------------------
@@ -42,7 +43,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'stats') {
       COUNT(*)                       AS tx,
       COUNT(DISTINCT customer_id)    AS customers
     FROM booking
-    WHERE status='confirmed'
+    WHERE status={$confirmedStatus}
   ")->fetch_assoc();
   $net_total = (float)$k['net'];
   $tx_total = (int)$k['tx'];
@@ -52,7 +53,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'stats') {
     FROM booking b
     JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
     JOIN service_option so ON so.option_id=bs.option_id
-    WHERE b.status='confirmed'
+    WHERE b.status={$confirmedStatus}
   ")->fetch_assoc()['c'];
   // top service (by net, all time)
   $top = $conn->query("
@@ -61,7 +62,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'stats') {
     JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
     JOIN service_option so ON so.option_id=bs.option_id
     JOIN service sv ON sv.service_id=so.service_id
-    WHERE b.status='confirmed'
+    WHERE b.status={$confirmedStatus}
     GROUP BY sv.service_id
     ORDER BY net DESC
     LIMIT 1
@@ -95,7 +96,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'stats') {
     $rangeEnd  =sprintf('%04d-12-31',$endY);
   }
 
-  $extra = ["b.status='confirmed'"];
+  $extra = ["b.status={$confirmedStatus}"];
   if ($staffId > 0)   $extra[] = "b.staff_id=".$staffId;
   $whereBase = "$dateCond AND ".implode(" AND ",$extra);
 
@@ -192,7 +193,7 @@ $sortMap=[
 $orderBy = $sortMap[$sort] ?? $sortMap['net'];
 
 // WHERE for aggregated query
-$where = ["b.status='confirmed'"]; $types=""; $params=[];
+$where = ["b.status={$confirmedStatus}"]; $types=""; $params=[];
 if ($q!==''){ $where[]="sv.service_name LIKE ?"; $kw="%$q%"; $params[]=$kw; $types.="s"; }
 if ($staffF>0){ $where[]="b.staff_id=?"; $params[]=$staffF; $types.="i"; }
 if ($startDate!==''){ $where[]="b.booking_date>=?"; $params[]=$startDate; $types.="s"; }
@@ -290,7 +291,7 @@ $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER B
           <div class="col-md-auto">
             <label class="form-label small-label">สถานะ</label>
             <select class="form-select" name="status" disabled>
-              <option value="confirmed" selected>confirmed (ยึดสำหรับรายได้)</option>
+              <option value="<?=BOOKING_STATUS_CONFIRMED?>" selected>Confirmed (ยึดสำหรับรายได้)</option>
             </select>
           </div>
           <div class="col-md-auto">

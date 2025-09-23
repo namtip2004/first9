@@ -13,6 +13,9 @@
 //   service(service_id, service_name)
 //   customer(customer_id, customer_name, gmail)
 require_once("connect_db.php");
+$pendingStatus   = BOOKING_STATUS_PENDING;
+$confirmedStatus = BOOKING_STATUS_CONFIRMED;
+$cancelledStatus = BOOKING_STATUS_CANCELLED;
 function esc($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // ---------------- Year meta for chart pickers ----------------
@@ -37,15 +40,15 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
 
   // ---------- KPI (GLOBAL; all time) ----------
   $total_staff = (int)$conn->query("SELECT COUNT(*) c FROM staff")->fetch_assoc()['c'];
-  $confirmed_rev = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE status='confirmed'")->fetch_assoc()['s'];
-  $confirmed_tx  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status='confirmed'")->fetch_assoc()['c'];
+  $confirmed_rev = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE status={$confirmedStatus}")->fetch_assoc()['s'];
+  $confirmed_tx  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status={$confirmedStatus}")->fetch_assoc()['c'];
   $avg_rev_per_staff = $total_staff>0 ? $confirmed_rev / $total_staff : 0.0;
 
   // Top performer overall
   $tp = $conn->query("
     SELECT s.staff_name, COALESCE(SUM(b.final_price),0) net
     FROM staff s
-    LEFT JOIN booking b ON b.staff_id=s.staff_id AND b.status='confirmed'
+    LEFT JOIN booking b ON b.staff_id=s.staff_id AND b.status={$confirmedStatus}
     GROUP BY s.staff_id
     ORDER BY net DESC
     LIMIT 1
@@ -83,11 +86,11 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
   // ---------- Time series: bookings count per status + net revenue ----------
   $sql="
     SELECT $groupExpr AS bucket,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
-           SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS pending,
-           SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
+           SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
+           SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled,
            COUNT(*) AS total,
-           COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net_rev
+           COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net_rev
     FROM booking b
     WHERE $where
     GROUP BY bucket
@@ -117,8 +120,8 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
   if ($serviceId>0) $ws .= " AND EXISTS (SELECT 1 FROM booking_seviceop bs2 JOIN service_option so2 ON bs2.option_id=so2.option_id WHERE bs2.booking_id=b.booking_id AND so2.service_id=".$serviceId.")";
 
   $sqlTopNet="
-    SELECT s.staff_name, COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS tx_conf
+    SELECT s.staff_name, COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net,
+           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf
     FROM staff s
     LEFT JOIN booking b ON b.staff_id=s.staff_id AND $ws
     GROUP BY s.staff_id
@@ -130,8 +133,8 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
 
   $sqlTopTx="
     SELECT s.staff_name,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS tx_conf,
-           COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net
+           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf,
+           COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net
     FROM staff s
     LEFT JOIN booking b ON b.staff_id=s.staff_id AND $ws
     GROUP BY s.staff_id
@@ -146,9 +149,9 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
   if ($staffId>0) $wm .= " AND b.staff_id=".$staffId;
   $mix = $conn->query("
     SELECT
-      SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS confirmed,
-      SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS cancelled
+      SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
+      SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled
     FROM booking b
     WHERE $wm
   ")->fetch_assoc();
@@ -214,16 +217,16 @@ $sql="
   SELECT
     s.staff_id, s.staff_name,
     SUM(1)                                   AS tx_total,
-    SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS tx_conf,
-    SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS tx_pend,
-    SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS tx_canc,
-    COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) AS net_rev,
-    CASE WHEN SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END)=0
+    SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf,
+    SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS tx_pend,
+    SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS tx_canc,
+    COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net_rev,
+    CASE WHEN SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END)=0
          THEN 0
-         ELSE COALESCE(SUM(CASE WHEN b.status='confirmed' THEN b.final_price ELSE 0 END),0) /
-              SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END)
+         ELSE COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) /
+              SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END)
     END AS aov,
-    COUNT(DISTINCT CASE WHEN b.status='confirmed' THEN b.customer_id END) AS custs,
+    COUNT(DISTINCT CASE WHEN b.status={$confirmedStatus} THEN b.customer_id END) AS custs,
     COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(b.time_end, b.time_start)))/3600,0) AS hrs,
     AVG(TIME_TO_SEC(TIMEDIFF(b.time_end, b.time_start))/60) AS avgdur,
     MIN(b.booking_date) AS first_bk,

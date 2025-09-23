@@ -24,9 +24,9 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
 
   // KPI cards (GLOBAL; not affected by chart filters)
   $k_total = (int)$conn->query("SELECT COUNT(*) c FROM booking")->fetch_assoc()['c'];
-  $k_conf  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status='confirmed'")->fetch_assoc()['c'];
-  $k_pend  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status='pending'")->fetch_assoc()['c'];
-  $k_canc  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status='cancelled'")->fetch_assoc()['c'];
+  $k_conf  = (int)$conn->query(sprintf("SELECT COUNT(*) c FROM booking WHERE status=%d", BOOKING_STATUS_CONFIRMED))->fetch_assoc()['c'];
+  $k_pend  = (int)$conn->query(sprintf("SELECT COUNT(*) c FROM booking WHERE status=%d", BOOKING_STATUS_PENDING))->fetch_assoc()['c'];
+  $k_canc  = (int)$conn->query(sprintf("SELECT COUNT(*) c FROM booking WHERE status=%d", BOOKING_STATUS_CANCELLED))->fetch_assoc()['c'];
 
   // Chart bucketing
   $labels=[]; $groupExpr=""; $dateFilter="1=1"; $axis='';
@@ -54,11 +54,15 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
   if($service>0) $w[]="EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=".$service.")";
   $where=implode(" AND ",$w);
 
+  $confStatus = BOOKING_STATUS_CONFIRMED;
+  $pendStatus = BOOKING_STATUS_PENDING;
+  $cancStatus = BOOKING_STATUS_CANCELLED;
+
   $sql="
     SELECT $groupExpr AS b,
-           SUM(CASE WHEN b.status='confirmed' THEN 1 ELSE 0 END) AS conf,
-           SUM(CASE WHEN b.status='pending'   THEN 1 ELSE 0 END) AS pend,
-           SUM(CASE WHEN b.status='cancelled' THEN 1 ELSE 0 END) AS canc,
+           SUM(CASE WHEN b.status=$confStatus THEN 1 ELSE 0 END) AS conf,
+           SUM(CASE WHEN b.status=$pendStatus THEN 1 ELSE 0 END) AS pend,
+           SUM(CASE WHEN b.status=$cancStatus THEN 1 ELSE 0 END) AS canc,
            COUNT(*) AS total
     FROM booking b
     WHERE $where
@@ -99,7 +103,9 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
 
 // ----------------------- TABLE: filters + sort + pagination -----------------------
 $search = trim($_GET['q'] ?? '');
-$status = $_GET['status'] ?? 'all';
+$statusParam = $_GET['status'] ?? 'all';
+$statusCode = $statusParam === 'all' ? null : booking_status_code($statusParam);
+$statusValue = $statusCode === null ? 'all' : (string)$statusCode;
 $staffF = isset($_GET['staff']) ? (int)$_GET['staff'] : 0;
 $serviceF = isset($_GET['service']) ? (int)$_GET['service'] : 0;
 $startDate = $_GET['start_date'] ?? '';
@@ -122,8 +128,8 @@ if($search!==''){
   $where[]="(c.customer_name LIKE ? OR c.gmail LIKE ? OR s.staff_name LIKE ?)";
   $kw="%$search%"; $params[]=$kw; $params[]=$kw; $params[]=$kw; $types.="sss";
 }
-if($status!=='all'){
-  $where[]="b.status=?"; $params[]=$status; $types.="s";
+if($statusCode !== null){
+  $where[]="b.status=?"; $params[]=$statusCode; $types.="i";
 }
 if($staffF>0){
   $where[]="b.staff_id=?"; $params[]=$staffF; $types.="i";
@@ -223,8 +229,14 @@ $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER B
           <div class="col-md-auto">
             <label class="form-label small-label">สถานะ</label>
             <select class="form-select" name="status">
-              <?php $opts=['all'=>'ทั้งหมด','confirmed'=>'confirmed','pending'=>'pending','cancelled'=>'cancelled']; foreach($opts as $k=>$v): ?>
-                <option value="<?=$k?>" <?= $status===$k?'selected':'' ?>><?=$v?></option>
+              <?php
+                $statusOptions = ['all' => 'ทั้งหมด'];
+                foreach (booking_status_options() as $code => $label) {
+                  $statusOptions[(string)$code] = $label;
+                }
+                foreach ($statusOptions as $key => $label):
+              ?>
+                <option value="<?=$key?>" <?= $statusValue === $key ? 'selected' : '' ?>><?=$label?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -308,8 +320,8 @@ $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER B
                   <td><?=esc($bk['staff_name']?:'N/A')?></td>
                   <td class="text-end text-success fw-bold">฿<?=number_format((float)$bk['final_price'],2)?></td>
                   <td>
-                    <?php $st=strtolower($bk['status']); $bclass= $st==='confirmed'?'success':($st==='pending'?'warning':'danger'); ?>
-                    <span class="badge bg-<?=$bclass?>"><?=esc(ucfirst($st) ?: 'N/A')?></span>
+                    <?php $stCode = booking_status_code($bk['status']); $badgeClass = booking_status_badge_class($stCode); $label = booking_status_label($stCode); ?>
+                    <span class="badge <?=$badgeClass?>"><?=esc($label ?: 'N/A')?></span>
                   </td>
                   <td>
                     <div class="btn-group">

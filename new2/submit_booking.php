@@ -2,6 +2,8 @@
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
+require_once __DIR__ . '/../booking_status.php';
+
 try {
     $pdo = new PDO("mysql:host=127.0.0.1;dbname=first9;charset=utf8mb4", "root", "", [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -126,7 +128,7 @@ try {
     // Insert into booking with evidence
     $stmt = $pdo->prepare("
         INSERT INTO booking (customer_id, staff_id, booking_date, time_start, time_end, total_price, total_discount, final_price, status, discount_detail, evidence)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ");
     $stmt->execute([
         $customer_id, 
@@ -136,7 +138,8 @@ try {
         $end_time, 
         $total_price, 
         $total_discount, 
-        $final_price, 
+        $final_price,
+        BOOKING_STATUS_PENDING,
         null,
         $evidenceFileName
     ]);

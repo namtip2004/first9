@@ -1,20 +1,41 @@
 <?php
 session_start();
+require_once 'connect_db.php';
+require_once 'promotion_utils.php';
+
+ensurePromotionSupport($conn);
+
+$message = isset($_GET['message']) ? trim($_GET['message']) : '';
+$error = isset($_GET['error']) ? trim($_GET['error']) : '';
+
+$columns = getPromotionColumns($conn);
+$maxPercentByPromotion = [];
+$percentQuery = $conn->query("SELECT promotion_id, MAX(discount_percent) AS max_percent FROM promotion_service_option GROUP BY promotion_id");
+if ($percentQuery) {
+    while ($row = $percentQuery->fetch_assoc()) {
+        $maxPercentByPromotion[(int) $row['promotion_id']] = (float) $row['max_percent'];
+    }
+    $percentQuery->free();
+}
+
+$sql = "SELECT p.*, COUNT(ps.service_id) AS service_count
+        FROM promotion p
+        LEFT JOIN promotion_service ps ON p.promotion_id = ps.promotion_id
+        GROUP BY p.promotion_id
+        ORDER BY p.pm_start_date DESC";
+$result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 
 <body>
-  <?php include("header.php"); ?>
-  <?php include("slidebar.php"); ?>
+  <?php include 'header.php'; ?>
+  <?php include 'slidebar.php'; ?>
 
   <main id="main" class="main">
 
     <div class="pagetitle">
       <h1>Promotion Table</h1>
-      <nav>
-        <ol class="breadcrumb"></ol>
-      </nav>
     </div>
 
     <section class="section">
@@ -22,58 +43,108 @@ session_start();
         <div class="col-lg-12">
 
           <div class="card">
-            <div class="card-body">
+            <div class="card-body pt-4">
 
-              <div class="text-end mb-2">
-                <a href="form_promotion.php" class="btn btn-success mb-2">+ Add Promotion</a>
+              <div class="text-end mb-3">
+                <a href="form_promotion.php" class="btn btn-success"><i class="bi bi-plus"></i> เพิ่มโปรโมชั่น</a>
               </div>
 
-              <?php 
-              require_once("connect_db.php");
-              $sql = "SELECT * FROM promotion ORDER BY pm_created_at DESC";
-              $result = mysqli_query($conn, $sql);
-              ?>
+              <?php if (!empty($message)): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                  <?= htmlspecialchars($message) ?>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              <?php endif; ?>
 
-              <table class="table table-bordered table-striped">
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>Promotion Name</th>
-                    <th>Discount (%)</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Apply to All</th>
-                    <th>Status</th>
-                    <th>Detail</th>
-                    <th>Edit</th>
-                    <!-- <th>Delete</th> -->
-                  </tr>
-                </thead>
-                <tbody>
-                  <?php 
-                  $i = 1;
-                  while ($row = mysqli_fetch_assoc($result)) { ?>
+              <?php if (!empty($error)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                  <?= htmlspecialchars($error) ?>
+                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+              <?php endif; ?>
+
+              <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                  <thead class="table-light">
                     <tr>
-                      <td><?= $i++ ?></td>
-                      <td><?= htmlspecialchars($row['pm_name']) ?></td>
-                      <td><?= htmlspecialchars($row['discount']) ?></td>
-                      <td><?= htmlspecialchars($row['pm_start_date']) ?></td>
-                      <td><?= htmlspecialchars($row['pm_end_date']) ?></td>
-                      <td><?= $row['apply_to_all'] ? 'Yes' : 'No' ?></td>
-                      <td><?= $row['active'] ? 'Active' : 'Inactive' ?></td>
-                      <td>
-                        <a class="btn btn-outline-primary btn-sm" href="promotion_detail.php?id=<?= $row['promotion_id'] ?>">Detail</a>
-                      </td>
-                      <td>
-                        <a class="btn btn-outline-primary btn-sm" href="promotion_update_form.php?id=<?= $row['promotion_id'] ?>">Edit</a>
-                      </td>
-                      <!-- <td>
-                        <a class="btn btn-outline-danger btn-sm" href="promotion_delete.php?id=<?= $row['promotion_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this promotion?');">Delete</a>
-                      </td> -->
+                      <th scope="col">#</th>
+                      <th scope="col">ชื่อโปรโมชั่น</th>
+                      <th scope="col">วัน-เวลาเริ่มต้น</th>
+                      <th scope="col">วัน-เวลาสิ้นสุด</th>
+                      <th scope="col">สถานะ</th>
+                      <th scope="col">บริการที่เข้าร่วม</th>
+                      <th scope="col">ส่วนลดสูงสุด (%)</th>
+                      <th scope="col" class="text-center">การจัดการ</th>
                     </tr>
-                  <?php } ?>
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    <?php if ($result && $result->num_rows > 0): ?>
+                      <?php $i = 1; ?>
+                      <?php while ($row = $result->fetch_assoc()): ?>
+                        <?php
+                          $promotionId = (int) $row['promotion_id'];
+                          $status = promotionStatus($row['pm_start_date'], $row['pm_end_date']);
+                          $statusLabel = promotionStatusLabel($status);
+                          $serviceCount = (int) $row['service_count'];
+                          $maxPercent = $maxPercentByPromotion[$promotionId] ?? null;
+                          if ($maxPercent === null) {
+                              if (in_array('percent', $columns, true) && isset($row['percent'])) {
+                                  $maxPercent = (float) $row['percent'];
+                              } elseif (in_array('discount', $columns, true) && isset($row['discount'])) {
+                                  $maxPercent = (float) $row['discount'];
+                              } else {
+                                  $maxPercent = 0.0;
+                              }
+                          }
+                        ?>
+                        <tr>
+                          <td><?= $i++ ?></td>
+                          <td><?= htmlspecialchars($row['pm_name'] ?? '') ?></td>
+                          <td><?= htmlspecialchars(formatDateTimeDisplay($row['pm_start_date'] ?? '')) ?></td>
+                          <td><?= htmlspecialchars(formatDateTimeDisplay($row['pm_end_date'] ?? '')) ?></td>
+                          <td>
+                            <span class="badge
+                              <?php if ($status === 'running'): ?> bg-success<?php elseif ($status === 'upcoming'): ?> bg-warning text-dark<?php elseif ($status === 'ended'): ?> bg-secondary<?php else: ?> bg-light text-dark<?php endif; ?>
+                            ">
+                              <?= htmlspecialchars($statusLabel) ?>
+                            </span>
+                          </td>
+                          <td><?= $serviceCount ?></td>
+                          <td><?= number_format((float) $maxPercent, 2) ?></td>
+                          <td class="text-center">
+                            <div class="d-flex justify-content-center flex-wrap gap-2">
+                              <a href="promotion_detail.php?id=<?= $promotionId ?>" class="btn btn-outline-primary btn-sm">รายละเอียด</a>
+                              <?php if ($status !== 'ended'): ?>
+                                <a href="promotion_update_form.php?id=<?= $promotionId ?>" class="btn btn-outline-secondary btn-sm">แก้ไข</a>
+                              <?php else: ?>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>แก้ไข</button>
+                              <?php endif; ?>
+
+                              <?php if ($status === 'upcoming'): ?>
+                                <form action="promotion_delete.php" method="post" class="d-inline" onsubmit="return confirm('ต้องการลบโปรโมชั่นนี้หรือไม่?');">
+                                  <input type="hidden" name="promotion_id" value="<?= $promotionId ?>">
+                                  <button type="submit" class="btn btn-outline-danger btn-sm">ลบ</button>
+                                </form>
+                              <?php elseif ($status === 'running'): ?>
+                                <form action="promotion_end.php" method="post" class="d-inline" onsubmit="return confirm('ต้องการสิ้นสุดโปรโมชั่นนี้ทันทีหรือไม่?');">
+                                  <input type="hidden" name="promotion_id" value="<?= $promotionId ?>">
+                                  <button type="submit" class="btn btn-outline-warning btn-sm">สิ้นสุดทันที</button>
+                                </form>
+                              <?php else: ?>
+                                <span class="text-muted">-</span>
+                              <?php endif; ?>
+                            </div>
+                          </td>
+                        </tr>
+                      <?php endwhile; ?>
+                    <?php else: ?>
+                      <tr>
+                        <td colspan="8" class="text-center text-muted">ยังไม่มีข้อมูลโปรโมชั่น</td>
+                      </tr>
+                    <?php endif; ?>
+                  </tbody>
+                </table>
+              </div>
 
             </div>
           </div>
@@ -84,7 +155,7 @@ session_start();
 
   </main>
 
-  <?php include("footer.php"); ?>
+  <?php include 'footer.php'; ?>
 </body>
 
 </html>

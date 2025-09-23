@@ -64,14 +64,14 @@ try {
 
     $end_time = date('H:i', strtotime('+' . $total_duration . ' minutes', strtotime($start_time)));
 
-    $targetDateTime = combineDateAndTime($booking_date, $start_time);
+    $bookingMoment = date('Y-m-d H:i:s');
     $discountMap = [];
     $total_discount = 0.0;
     $discount_detail = '';
 
-    if ($targetDateTime && !empty($optionIds)) {
+    if (!empty($optionIds)) {
         ensurePromotionSupport($conn);
-        $result = getApplicableOptionDiscounts($conn, $optionIds, $targetDateTime);
+        $result = getApplicableOptionDiscounts($conn, $optionIds, $bookingMoment);
         $discountMap = $result['by_option'];
         $total_discount = (float) $result['total_discount'];
         $discount_detail = summarizePromotionDiscountDetail($result['by_promotion']);

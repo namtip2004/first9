@@ -547,6 +547,7 @@
                     services.forEach(service => {
                         const serviceCard = createServiceCard(service);
                         container.appendChild(serviceCard);
+                        loadServiceOptions(service.service_id, service.service_name);
                     });
                 })
                 .catch(error => {
@@ -584,8 +585,10 @@ function createServiceCard(service) {
         </div>
     `;
 
-    // เรียกแสดงตัวเลือกทันทีที่สร้างการ์ด พร้อมส่ง serviceName
-    loadServiceOptions(service.service_id, service.service_name);
+    const optionsContainer = card.querySelector(`#options-${service.service_id}`);
+    if (optionsContainer) {
+        optionsContainer.innerHTML = '<small style="color: var(--deep-brown);">กำลังโหลดตัวเลือก...</small>';
+    }
 
     return card;
 }
@@ -1261,17 +1264,6 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
             }, 3000);
         }
 
-        // Initialize service options loading on click
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.service-card') && !e.target.closest('.option-item')) {
-                const serviceCard = e.target.closest('.service-card');
-                const serviceId = serviceCard.dataset.serviceId || serviceCard.querySelector('[id^="options-"]')?.id.split('-')[1];
-                const serviceName = serviceCard.dataset.serviceName || '';
-                if (serviceId) {
-                    loadServiceOptions(parseInt(serviceId, 10), serviceName);
-                }
-            }
-        });
     </script>
 
     <!-- Additional PHP for getting services -->

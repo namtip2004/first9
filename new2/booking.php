@@ -681,10 +681,10 @@ async function loadServiceOptions(serviceId, serviceName = '') {
                 optionElement.classList.add('promotion-active');
             }
 
-            const promotionLabel = promotionName ? escapeHtml(promotionName) : 'โปรโมชั่นพิเศษ';
+            const promotionIndicatorText = 'กำลังจัดโปรโมชั่น';
 
             optionElement.innerHTML = `
-                ${hasDiscount ? `<div class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionLabel}</span></div>` : ''}
+                ${hasDiscount ? `<div class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionIndicatorText}</span></div>` : ''}
                 <div class="option-duration"><strong>${durationLabel}</strong></div>
                 <div class="option-price-wrapper">
                     ${hasDiscount
@@ -794,13 +794,11 @@ function updateCartDisplay() {
         const hasDiscount = Number(item.discountAmount) > 0;
         const serviceName = escapeHtml(item.serviceName || '');
         const description = escapeHtml(item.description || '');
-        const promotionLabel = item.promotionName ? escapeHtml(item.promotionName) : '';
-
         const priceSection = hasDiscount
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)}${promotionLabel ? ` <span class="promotion-text">(${promotionLabel})</span>` : ''}</div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text">(โปรโมชั่น)</span></div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -1056,13 +1054,11 @@ function generatePaymentSummary() {
         const hasDiscount = Number(item.discountAmount) > 0;
         const serviceName = escapeHtml(item.serviceName || '');
         const description = escapeHtml(item.description || '');
-        const promotionLabel = item.promotionName ? escapeHtml(item.promotionName) : '';
-
         const priceSection = hasDiscount
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)}${promotionLabel ? ` <span class="promotion-text">(${promotionLabel})</span>` : ''}</div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text">(โปรโมชั่น)</span></div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -1071,7 +1067,7 @@ function generatePaymentSummary() {
                 <div class="summary-service">
                     <div class="summary-service-name">${serviceName}</div>
                     <div class="summary-service-details">${description}</div>
-                    ${hasDiscount && promotionLabel ? `<div class="promotion-text">โปรโมชั่น: ${promotionLabel}</div>` : ''}
+                    ${hasDiscount ? `<div class="promotion-text">กำลังจัดโปรโมชั่น</div>` : ''}
                 </div>
                 <div class="summary-price">${priceSection}</div>
             </div>

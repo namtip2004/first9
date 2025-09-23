@@ -116,8 +116,6 @@ $result = $conn->query($sql);
                               <a href="promotion_detail.php?id=<?= $promotionId ?>" class="btn btn-outline-primary btn-sm">รายละเอียด</a>
                               <?php if ($status !== 'ended'): ?>
                                 <a href="promotion_update_form.php?id=<?= $promotionId ?>" class="btn btn-outline-secondary btn-sm">แก้ไข</a>
-                              <?php else: ?>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>แก้ไข</button>
                               <?php endif; ?>
 
                               <?php if ($status === 'upcoming'): ?>
@@ -131,7 +129,7 @@ $result = $conn->query($sql);
                                   <button type="submit" class="btn btn-outline-warning btn-sm">สิ้นสุดทันที</button>
                                 </form>
                               <?php else: ?>
-                                <span class="text-muted">-</span>
+
                               <?php endif; ?>
                             </div>
                           </td>

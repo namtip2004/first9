@@ -40,6 +40,10 @@
       margin-top: 0;
     }
 
+    .compact-card .card-body {
+      padding: 1.25rem;
+    }
+
     .summary-card .table {
       font-size: 0.95rem;
     }
@@ -127,11 +131,11 @@
           <div class="card-body p-0">
 
             <form id="bookingForm" action="submit_booking.php" method="POST" enctype="multipart/form-data">
-              <div class="row g-3">
-                <div class="col-lg-8 d-flex flex-column gap-3">
-                  <div class="card shadow-sm border-0">
+              <div class="row g-2">
+                <div class="col-lg-8 d-flex flex-column gap-2">
+                  <div class="card shadow-sm border-0 compact-card">
                     <div class="card-body">
-                      <h5 class="card-title mb-3">Customer</h5>
+                      <h5 class="card-title mb-2">Customer</h5>
                       <label for="customer" class="form-label">Select Customer</label>
                       <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
                         <option value="">Select a customer</option>
@@ -142,16 +146,16 @@
                     </div>
                   </div>
 
-                  <div class="card shadow-sm border-0">
+                  <div class="card shadow-sm border-0 compact-card">
                     <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
                         <h5 class="card-title mb-0">Services</h5>
                         <button type="button" class="btn btn-outline-primary btn-sm" onclick="addService()">Add Service</button>
                       </div>
 
-                      <div id="servicesContainer" class="d-flex flex-column gap-3">
-                        <div class="service-row p-3">
-                          <div class="row g-3 align-items-end">
+                      <div id="servicesContainer" class="d-flex flex-column gap-2">
+                        <div class="service-row p-2">
+                          <div class="row g-2 align-items-end">
                             <div class="col-12 col-md-6">
                               <label class="form-label">Select Service</label>
                               <select class="form-select service-select" name="services[]" onchange="loadOptions(this)">
@@ -178,10 +182,10 @@
                     </div>
                   </div>
 
-                  <div class="card shadow-sm border-0">
+                  <div class="card shadow-sm border-0 compact-card">
                     <div class="card-body">
-                      <h5 class="card-title mb-3">Schedule</h5>
-                      <div class="row g-3">
+                      <h5 class="card-title mb-2">Schedule</h5>
+                      <div class="row g-2">
                         <div class="col-sm-6">
                           <label for="bookingDate" class="form-label">Select Date</label>
                           <input type="text" class="form-control" id="bookingDate" name="booking_date" required disabled>
@@ -204,10 +208,10 @@
                 </div>
 
                 <div class="col-lg-4">
-                  <div class="d-flex flex-column gap-3 sticky-lg-top" style="top: 5.5rem;">
-                    <div class="card shadow-sm summary-card border-0">
+                  <div class="d-flex flex-column gap-2 sticky-lg-top" style="top: 5.5rem;">
+                    <div class="card shadow-sm summary-card border-0 compact-card">
                       <div class="card-body">
-                        <h5 class="card-title mb-3">Price Summary</h5>
+                        <h5 class="card-title mb-2">Price Summary</h5>
                         <div class="table-responsive">
                           <table class="table table-sm align-middle mb-0">
                             <thead class="table-light">
@@ -245,9 +249,9 @@
                       </div>
                     </div>
 
-                    <div class="card shadow-sm border-0">
+                    <div class="card shadow-sm border-0 compact-card">
                       <div class="card-body">
-                        <h5 class="card-title mb-3">Supporting Evidence</h5>
+                        <h5 class="card-title mb-2">Supporting Evidence</h5>
                         <div class="upload-box" id="uploadBox">
                           <div class="upload-text" id="uploadText">Add evidence (JPG, PNG, PDF)</div>
                           <input type="file" id="imgprofile" name="imgprofile" />
@@ -259,7 +263,7 @@
                 </div>
 
                 <div class="col-12 d-flex justify-content-end">
-                  <button type="submit" class="btn btn-primary btn-lg px-4 mt-3 mt-lg-0">Confirm Booking</button>
+                  <button type="submit" class="btn btn-primary btn-lg px-4 mt-2 mt-lg-0">Confirm Booking</button>
                 </div>
               </div>
             </form>
@@ -376,9 +380,9 @@
     function addService(){
       const container = document.getElementById('servicesContainer');
       const newRow = document.createElement('div');
-      newRow.className = 'service-row p-3';
+      newRow.className = 'service-row p-2';
       newRow.innerHTML = `
-        <div class="row g-3 align-items-end">
+        <div class="row g-2 align-items-end">
           <div class="col-12 col-md-6">
             <label class="form-label">Select Service</label>
             <select class="form-select service-select" name="services[]" onchange="loadOptions(this)">

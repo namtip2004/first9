@@ -819,11 +819,8 @@ function addToCart(serviceId, option, serviceName = '') {
 
     if (existingIndex === -1) {
         selectedItems.push(itemData);
-        showToast(`เพิ่ม ${serviceName} (${durationLabel}) ในรายการแล้ว`, 'success');
     } else {
-        const oldLabel = selectedItems[existingIndex].description || `${selectedItems[existingIndex].duration} min`;
         selectedItems[existingIndex] = itemData;
-        showToast(`เปลี่ยน ${serviceName} จาก ${oldLabel} เป็น ${durationLabel}`, 'info');
     }
 
     updateCartDisplay();

@@ -133,52 +133,10 @@
                 <div class="col-lg-8 d-flex flex-column gap-4">
                   <div class="card shadow-sm border-0">
                     <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-                        <div>
-                          <h5 class="card-title mb-1">Customer &amp; Schedule</h5>
-                          <p class="form-section-description mb-0">Choose the customer and set the details for this appointment.</p>
-                        </div>
-                      </div>
-                      <div class="row g-3">
-                        <div class="col-12">
-                          <label for="customer" class="form-label">Select Customer</label>
-                          <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
-                            <option value="">Select a customer</option>
-                            <?php foreach ($customers as $customer) { ?>
-                              <option value="<?php echo htmlspecialchars($customer['customer_id']); ?>"><?php echo htmlspecialchars($customer['customer_id'] . ' - ' . $customer['customer_name']); ?></option>
-                            <?php } ?>
-                          </select>
-                        </div>
-                        <div class="col-sm-6">
-                          <label for="bookingDate" class="form-label">Select Date</label>
-                          <input type="text" class="form-control" id="bookingDate" name="booking_date" required>
-                        </div>
-                        <div class="col-sm-6">
-                          <label for="startTime" class="form-label">Select Start Time</label>
-                          <select class="form-select" id="startTime" name="start_time" onchange="loadAvailableStaff()" required>
-                            <option value="">Select a time</option>
-                          </select>
-                        </div>
-                        <div class="col-sm-6">
-                          <label for="staff" class="form-label">Select Staff</label>
-                          <select class="form-select" id="staff" name="staff_id" required>
-                            <option value="">Select a staff member</option>
-                          </select>
-                        </div>
-                        <div class="col-sm-6 col-lg-4">
-                          <label class="form-label">Total Duration</label>
-                          <input type="text" class="form-control" id="totalDuration" value="0 minutes" readonly>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="card shadow-sm border-0">
-                    <div class="card-body">
                       <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
                         <div>
                           <h5 class="card-title mb-1">Services</h5>
-                          <p class="form-section-description mb-0">Add each service required for this booking. You can add more than one option.</p>
+                          <p class="form-section-description mb-0">Start by selecting the services required for this booking. You can add more than one option.</p>
                         </div>
                         <button type="button" class="btn btn-outline-primary btn-sm" onclick="addService()">Add Service</button>
                       </div>
@@ -213,6 +171,44 @@
                       </div>
                     </div>
                   </div>
+
+                  <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+                        <div>
+                          <h5 class="card-title mb-1">Customer &amp; Schedule</h5>
+                          <p class="form-section-description mb-0">After selecting services, choose the customer and suitable time slot.</p>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label for="customer" class="form-label">Select Customer</label>
+                          <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
+                            <option value="">Select a customer</option>
+                            <?php foreach ($customers as $customer) { ?>
+                              <option value="<?php echo htmlspecialchars($customer['customer_id']); ?>"><?php echo htmlspecialchars($customer['customer_id'] . ' - ' . $customer['customer_name']); ?></option>
+                            <?php } ?>
+                          </select>
+                        </div>
+                        <div class="col-sm-6">
+                          <label for="bookingDate" class="form-label">Select Date</label>
+                          <input type="text" class="form-control" id="bookingDate" name="booking_date" required disabled>
+                        </div>
+                        <div class="col-sm-6">
+                          <label for="startTime" class="form-label">Select Start Time</label>
+                          <select class="form-select" id="startTime" name="start_time" onchange="loadAvailableStaff()" required disabled>
+                            <option value="">Select a time</option>
+                          </select>
+                        </div>
+                        <div class="col-sm-6">
+                          <label for="staff" class="form-label">Select Staff</label>
+                          <select class="form-select" id="staff" name="staff_id" required disabled>
+                            <option value="">Select a staff member</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="col-lg-4">
@@ -220,6 +216,10 @@
                     <div class="card shadow-sm summary-card border-0">
                       <div class="card-body">
                         <h5 class="card-title mb-3">Price Summary</h5>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                          <span class="text-muted text-uppercase small">Total Duration</span>
+                          <span id="totalDurationDisplay" class="fw-semibold">0 minutes</span>
+                        </div>
                         <div class="table-responsive">
                           <table class="table table-sm align-middle mb-0">
                             <thead class="table-light">
@@ -291,6 +291,10 @@
     const fileInput = document.getElementById('imgprofile');
     const previewImage = document.getElementById('previewImage');
     const uploadText = document.getElementById('uploadText');
+    const bookingDateInput = document.getElementById('bookingDate');
+    const startTimeSelect = document.getElementById('startTime');
+    const staffSelect = document.getElementById('staff');
+    let bookingDatePicker;
 
     uploadBox.addEventListener('dragover', (e) => {
       e.preventDefault(); uploadBox.classList.add('dragover');
@@ -313,17 +317,43 @@
       if (customerSelect) {
         $(customerSelect).select2({ placeholder: "Search or select a customer", allowClear: true });
       }
+
+      bookingDatePicker = flatpickr("#bookingDate", {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        clickOpens: false,
+        onChange: function(selectedDates, dateStr){
+          loadAvailableTimes(dateStr);
+          calculatePrices();
+        }
+      });
+
+      updateScheduleAvailability(false);
     });
 
-    // ---------- Flatpickr ----------
-    flatpickr("#bookingDate", {
-      dateFormat: "Y-m-d",
-      minDate: "today",
-      onChange: function(selectedDates, dateStr){
-        loadAvailableTimes(dateStr);
-        calculatePrices();
+    function updateScheduleAvailability(hasDuration){
+      if (!bookingDateInput || !startTimeSelect || !staffSelect) { return; }
+
+      if (!hasDuration) {
+        if (bookingDatePicker) {
+          bookingDatePicker.clear();
+          bookingDatePicker.set('clickOpens', false);
+        }
+        bookingDateInput.value = '';
+        bookingDateInput.setAttribute('disabled', 'disabled');
+
+        startTimeSelect.innerHTML = '<option value="">Select a time</option>';
+        startTimeSelect.setAttribute('disabled', 'disabled');
+
+        staffSelect.innerHTML = '<option value="">Select a staff member</option>';
+        staffSelect.setAttribute('disabled', 'disabled');
+      } else {
+        bookingDateInput.removeAttribute('disabled');
+        if (bookingDatePicker) {
+          bookingDatePicker.set('clickOpens', true);
+        }
       }
-    });
+    }
 
     // ---------- Helpers ----------
     function getTotalMinutes(){
@@ -337,8 +367,12 @@
 
     function refreshTotalDuration(){
       const mins = getTotalMinutes();
-      document.getElementById('totalDuration').value = `${mins} minutes`;
-      const date = document.getElementById('bookingDate').value;
+      const durationDisplay = document.getElementById('totalDurationDisplay');
+      if (durationDisplay) {
+        durationDisplay.textContent = `${mins} minutes`;
+      }
+      updateScheduleAvailability(mins > 0);
+      const date = bookingDateInput ? bookingDateInput.value : '';
       if (date) loadAvailableTimes(date); // refresh slots when minutes change
     }
 
@@ -421,8 +455,14 @@
     // ---------- Time slots ----------
     function loadAvailableTimes(date){
       const totalDuration = getTotalMinutes();
-      const timeSelect = document.getElementById('startTime');
-      timeSelect.innerHTML = '<option value="">Select a time</option>';
+
+      if (!startTimeSelect || !staffSelect) { return; }
+
+      startTimeSelect.innerHTML = '<option value="">Select a time</option>';
+      startTimeSelect.setAttribute('disabled', 'disabled');
+
+      staffSelect.innerHTML = '<option value="">Select a staff member</option>';
+      staffSelect.setAttribute('disabled', 'disabled');
 
       if (!date || !totalDuration){ return; }
 
@@ -432,8 +472,13 @@
           times.forEach(t => {
             const o = document.createElement('option');
             o.value = t; o.textContent = t;
-            timeSelect.appendChild(o);
+            startTimeSelect.appendChild(o);
           });
+
+          if (times.length) {
+            startTimeSelect.removeAttribute('disabled');
+          }
+
           loadAvailableStaff();
         })
         .catch(() => {});
@@ -441,11 +486,13 @@
 
     // ---------- Staff ----------
     function loadAvailableStaff(){
-      const date = document.getElementById('bookingDate').value;
-      const startTime = document.getElementById('startTime').value;
+      if (!staffSelect) { return; }
+
+      const date = bookingDateInput ? bookingDateInput.value : '';
+      const startTime = startTimeSelect ? startTimeSelect.value : '';
       const totalDuration = getTotalMinutes();
-      const staffSelect = document.getElementById('staff');
       staffSelect.innerHTML = '<option value="">Select a staff member</option>';
+      staffSelect.setAttribute('disabled', 'disabled');
 
       if (date && startTime && totalDuration){
         fetch(`get_available_staff.php?date=${encodeURIComponent(date)}&start_time=${encodeURIComponent(startTime)}&duration=${encodeURIComponent(totalDuration)}`)
@@ -456,6 +503,10 @@
               o.value = s.staff_id; o.textContent = s.staff_name;
               staffSelect.appendChild(o);
             });
+
+            if (staffs.length) {
+              staffSelect.removeAttribute('disabled');
+            }
           })
           .catch(() => {});
       }

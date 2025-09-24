@@ -131,17 +131,13 @@
             font-weight: 600;
             font-size: 1rem;
         }
-        .option-item .price-discount {
-            display: block;
-            text-align: right;
-            font-size: 0.75rem;
+        .price-discount {
             color: rgba(112, 85, 61, 0.85);
-            margin-top: 4px;
         }
         .discount-ribbon {
             position: absolute;
-            top: 8px;
-            right: 8px;
+            top: 0;
+            right: 0;
             background: var(--deep-burgundy);
             color: white;
             padding: 6px 14px;
@@ -754,7 +750,6 @@ async function loadServiceOptions(serviceId, serviceName = '') {
                             : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
                     </div>
                 </div>
-                ${hasDiscount ? `<span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}</span>` : ''}
             `;
 
             const enrichedOption = {
@@ -866,7 +861,6 @@ function updateCartDisplay() {
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)}</div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -1135,7 +1129,6 @@ function generatePaymentSummary() {
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)}</div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 

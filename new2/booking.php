@@ -88,32 +88,50 @@
             border-color: rgba(201, 169, 110, 0.6);
             box-shadow: 0 8px 20px rgba(201, 169, 110, 0.25);
         }
-        .option-price-wrapper {
-            margin-top: 6px;
+        .option-info {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 2px;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+        }
+        .option-duration {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--deep-brown);
+            font-weight: 600;
+        }
+        .option-pricing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .option-pricing .price-original {
+            text-decoration: line-through;
+            color: rgba(112, 85, 61, 0.55);
+            font-size: 0.85rem;
+        }
+        .option-pricing .price-final,
+        .option-pricing .option-price-normal {
+            color: var(--luxury-gold);
+            font-weight: 600;
+            font-size: 1rem;
         }
         .price-original {
             text-decoration: line-through;
             color: rgba(112, 85, 61, 0.55);
             font-size: 0.9rem;
         }
-        .price-final {
-            color: var(--luxury-gold);
-            font-weight: 600;
-            font-size: 1rem;
-        }
+        .price-final,
         .option-price-normal {
             color: var(--luxury-gold);
             font-weight: 600;
             font-size: 1rem;
         }
-        .price-discount {
-            color: #1f9d55;
-            font-size: 0.8rem;
-            font-weight: 500;
+        .option-item .price-discount {
+            display: block;
+            text-align: right;
         }
         .promotion-chip {
             display: inline-flex;
@@ -133,11 +151,11 @@
             display: inline-block;
         }
         .options-list {
-    display: flex;
-    flex-direction: row; /* จัดเรียงในแนวนอน */
-    flex-wrap: wrap; /* ถ้ามีหลายตัวเลือกให้ขึ้นบรรทัดใหม่ */
-    gap: 10px; /* ระยะห่างระหว่างตัวเลือก */
-}
+            display: flex;
+            flex-direction: row; /* จัดเรียงในแนวนอน */
+            flex-wrap: wrap; /* ถ้ามีหลายตัวเลือกให้ขึ้นบรรทัดใหม่ */
+            gap: 10px; /* ระยะห่างระหว่างตัวเลือก */
+        }
 
         .cart-item {
             background: var(--soft-cream);
@@ -645,7 +663,7 @@ async function loadServiceOptions(serviceId, serviceName = '') {
             optionElement.style.padding = '10px';
             optionElement.style.borderRadius = '5px';
             optionElement.style.minWidth = '120px';
-            optionElement.style.textAlign = 'center';
+            optionElement.style.textAlign = 'left';
             optionElement.style.border = '1px solid #ddd';
             optionElement.style.cursor = 'pointer';
 
@@ -684,15 +702,17 @@ async function loadServiceOptions(serviceId, serviceName = '') {
             const promotionIndicatorText = 'กำลังจัดโปรโมชั่น';
 
             optionElement.innerHTML = `
-                ${hasDiscount ? `<div class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionIndicatorText}</span></div>` : ''}
-                <div class="option-duration"><strong>${durationLabel}</strong></div>
-                <div class="option-price-wrapper">
-                    ${hasDiscount
-                        ? `<span class="price-original">${formatCurrency(basePrice)}</span>
-                           <span class="price-final">${formatCurrency(finalPrice)}</span>
-                           <span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}</span>`
-                        : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
+                <div class="option-info">
+                    <div class="option-duration"><i class="fas fa-clock"></i><span>${durationLabel}</span></div>
+                    <div class="option-pricing">
+                        ${hasDiscount
+                            ? `<span class="price-original">${formatCurrency(basePrice)}</span>
+                               <span class="price-final">${formatCurrency(finalPrice)}</span>
+                               <span class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionIndicatorText}</span></span>`
+                            : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
+                    </div>
                 </div>
+                ${hasDiscount ? `<span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}</span>` : ''}
             `;
 
             const enrichedOption = {

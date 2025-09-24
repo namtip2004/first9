@@ -84,6 +84,54 @@
             color: white;
             border-color: var(--deep-burgundy);
         }
+        .option-item.promotion-active {
+            border-color: rgba(201, 169, 110, 0.6);
+            box-shadow: 0 8px 20px rgba(201, 169, 110, 0.25);
+        }
+        .option-price-wrapper {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .price-original {
+            text-decoration: line-through;
+            color: rgba(112, 85, 61, 0.55);
+            font-size: 0.9rem;
+        }
+        .price-final {
+            color: var(--luxury-gold);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .option-price-normal {
+            color: var(--luxury-gold);
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .price-discount {
+            color: #1f9d55;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .promotion-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(201, 169, 110, 0.18);
+            color: var(--deep-burgundy);
+            border-radius: 999px;
+            padding: 3px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .promotion-text {
+            color: var(--deep-burgundy);
+            font-weight: 600;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
         .options-list {
     display: flex;
     flex-direction: row; /* จัดเรียงในแนวนอน */
@@ -273,6 +321,10 @@
                                         <span>ราคารวม:</span>
                                         <span id="totalPrice">€0</span>
                                     </div>
+                                    <div class="d-flex justify-content-between mb-2" id="discountRow" style="display: none;">
+                                        <span>ส่วนลด:</span>
+                                        <span id="totalDiscount" class="price-discount">-€0</span>
+                                    </div>
 
                                     <hr style="border-color: rgba(255,255,255,0.3);">
                                     <div class="d-flex justify-content-between">
@@ -416,6 +468,49 @@
         let selectedStaff = null;
         let totalDuration = 0;
 
+        function formatCurrency(value) {
+            const number = Number(value) || 0;
+            return `€${number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+        }
+
+        function formatDiscount(value) {
+            const number = Number(value) || 0;
+            return `-€${number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+        }
+
+        function escapeHtml(value) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+            return value
+                .toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getNowForPromotion() {
+            const now = new Date();
+            return {
+                date: now.toISOString().slice(0, 10),
+                time: now.toTimeString().slice(0, 8)
+            };
+        }
+
+        function getPriceTotals() {
+            return selectedItems.reduce((totals, item) => {
+                const base = Number(item.originalPrice ?? item.price) || 0;
+                const final = Number(item.price) || base;
+                const discount = Number(item.discountAmount ?? Math.max(base - final, 0)) || 0;
+                totals.original += base;
+                totals.discount += Math.min(discount, base);
+                totals.final += Math.max(final, 0);
+                return totals;
+            }, { original: 0, discount: 0, final: 0 });
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadServices();
@@ -452,6 +547,7 @@
                     services.forEach(service => {
                         const serviceCard = createServiceCard(service);
                         container.appendChild(serviceCard);
+                        loadServiceOptions(service.service_id, service.service_name);
                     });
                 })
                 .catch(error => {
@@ -465,11 +561,13 @@
 function createServiceCard(service) {
     const card = document.createElement('div');
     card.className = 'service-card';
+    card.dataset.serviceId = service.service_id;
+    card.dataset.serviceName = service.service_name;
     card.innerHTML = `
         <div class="d-flex align-items-start">
             <div class="service-icon me-3">
-                <img 
-                    src="${service.coverimg ? '../admin/assets/img/' + service.coverimg : '../admin/assets/img/default.jpg'}" 
+                <img
+                    src="${service.coverimg ? '../admin/assets/img/' + service.coverimg : '../admin/assets/img/default.jpg'}"
                     alt="${service.service_name}" 
                     class="profile-img"
                     style="width: 140px; height: 140px; object-fit: cover;"
@@ -487,87 +585,185 @@ function createServiceCard(service) {
         </div>
     `;
 
-    // เรียกแสดงตัวเลือกทันทีที่สร้างการ์ด พร้อมส่ง serviceName
-    loadServiceOptions(service.service_id, service.service_name);
+    const optionsContainer = card.querySelector(`#options-${service.service_id}`);
+    if (optionsContainer) {
+        optionsContainer.innerHTML = '<small style="color: var(--deep-brown);">กำลังโหลดตัวเลือก...</small>';
+    }
 
     return card;
 }
 
-function loadServiceOptions(serviceId, serviceName) {
-    fetch(`get_options.php?service_id=${serviceId}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(options => {
-            const container = document.getElementById(`options-${serviceId}`);
-            container.innerHTML = '';
+async function loadServiceOptions(serviceId, serviceName = '') {
+    const container = document.getElementById(`options-${serviceId}`);
+    if (!container) {
+        return;
+    }
 
-            if (options.length === 0) {
-                container.innerHTML = '<small style="color: var(--deep-brown);">ไม่มีตัวเลือก</small>';
-                return;
-            }
+    const resolvedServiceName = serviceName || container.closest('.service-card')?.dataset?.serviceName || '';
 
-            options.forEach(option => {
-                const optionElement = document.createElement('div');
-                optionElement.className = 'option-item';
-                optionElement.style.backgroundColor = '#f8f9fa';
-                optionElement.style.padding = '10px';
-                optionElement.style.borderRadius = '5px';
-                optionElement.style.minWidth = '100px';
-                optionElement.style.textAlign = 'center';
-                optionElement.style.border = '1px solid #ddd';
-                optionElement.style.cursor = 'pointer';
-                optionElement.innerHTML = `
-                    <strong>${option.duration} min</strong> - 
-                    <span style="color: var(--luxury-gold); font-weight: 500;">${option.price} €</span>
-                `;
-                // ส่ง serviceName ไปยัง addToCart
-                optionElement.addEventListener('click', () => addToCart(serviceId, option, serviceName));
-                container.appendChild(optionElement);
+    try {
+        const response = await fetch(`get_options.php?service_id=${serviceId}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const options = await response.json();
+        container.innerHTML = '';
+
+        if (!Array.isArray(options) || options.length === 0) {
+            container.innerHTML = '<small style="color: var(--deep-brown);">ไม่มีตัวเลือก</small>';
+            return;
+        }
+
+        let promotionMap = {};
+        try {
+            const now = getNowForPromotion();
+            const promoResponse = await fetch('get_applicable_promotions.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    option_ids: options.map(opt => opt.option_id),
+                    date: now.date,
+                    time: now.time
+                })
             });
-        })
-        .catch(error => {
-            console.error('Error loading options:', error);
-            const container = document.getElementById(`options-${serviceId}`);
-            container.innerHTML = '<small style="color: var(--deep-brown);">เกิดข้อผิดพลาดในการโหลดตัวเลือก</small>';
+
+            if (promoResponse.ok) {
+                const promoData = await promoResponse.json();
+                if (promoData && promoData.success) {
+                    promotionMap = promoData.option_discounts || {};
+                }
+            }
+        } catch (promoError) {
+            console.warn('Error fetching promotions:', promoError);
+        }
+
+        options.forEach(option => {
+            const optionElement = document.createElement('div');
+            optionElement.className = 'option-item';
+            optionElement.style.backgroundColor = '#f8f9fa';
+            optionElement.style.padding = '10px';
+            optionElement.style.borderRadius = '5px';
+            optionElement.style.minWidth = '120px';
+            optionElement.style.textAlign = 'center';
+            optionElement.style.border = '1px solid #ddd';
+            optionElement.style.cursor = 'pointer';
+
+            const optionId = parseInt(option.option_id, 10);
+            const basePrice = parseFloat(option.price) || 0;
+            const durationMinutes = parseInt(option.duration, 10);
+            const durationLabel = Number.isNaN(durationMinutes) ? `${option.duration} min` : `${durationMinutes} min`;
+            const discountInfo = promotionMap[optionId] || null;
+
+            let discountAmount = 0;
+            let finalPrice = basePrice;
+            let promotionName = '';
+            let discountPercent = 0;
+            let promotionId = null;
+
+            if (discountInfo && Number(discountInfo.discount_amount) > 0) {
+                discountAmount = parseFloat(discountInfo.discount_amount) || 0;
+                const finalFromApi = discountInfo.final_price !== undefined && discountInfo.final_price !== null
+                    ? parseFloat(discountInfo.final_price)
+                    : NaN;
+                if (!Number.isNaN(finalFromApi)) {
+                    finalPrice = finalFromApi;
+                } else {
+                    finalPrice = Math.max(basePrice - discountAmount, 0);
+                }
+                promotionName = discountInfo.promotion_name || '';
+                discountPercent = parseFloat(discountInfo.discount_percent || 0) || 0;
+                promotionId = discountInfo.promotion_id ? parseInt(discountInfo.promotion_id, 10) : null;
+            }
+
+            const hasDiscount = discountAmount > 0 && finalPrice < basePrice;
+            if (hasDiscount) {
+                optionElement.classList.add('promotion-active');
+            }
+
+            const promotionIndicatorText = 'กำลังจัดโปรโมชั่น';
+
+            optionElement.innerHTML = `
+                ${hasDiscount ? `<div class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionIndicatorText}</span></div>` : ''}
+                <div class="option-duration"><strong>${durationLabel}</strong></div>
+                <div class="option-price-wrapper">
+                    ${hasDiscount
+                        ? `<span class="price-original">${formatCurrency(basePrice)}</span>
+                           <span class="price-final">${formatCurrency(finalPrice)}</span>
+                           <span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}</span>`
+                        : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
+                </div>
+            `;
+
+            const enrichedOption = {
+                option_id: optionId,
+                duration: Number.isNaN(durationMinutes) ? 0 : durationMinutes,
+                duration_label: durationLabel,
+                base_price: basePrice,
+                final_price: hasDiscount ? finalPrice : basePrice,
+                discount_amount: hasDiscount ? discountAmount : 0,
+                promotion_name: promotionName,
+                promotion_id: promotionId,
+                discount_percent: discountPercent
+            };
+
+            optionElement.addEventListener('click', () => addToCart(serviceId, enrichedOption, resolvedServiceName));
+            container.appendChild(optionElement);
         });
+    } catch (error) {
+        console.error('Error loading options:', error);
+        container.innerHTML = '<small style="color: var(--deep-brown);">เกิดข้อผิดพลาดในการโหลดตัวเลือก</small>';
+    }
 }
 
-function addToCart(serviceId, option, serviceName) {
-    // Check if service already exists in cart (regardless of optionId)
-    const existingIndex = selectedItems.findIndex(item => item.serviceId === serviceId);
-    
-    if (existingIndex === -1) {
-        // If service is not in cart, add new item
-        selectedItems.push({
-            serviceId: serviceId,
-            serviceName: serviceName,
-            optionId: option.option_id,
-            duration: parseInt(option.duration),
-            price: parseFloat(option.price),
-            description: `${option.duration} min`
-        });
-        showToast(`เพิ่ม ${serviceName} (${option.duration} min) ในรายการแล้ว`, 'success');
-    } else {
-        // If service exists, replace the existing option
-        const oldDuration = selectedItems[existingIndex].duration;
-        selectedItems[existingIndex] = {
-            serviceId: serviceId,
-            serviceName: serviceName,
-            optionId: option.option_id,
-            duration: parseInt(option.duration),
-            price: parseFloat(option.price),
-            description: `${option.duration} min`
-        };
-        showToast(`เปลี่ยน ${serviceName} จาก ${oldDuration} min เป็น ${option.duration} min`, 'info');
+function addToCart(serviceId, option, serviceName = '') {
+    const optionId = parseInt(option.option_id, 10);
+    const durationMinutes = parseInt(option.duration, 10);
+    const durationLabel = option.duration_label || (Number.isNaN(durationMinutes) ? `${option.duration} min` : `${durationMinutes} min`);
+    const basePrice = typeof option.base_price !== 'undefined' ? parseFloat(option.base_price) : parseFloat(option.price);
+    let finalPrice = typeof option.final_price !== 'undefined' ? parseFloat(option.final_price) : parseFloat(option.price);
+    let discountAmount = typeof option.discount_amount !== 'undefined' ? parseFloat(option.discount_amount) : Math.max(basePrice - finalPrice, 0);
+
+    if (Number.isNaN(finalPrice)) {
+        finalPrice = basePrice;
     }
-    
+    if (Number.isNaN(discountAmount)) {
+        discountAmount = Math.max(basePrice - finalPrice, 0);
+    }
+
+    discountAmount = Math.max(0, Math.min(discountAmount, basePrice));
+    finalPrice = Math.max(0, finalPrice);
+
+    const promotionName = option.promotion_name || '';
+    const promotionId = option.promotion_id || null;
+    const discountPercent = typeof option.discount_percent !== 'undefined' ? parseFloat(option.discount_percent) || 0 : 0;
+
+    const existingIndex = selectedItems.findIndex(item => item.serviceId === serviceId);
+    const itemData = {
+        serviceId: serviceId,
+        serviceName: serviceName,
+        optionId: optionId,
+        duration: Number.isNaN(durationMinutes) ? 0 : durationMinutes,
+        description: durationLabel,
+        price: finalPrice,
+        originalPrice: basePrice,
+        discountAmount: discountAmount,
+        promotionName: promotionName,
+        promotionId: promotionId,
+        discountPercent: discountPercent
+    };
+
+    if (existingIndex === -1) {
+        selectedItems.push(itemData);
+        showToast(`เพิ่ม ${serviceName} (${durationLabel}) ในรายการแล้ว`, 'success');
+    } else {
+        const oldLabel = selectedItems[existingIndex].description || `${selectedItems[existingIndex].duration} min`;
+        selectedItems[existingIndex] = itemData;
+        showToast(`เปลี่ยน ${serviceName} จาก ${oldLabel} เป็น ${durationLabel}`, 'info');
+    }
+
     updateCartDisplay();
     updateTotalDuration();
-    calculatePrices();
     calculatePrices();
 }
 
@@ -577,32 +773,43 @@ function addToCart(serviceId, option, serviceName) {
             updateCartDisplay();
             updateTotalDuration();
             calculatePrices();
-            calculatePrices();
         }
 
         // Update cart display
 // แทนที่ฟังก์ชัน updateCartDisplay เดิม
 function updateCartDisplay() {
     const container = document.getElementById('cartItems');
-    
+
     if (selectedItems.length === 0) {
         container.innerHTML = '<p class="text-center text-muted">ยังไม่ได้เลือกบริการ</p>';
         document.getElementById('proceedToPaymentBtn').disabled = true;
         return;
     }
-    
+
     container.innerHTML = '';
     selectedItems.forEach((item, index) => {
         const cartItem = document.createElement('div');
         cartItem.className = 'cart-item';
+
+        const hasDiscount = Number(item.discountAmount) > 0;
+        const serviceName = escapeHtml(item.serviceName || '');
+        const description = escapeHtml(item.description || '');
+        const priceSection = hasDiscount
+            ? `
+                <div class="price-original">${formatCurrency(item.originalPrice)}</div>
+                <div class="price-final">${formatCurrency(item.price)}</div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
+            `
+            : `<div class="price-final">${formatCurrency(item.price)}</div>`;
+
         cartItem.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h6 class="mb-1" style="color: var(--charcoal);">${item.serviceName}</h6>
-                    <small style="color: var(--deep-brown);">${item.description}</small>
+                    <h6 class="mb-1" style="color: var(--charcoal);">${serviceName}</h6>
+                    <small style="color: var(--deep-brown);">${description}</small>
                 </div>
                 <div class="text-end">
-                    <div style="color: var(--luxury-gold); font-weight: 500;">€${item.price.toLocaleString()}</div>
+                    ${priceSection}
                     <button class="btn btn-sm btn-outline-danger mt-1" onclick="removeFromCart(${index})">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -611,11 +818,11 @@ function updateCartDisplay() {
         `;
         container.appendChild(cartItem);
     });
-    
+
     // Update hidden form fields
     document.getElementById('selectedServices').value = selectedItems.map(item => item.serviceId).join(',');
     document.getElementById('selectedOptions').value = selectedItems.map(item => item.optionId).join(',');
-    
+
     // Enable payment button if customer is logged in
     document.getElementById('proceedToPaymentBtn').disabled = !document.getElementById('customerId').value;
 }
@@ -671,33 +878,43 @@ function updateCartDisplay() {
         }
 
         // Display staff options in modal
-        function displayStaffOptions(staff) {
-            const container = document.getElementById('staffContainer');
-            container.innerHTML = '';
-            
-            if (staff.length === 0) {
-                container.innerHTML = '<div class="col-12 text-center text-muted">ไม่มีผู้ให้บริการว่างในเวลานี้</div>';
-                return;
-            }
-            
-            staff.forEach(s => {
-                const staffCard = document.createElement('div');
-                staffCard.className = 'col-md-4 mb-3';
-                staffCard.innerHTML = `
-                    <div class="staff-card" onclick="selectStaff(${s.staff_id}, '${s.staff_name}', '${s.image || ''}')">
-                        <div class="staff-avatar">
-                            ${s.image ? `<img src="${s.image}" alt="${s.staff_name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` : '<i class="fas fa-user"></i>'}
-                        </div>
-                        <h6 class="mb-2" style="color: var(--charcoal);">${s.staff_name}</h6>
-                        
-                        <div class="mt-2">
+function displayStaffOptions(staff) {
+  const container = document.getElementById('staffContainer');
+  container.innerHTML = '';
 
-                        </div>
-                    </div>
-                `;
-                container.appendChild(staffCard);
-            });
-        }
+  if (!Array.isArray(staff) || staff.length === 0) {
+    container.innerHTML = '<div class="col-12 text-center text-muted">ไม่มีผู้ให้บริการว่างในเวลานี้</div>';
+    return;
+  }
+
+  staff.forEach(s => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 mb-3';
+    col.innerHTML = `
+      <div class="staff-card" data-id="${s.staff_id}" data-name="${s.staff_name}" data-img="${s.image_url || ''}">
+        <div class="staff-avatar">
+          ${s.image_url
+            ? `<img src="${s.image_url}" alt="${s.staff_name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+            : `<i class="fas fa-user"></i>`}
+        </div>
+        <h6 class="mb-2" style="color: var(--charcoal);">${s.staff_name}</h6>
+      </div>
+    `;
+
+    col.querySelector('.staff-card').addEventListener('click', function(){
+      document.querySelectorAll('.staff-card').forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedStaff = {
+        id:   this.getAttribute('data-id'),
+        name: this.getAttribute('data-name'),
+        image:this.getAttribute('data-img')
+      };
+      document.getElementById('confirmStaffBtn').disabled = false;
+    });
+
+    container.appendChild(col);
+  });
+}
 
         // Select staff member
         function selectStaff(staffId, staffName, image) {
@@ -732,13 +949,34 @@ function updateCartDisplay() {
             return stars;
         }
 
-         // Calculate price summary without promotions
+        // Calculate price summary with promotions
         function calculatePrices() {
-            const totalPrice = selectedItems.reduce((sum, item) => sum + item.price, 0);
-            const finalPrice = totalPrice;
+            const totals = getPriceTotals();
+            const totalPriceEl = document.getElementById('totalPrice');
+            const totalDiscountEl = document.getElementById('totalDiscount');
+            const discountRow = document.getElementById('discountRow');
+            const finalPriceEl = document.getElementById('finalPrice');
 
-            document.getElementById('totalPrice').textContent = `€${totalPrice.toLocaleString()}`;
-            document.getElementById('finalPrice').textContent = `€${finalPrice.toLocaleString()}`;
+            totalPriceEl.textContent = formatCurrency(totals.original);
+            totalPriceEl.classList.remove('price-original');
+
+            if (totals.discount > 0) {
+                if (discountRow) {
+                    discountRow.style.display = 'flex';
+                }
+                if (totalDiscountEl) {
+                    totalDiscountEl.textContent = formatDiscount(totals.discount);
+                }
+            } else {
+                if (discountRow) {
+                    discountRow.style.display = 'none';
+                }
+                if (totalDiscountEl) {
+                    totalDiscountEl.textContent = formatDiscount(0);
+                }
+            }
+
+            finalPriceEl.textContent = formatCurrency(totals.final);
         }
 
         // Form submission
@@ -794,18 +1032,22 @@ function generatePaymentSummary() {
     const date = document.getElementById('hiddenBookingDate').value;
     const time = document.getElementById('startTime').value;
     const staffName = selectedStaff ? selectedStaff.name : 'ไม่ระบุ';
+    const totals = getPriceTotals();
+
+    const dateDisplay = date ? `${formatEnglishDate(date)} เวลา ${time || '-'}` : '-';
+    const staffDisplay = escapeHtml(staffName || 'ไม่ระบุ');
 
     let summaryHTML = `
         <div class="summary-item">
             <div class="summary-service">
                 <div class="summary-service-name">วันที่และเวลา</div>
-                <div class="summary-service-details">${formatEnglishDate(date)} เวลา ${time}</div>
+                <div class="summary-service-details">${escapeHtml(dateDisplay)}</div>
             </div>
         </div>
         <div class="summary-item">
             <div class="summary-service">
                 <div class="summary-service-name">ผู้ให้บริการ</div>
-                <div class="summary-service-details">${staffName}</div>
+                <div class="summary-service-details">${staffDisplay}</div>
             </div>
         </div>
         <div class="summary-item">
@@ -815,30 +1057,62 @@ function generatePaymentSummary() {
             </div>
         </div>
     `;
-    
+
     // Add selected services
     selectedItems.forEach(item => {
+        const hasDiscount = Number(item.discountAmount) > 0;
+        const serviceName = escapeHtml(item.serviceName || '');
+        const description = escapeHtml(item.description || '');
+        const priceSection = hasDiscount
+            ? `
+                <div class="price-original">${formatCurrency(item.originalPrice)}</div>
+                <div class="price-final">${formatCurrency(item.price)}</div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
+            `
+            : `<div class="price-final">${formatCurrency(item.price)}</div>`;
+
         summaryHTML += `
             <div class="summary-item">
                 <div class="summary-service">
-                    <div class="summary-service-name">${item.serviceName}</div>
-                    <div class="summary-service-details">${item.description}</div>
+                    <div class="summary-service-name">${serviceName}</div>
+                    <div class="summary-service-details">${description}</div>
+                    ${hasDiscount ? `<div class="promotion-text">กำลังจัดโปรโมชั่น</div>` : ''}
                 </div>
-                <div class="summary-price">€${item.price.toLocaleString()}</div>
+                <div class="summary-price">${priceSection}</div>
             </div>
         `;
     });
-    
-    // Total
+
+    // Totals
     summaryHTML += `
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ยอดรวมทั้งสิ้น</div>
+                <div class="summary-service-name">ยอดรวมก่อนส่วนลด</div>
             </div>
-            <div class="summary-price">€${document.getElementById('finalPrice').textContent.replace('€', '').replace(',', '')}</div>
+            <div class="summary-price">${formatCurrency(totals.original)}</div>
         </div>
     `;
-    
+
+    if (totals.discount > 0) {
+        summaryHTML += `
+            <div class="summary-item">
+                <div class="summary-service">
+                    <div class="summary-service-name">ส่วนลดทั้งหมด</div>
+                </div>
+                <div class="summary-price price-discount">${formatDiscount(totals.discount)}</div>
+            </div>
+        `;
+    }
+
+    summaryHTML += `
+        <div class="summary-item">
+            <div class="summary-service">
+                <div class="summary-service-name">ยอดชำระสุทธิ</div>
+            </div>
+            <div class="summary-price price-final">${formatCurrency(totals.final)}</div>
+        </div>
+    `;
+
     container.innerHTML = summaryHTML;
 }
 
@@ -995,16 +1269,6 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
             }, 3000);
         }
 
-        // Initialize service options loading on click
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.service-card') && !e.target.closest('.option-item')) {
-                const serviceCard = e.target.closest('.service-card');
-                const serviceId = serviceCard.querySelector('[id^="options-"]')?.id.split('-')[1];
-                if (serviceId) {
-                    loadServiceOptions(parseInt(serviceId));
-                }
-            }
-        });
     </script>
 
     <!-- Additional PHP for getting services -->
@@ -1251,6 +1515,7 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
 .summary-price {
     font-weight: 600;
     color: var(--luxury-gold);
+    text-align: right;
 }
 
 /* Loading Spinner Styles */

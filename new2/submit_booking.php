@@ -3,6 +3,7 @@ session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../booking_status.php';
+require_once __DIR__ . '/../Admin/promotion_utils.php';
 
 try {
     $pdo = new PDO("mysql:host=127.0.0.1;dbname=first9;charset=utf8mb4", "root", "", [
@@ -89,26 +90,107 @@ try {
         throw new Exception('ข้อมูลบริการและตัวเลือกไม่สอดคล้องกัน');
     }
 
+    $services = array_values(array_map('intval', $services));
+    $options = array_values(array_map('intval', $options));
+
+    $promotionDiscounts = [];
+    $promotionSummary = '';
+    $promotionTotalDiscount = 0.0;
+    $promotionConn = null;
+
+    try {
+        $promotionConn = new mysqli('127.0.0.1', 'root', '', 'first9');
+        if ($promotionConn->connect_error) {
+            throw new Exception('ไม่สามารถเชื่อมต่อข้อมูลโปรโมชั่นได้');
+        }
+
+        ensurePromotionSupport($promotionConn);
+        $targetDateTime = date('Y-m-d H:i:s');
+        $promotionResult = getApplicableOptionDiscounts($promotionConn, $options, $targetDateTime);
+        $promotionDiscounts = $promotionResult['by_option'] ?? [];
+        $promotionSummary = trim(summarizePromotionDiscountDetail($promotionResult['by_promotion'] ?? []));
+        $promotionTotalDiscount = (float)($promotionResult['total_discount'] ?? 0);
+    } catch (Exception $promotionException) {
+        $promotionDiscounts = [];
+        $promotionSummary = '';
+        $promotionTotalDiscount = 0.0;
+    } finally {
+        if ($promotionConn instanceof mysqli) {
+            $promotionConn->close();
+        }
+    }
+
     // Calculate total duration and prices
     $total_duration = 0;
-    $total_price = 0;
-    $total_discount = 0;
- 
+    $total_price = 0.0;
+    $total_discount = 0.0;
+    $optionPricing = [];
+
     foreach ($options as $index => $option_id) {
         $stmt = $pdo->prepare("SELECT duration, price, service_id FROM service_option WHERE option_id = ?");
-        $stmt->execute([(int)$option_id]);
+        $stmt->execute([$option_id]);
         $option = $stmt->fetch();
-        if (!$option || $option['service_id'] != $services[$index]) {
+        if (!$option || (int)$option['service_id'] !== $services[$index]) {
             throw new Exception('ตัวเลือกหรือบริการไม่ถูกต้อง');
         }
-        $total_duration += $option['duration'];
-        $total_price += $option['price'];
 
+        $duration = (int)$option['duration'];
+        $price = (float)$option['price'];
 
+        $total_duration += $duration;
+        $total_price += $price;
+
+        $discountInfo = $promotionDiscounts[$option_id] ?? null;
+        $netPrice = $price;
+        $discountAmount = 0.0;
+
+        if ($discountInfo) {
+            if (isset($discountInfo['final_price'])) {
+                $netFromPromotion = (float)$discountInfo['final_price'];
+                if ($netFromPromotion >= 0 && $netFromPromotion <= $price) {
+                    $netPrice = $netFromPromotion;
+                    $discountAmount = $price - $netPrice;
+                }
+            }
+
+            if ($discountAmount <= 0 && isset($discountInfo['discount_amount'])) {
+                $discountAmount = (float)$discountInfo['discount_amount'];
+                if ($discountAmount < 0) {
+                    $discountAmount = 0.0;
+                }
+                if ($discountAmount > $price) {
+                    $discountAmount = $price;
+                }
+                $netPrice = $price - $discountAmount;
+            }
+        }
+
+        if ($netPrice < 0) {
+            $netPrice = 0.0;
+        }
+
+        $total_discount += $discountAmount;
+        $optionPricing[$option_id] = [
+            'price' => $price,
+            'discount' => $discountAmount,
+            'net' => $netPrice,
+        ];
+    }
+
+    if ($promotionTotalDiscount > 0) {
+        $total_discount = max($total_discount, min($promotionTotalDiscount, $total_price));
+    }
+
+    if ($total_discount > $total_price) {
+        $total_discount = $total_price;
+    }
+
+    $final_price = $total_price - $total_discount;
+    if ($final_price < 0) {
+        $final_price = 0.0;
     }
 
     $end_time = date("H:i", strtotime("+$total_duration minutes", strtotime($start_time)));
-    $final_price = $total_price - $total_discount;
 
     // Check staff availability
     $stmt = $pdo->prepare("
@@ -135,27 +217,39 @@ try {
         $staff_id, 
         $booking_date, 
         $start_time, 
-        $end_time, 
-        $total_price, 
-        $total_discount, 
+        $end_time,
+        $total_price,
+        $total_discount,
         $final_price,
         BOOKING_STATUS_PENDING,
-        null,
+        $promotionSummary !== '' ? $promotionSummary : null,
         $evidenceFileName
     ]);
     $booking_id = $pdo->lastInsertId();
 
     // Insert into booking_seviceop
-    foreach ($options as $index => $option_id) {
-        $stmt = $pdo->prepare("SELECT price, service_id FROM service_option WHERE option_id = ?");
-        $stmt->execute([(int)$option_id]);
-        $option = $stmt->fetch();
-        $price = $option['price'];
-        $discount = 0;
+    foreach ($options as $option_id) {
+        $optionId = (int)$option_id;
+        $pricing = $optionPricing[$optionId] ?? null;
 
-        $net_price = $price - $discount;
+        if ($pricing === null) {
+            $stmt = $pdo->prepare("SELECT price FROM service_option WHERE option_id = ?");
+            $stmt->execute([$optionId]);
+            $optionRow = $stmt->fetch();
+            if (!$optionRow) {
+                throw new Exception('ไม่พบข้อมูลบริการที่เลือก');
+            }
+            $price = (float)$optionRow['price'];
+            $discount = 0.0;
+            $net_price = $price;
+        } else {
+            $price = (float)$pricing['price'];
+            $discount = (float)$pricing['discount'];
+            $net_price = (float)$pricing['net'];
+        }
+
         $stmt = $pdo->prepare("INSERT INTO booking_seviceop (booking_id, option_id, price_booking, discount_booking, net_price) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute([$booking_id, (int)$option_id, $price, $discount, $net_price]);
+        $stmt->execute([$booking_id, $optionId, $price, $discount, $net_price]);
     }
 
     $pdo->commit();

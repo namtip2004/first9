@@ -224,6 +224,31 @@ if ($page > $pages) { $page = $pages; }
 $off=($page-1)*$per;
 
 // Aggregated list per service
+$sqlSummary = "
+  SELECT
+    COUNT(DISTINCT b.booking_id) AS tx,
+    COUNT(DISTINCT b.customer_id) AS customers,
+    COALESCE(SUM(COALESCE(bs.price_booking, so.price)),0) AS gross,
+    COALESCE(SUM(COALESCE(bs.discount_booking,0)),0) AS discount,
+    COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net
+  FROM booking b
+  JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+  JOIN service_option so ON so.option_id=bs.option_id
+  JOIN service sv ON sv.service_id=so.service_id
+  WHERE $whereSql
+";
+$summarySvc = ['tx'=>0,'customers'=>0,'gross'=>0,'discount'=>0,'net'=>0];
+$stmt=$conn->prepare($sqlSummary);
+if(!empty($params)) $stmt->bind_param($types,...$params);
+$stmt->execute();
+$summarySvc = $stmt->get_result()->fetch_assoc() ?: $summarySvc;
+$stmt->close();
+$summarySvc['tx'] = (int)($summarySvc['tx'] ?? 0);
+$summarySvc['customers'] = (int)($summarySvc['customers'] ?? 0);
+$summarySvc['gross'] = (float)($summarySvc['gross'] ?? 0);
+$summarySvc['discount'] = (float)($summarySvc['discount'] ?? 0);
+$summarySvc['net'] = (float)($summarySvc['net'] ?? 0);
+
 $sqlList="
   SELECT
     sv.service_id, sv.service_name,

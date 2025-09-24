@@ -132,7 +132,8 @@
             font-size: 1rem;
         }
         .price-discount {
-            color: rgba(112, 85, 61, 0.85);
+            color: var(--deep-burgundy);
+            font-weight: 600;
         }
         .discount-ribbon {
             position: absolute;

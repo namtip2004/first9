@@ -127,8 +127,8 @@
           <div class="card-body p-0">
 
             <form id="bookingForm" action="submit_booking.php" method="POST" enctype="multipart/form-data">
-              <div class="row g-4">
-                <div class="col-lg-8 d-flex flex-column gap-4">
+              <div class="row g-3">
+                <div class="col-lg-8 d-flex flex-column gap-3">
                   <div class="card shadow-sm border-0">
                     <div class="card-body">
                       <h5 class="card-title mb-3">Customer</h5>
@@ -204,7 +204,7 @@
                 </div>
 
                 <div class="col-lg-4">
-                  <div class="d-flex flex-column gap-4 sticky-lg-top" style="top: 5.5rem;">
+                  <div class="d-flex flex-column gap-3 sticky-lg-top" style="top: 5.5rem;">
                     <div class="card shadow-sm summary-card border-0">
                       <div class="card-body">
                         <h5 class="card-title mb-3">Price Summary</h5>
@@ -432,11 +432,10 @@
         .then(options => {
           options.forEach(o => {
             const opt = document.createElement('option');
-            const priceValue = parseFloat(o.price);
             opt.value = o.option_id;
             opt.dataset.duration = o.duration;
             opt.dataset.price = o.price;
-            opt.textContent = `${o.duration} minutes${!isNaN(priceValue) ? ` - €${priceValue.toFixed(2)}` : ''}`;
+            opt.textContent = `${o.duration} minutes`;
             optionSelect.appendChild(opt);
           });
           // หลังโหลดตัวเลือก เสนอให้ผู้ใช้เลือกเอง → แค่รีเฟรชสรุปเวลาราคา

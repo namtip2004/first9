@@ -726,11 +726,7 @@
       const finalPriceEl = document.getElementById('finalPrice');
 
       if (totalPriceEl){
-        if (totalDiscount > 0){
-          totalPriceEl.innerHTML = `<span class="text-muted text-decoration-line-through">€${totalBase.toFixed(2)}</span>`;
-        } else {
-          totalPriceEl.textContent = `€${totalBase.toFixed(2)}`;
-        }
+        totalPriceEl.textContent = `€${totalBase.toFixed(2)}`;
       }
 
       if (discountEl){

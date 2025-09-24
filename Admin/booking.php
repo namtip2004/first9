@@ -409,41 +409,45 @@
       option.dataset.discountAmount = resolvedDiscount.toFixed(2);
     }
 
-    async function applyOptionDiscountLabels(selectEl){
-      if (!selectEl){ return; }
+ async function applyOptionDiscountLabels(selectEl){
+   if (!selectEl){ return; }
 
-      const optionElements = Array.from(selectEl.options).filter(opt => Number.parseInt(opt.value || '0', 10) > 0);
-      optionElements.forEach(opt => setOptionDisplay(opt, null));
+   const optionElements = Array.from(selectEl.options).filter(opt => Number.parseInt(opt.value || '0', 10) > 0);
+   optionElements.forEach(opt => setOptionDisplay(opt, null));
 
-      if (!optionElements.length){
-        calculatePrices();
-        return;
-      }
+   if (!optionElements.length){
+-    calculatePrices();
++    calculatePrices();
++    refreshOptionDropdown(selectEl);
+     return;
+   }
 
-      const optionIds = optionElements.map(opt => Number.parseInt(opt.value, 10));
-      const { date, time } = getCurrentBookingMoment();
+   const optionIds = optionElements.map(opt => Number.parseInt(opt.value, 10));
+   const { date, time } = getCurrentBookingMoment();
 
-      try {
-        const response = await fetch('get_applicable_promotions.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ option_ids: optionIds, date, time })
-        });
+   try {
+     const response = await fetch('get_applicable_promotions.php', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ option_ids: optionIds, date, time })
+     });
 
-        if (response.ok){
-          const data = await response.json();
-          const discountMap = (data && typeof data === 'object') ? (data.option_discounts || {}) : {};
-          optionElements.forEach(opt => {
-            const optionId = Number.parseInt(opt.value, 10);
-            setOptionDisplay(opt, discountMap[optionId] || null);
-          });
-        }
-      } catch (error) {
-        console.warn('Failed to load option discount details', error);
-      } finally {
-        calculatePrices();
-      }
-    }
+     if (response.ok){
+       const data = await response.json();
+       const discountMap = (data && typeof data === 'object') ? (data.option_discounts || {}) : {};
+       optionElements.forEach(opt => {
+         const optionId = Number.parseInt(opt.value, 10);
+         setOptionDisplay(opt, discountMap[optionId] || null);
+       });
+     }
+   } catch (error) {
+     console.warn('Failed to load option discount details', error);
+   } finally {
+     calculatePrices();
++    // หลังอัปเดตราคาใน data-* แล้ว ให้ Select2 วาดใหม่ เพื่อให้เส้นขีดทับขึ้นถูกต้อง
++    refreshOptionDropdown(selectEl);
+   }
+ }
 
     // ---------- Select2 for customer ----------
     document.addEventListener('DOMContentLoaded', function () {
@@ -559,35 +563,35 @@
 
     // ---------- Load options for a given service (row-relative) ----------
     function loadOptions(serviceSelectEl){
-      const row = serviceSelectEl.closest('.service-row');
-      const optionSelect = row.querySelector('.option-select');
-      const serviceId = serviceSelectEl.value;
+   const row = serviceSelectEl.closest('.service-row');
+   const optionSelect = row.querySelector('.option-select');
+   const serviceId = serviceSelectEl.value;
 
-      optionSelect.innerHTML = '<option value="">Select an option</option>';
-      refreshTotalDuration();
-      calculatePrices();
-      if (!serviceId){
-        return;
-      }
+   optionSelect.innerHTML = '<option value="">Select an option</option>';
+   refreshTotalDuration();
+   calculatePrices();
+   if (!serviceId){ return; }
 
-      fetch(`get_options.php?service_id=${encodeURIComponent(serviceId)}`)
-        .then(res => res.json())
-        .then(options => {
-          options.forEach(o => {
-            const opt = document.createElement('option');
-            opt.value = o.option_id;
-            opt.dataset.duration = o.duration;
-            opt.dataset.price = o.price;
-            opt.textContent = buildOptionLabel(o.duration, o.price, null);
-            optionSelect.appendChild(opt);
-          });
-          applyOptionDiscountLabels(optionSelect);
-          // หลังโหลดตัวเลือก เสนอให้ผู้ใช้เลือกเอง → แค่รีเฟรชสรุปเวลาราคา
-          refreshTotalDuration();
-        })
-        .catch(() => { /* เงียบไว้ก่อน หรือจะแจ้ง error ก็ได้ */ });
-    }
-
+   fetch(`get_options.php?service_id=${encodeURIComponent(serviceId)}`)
+     .then(res => res.json())
+     .then(options => {
+       options.forEach(o => {
+         const opt = document.createElement('option');
+         opt.value = o.option_id;
+         opt.dataset.duration = o.duration;
+         opt.dataset.price = o.price;
+         // ปล่อย text ธรรมดาไว้เป็น fallback
+         opt.textContent = buildOptionLabel(o.duration, o.price, null);
+         optionSelect.appendChild(opt);
+       });
+       applyOptionDiscountLabels(optionSelect);
++      // ใช้ Select2 กับ dropdown นี้
++      enhanceOptionDropdown(optionSelect);
+       refreshTotalDuration();
+     })
+     .catch(() => {});
+ }
+ 
     // ---------- Time slots ----------
     function loadAvailableTimes(date){
       const totalDuration = getTotalMinutes();
@@ -741,6 +745,66 @@
         }
       }
     }
+
+    function enhanceOptionDropdown(selectEl){
+    if (!selectEl) return;
+    const $el = $(selectEl);
+    // ถ้าเคย init แล้ว ให้ destroy ก่อน
+    if ($el.data('select2')) { $el.select2('destroy'); }
+
+    $el.select2({
+      width: '100%',
+      // แสดงรายการใน dropdown
+      templateResult: function (state) {
+        if (!state.id) return state.text;
+        const opt = state.element;
+        const base = parseFloat(opt.dataset.price || '');
+        const final = parseFloat(opt.dataset.finalPrice || '');
+        const dur   = parseInt(opt.dataset.duration || '', 10);
+        const hasDiscount = Number.isFinite(base) && Number.isFinite(final) && final < base;
+
+        const durationText = Number.isFinite(dur) && dur > 0 ? dur + ' minutes' : '';
+        const priceHtml = hasDiscount
+          ? `<span style="margin-right:.5rem;">€${final.toFixed(2)}</span>
+             <span style="text-decoration:line-through;opacity:.6;">€${base.toFixed(2)}</span>`
+          : (Number.isFinite(base) ? `€${base.toFixed(2)}` : '');
+
+        return $(
+          `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+             <span>${durationText}</span>
+             <span>${priceHtml}</span>
+           </div>`
+        );
+      },
+      // ข้อความเมื่อเลือกแล้ว (บริเวณกล่อง select)
+      templateSelection: function (state) {
+        if (!state.id) return state.text;
+        const opt = state.element;
+        const base = parseFloat(opt.dataset.price || '');
+        const final = parseFloat(opt.dataset.finalPrice || '');
+        const dur   = parseInt(opt.dataset.duration || '', 10);
+        const hasDiscount = Number.isFinite(base) && Number.isFinite(final) && final < base;
+
+        const durationText = Number.isFinite(dur) && dur > 0 ? dur + ' minutes' : 'Option';
+        return hasDiscount
+          ? `${durationText} – €${final.toFixed(2)} (was €${base.toFixed(2)})`
+          : (Number.isFinite(base) ? `${durationText} – €${base.toFixed(2)}` : durationText);
+      },
+      // อนุญาต HTML
+      escapeMarkup: function (m) { return m; }
+    });
+  }
+
+  // ให้ Select2 รีเพนท์หลังจากที่เราอัปเดต data-* ของ <option>
+  function refreshOptionDropdown(selectEl){
+    const $el = $(selectEl);
+    if ($el.data('select2')) {
+      // ทริกเกอร์ให้ select2 อ่านค่าใหม่ แล้ววาดใหม่
+      $el.trigger('change.select2');
+    } else {
+      enhanceOptionDropdown(selectEl);
+    }
+  }
   </script>
 </main>
 </body>

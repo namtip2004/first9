@@ -409,8 +409,11 @@ $countStmt->execute();
 $totalRows = (int)$countStmt->get_result()->fetch_assoc()['c'];
 $countStmt->close();
 
-$page = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 20;
+$pages = max(1, (int)ceil($totalRows / $perPage));
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1) { $page = 1; }
+if ($page > $pages) { $page = $pages; }
 $offset = ($page - 1) * $perPage;
 
 $usageSubquery = "
@@ -491,6 +494,15 @@ foreach ($rows as $row) {
     $tableTotals['discount_sum'] += (float)$row['discount_sum'];
     $tableTotals['net_sum'] += (float)$row['net_sum'];
 }
+
+$baseQuery = $_GET;
+unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
+$baseQuery['tab'] = 'table';
+$pageUrl = function (int $target) use ($baseQuery): string {
+    $query = $baseQuery;
+    $query['page'] = $target;
+    return '?' . http_build_query($query);
+};
 
 // Dropdown data
 $serviceList = [];
@@ -685,18 +697,22 @@ $res->close();
           </table>
         </div>
 
-        <!-- Pagination -->
-        <?php $totalPages = (int)ceil($totalRows / $perPage); if ($totalPages > 1): ?>
-        <nav>
-          <ul class="pagination justify-content-end">
-            <?php for ($i=1;$i<=$totalPages;$i++):
-              $query = $_GET; $query['page']=$i; ?>
-              <li class="page-item <?= $i===$page?'active':'' ?>">
-                <a class="page-link" href="?<?= http_build_query($query) ?>"><?= $i ?></a>
-              </li>
-            <?php endfor; ?>
-          </ul>
-        </nav>
+        <?php if ($pages > 1): ?>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <div class="btn-group">
+            <?php if ($page > 1): ?>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+            <?php else: ?>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+            <?php endif; ?>
+            <?php if ($page < $pages): ?>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+            <?php else: ?>
+              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+            <?php endif; ?>
+          </div>
+        </div>
         <?php endif; ?>
 
       </div></div>

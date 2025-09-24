@@ -159,9 +159,11 @@ $stmt->execute();
 $totalRows = (int)$stmt->get_result()->fetch_assoc()['cnt'];
 $stmt->close();
 
-// Pagination
-$page    = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 20;
+$pages   = max(1, (int)ceil($totalRows / $perPage));
+$page    = (int)($_GET['page'] ?? 1);
+if ($page < 1) { $page = 1; }
+if ($page > $pages) { $page = $pages; }
 $offset  = ($page-1)*$perPage;
 
 // Data with aggregates
@@ -190,6 +192,15 @@ $rs = $stmt->get_result();
 $rows = [];
 while ($r = $rs->fetch_assoc()) $rows[] = $r;
 $stmt->close();
+
+$baseQuery = $_GET;
+unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
+$baseQuery['tab'] = 'table';
+$pageUrl = function(int $target) use ($baseQuery): string {
+  $query = $baseQuery;
+  $query['page'] = $target;
+  return '?' . http_build_query($query);
+};
 ?>
 <!doctype html>
 <html lang="th">
@@ -372,6 +383,24 @@ $stmt->close();
               </tbody>
             </table>
           </div>
+
+          <?php if ($pages > 1): ?>
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+            <div class="btn-group">
+              <?php if ($page > 1): ?>
+                <a class="btn btn-outline-secondary" href="<?=safe($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+              <?php else: ?>
+                <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+              <?php endif; ?>
+              <?php if ($page < $pages): ?>
+                <a class="btn btn-outline-primary" href="<?=safe($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+              <?php else: ?>
+                <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+              <?php endif; ?>
+            </div>
+          </div>
+          <?php endif; ?>
 
         </div>
       </div>

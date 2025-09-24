@@ -277,9 +277,26 @@ foreach ($rows as $row) {
 $summary['aov']    = $summary['tx_conf'] > 0 ? $summary['net_rev'] / $summary['tx_conf'] : 0.0;
 $summary['avgdur'] = $summary['tx_total'] > 0 ? ($summary['hrs'] * 60) / $summary['tx_total'] : 0.0;
 
+$per = 20;
+$pages = max(1, (int)ceil($totalRows / $per));
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1) { $page = 1; }
+if ($page > $pages) { $page = $pages; }
+$offset = ($page - 1) * $per;
+$rows = array_slice($rows, $offset, $per);
+
 // Dropdown options
 $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
 $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name");
+
+$baseQuery = $_GET;
+unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
+$baseQuery['tab'] = 'table';
+$pageUrl = function(int $target) use ($baseQuery): string {
+  $query = $baseQuery;
+  $query['page'] = $target;
+  return '?' . http_build_query($query);
+};
 ?>
 <!doctype html>
 <html lang="th">
@@ -441,6 +458,24 @@ $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staf
             </tfoot> -->
           </table>
         </div>
+
+        <?php if($pages > 1): ?>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <div class="btn-group">
+            <?php if($page > 1): ?>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+            <?php else: ?>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+            <?php endif; ?>
+            <?php if($page < $pages): ?>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+            <?php else: ?>
+              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php endif; ?>
 
       </div></div>
     </div>

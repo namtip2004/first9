@@ -166,8 +166,15 @@ $stmt=$conn->prepare($sqlCount);
 if(!empty($params)) $stmt->bind_param($types,...$params);
 $stmt->execute(); $total=(int)$stmt->get_result()->fetch_assoc()['cnt']; $stmt->close();
 
+$per = 20;
+$pages = max(1, (int)ceil($total / $per));
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1) { $page = 1; }
+if ($page > $pages) { $page = $pages; }
+$off = ($page - 1) * $per;
+
 // Totals (filtered, all rows)
-$sqlTotals="SELECT 
+$sqlTotals="SELECT
               COALESCE(SUM(b.total_price),0)   AS gross_sum,
               COALESCE(SUM(b.total_discount),0)AS disc_sum,
               COALESCE(SUM(b.final_price),0)   AS net_sum
@@ -178,9 +185,6 @@ $sqlTotals="SELECT
 $stmt=$conn->prepare($sqlTotals);
 if(!empty($params)) $stmt->bind_param($types,...$params);
 $stmt->execute(); $trow=$stmt->get_result()->fetch_assoc(); $stmt->close();
-
-// Pagination
-$page=max(1,(int)($_GET['page']??1)); $per=20; $off=($page-1)*$per;
 
 // List
 $sqlList="
@@ -208,6 +212,15 @@ $rows=[]; while($r=$rs->fetch_assoc()) $rows[]=$r; $stmt->close();
 // Dropdowns
 $staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name");
 $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
+
+$baseQuery = $_GET;
+unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
+$baseQuery['tab'] = 'table';
+$pageUrl = function(int $target) use ($baseQuery): string {
+  $query = $baseQuery;
+  $query['page'] = $target;
+  return '?' . http_build_query($query);
+};
 ?>
 <!doctype html>
 <html lang="th">
@@ -371,6 +384,24 @@ $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER B
             <?php endif; ?>
           </table>
         </div>
+
+        <?php if($pages > 1): ?>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <div class="btn-group">
+            <?php if($page > 1): ?>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+            <?php else: ?>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+            <?php endif; ?>
+            <?php if($page < $pages): ?>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+            <?php else: ?>
+              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php endif; ?>
 
       </div></div>
     </div>

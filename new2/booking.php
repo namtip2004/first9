@@ -212,6 +212,10 @@
             margin-top: 20px;
         }
 
+        .summary-card .price-discount {
+            color: #ffffff;
+        }
+
     </style>
 </head>
 <body>

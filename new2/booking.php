@@ -72,6 +72,8 @@
             margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .option-item:hover {
@@ -132,23 +134,30 @@
         .option-item .price-discount {
             display: block;
             text-align: right;
-        }
-        .promotion-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(201, 169, 110, 0.18);
-            color: var(--deep-burgundy);
-            border-radius: 999px;
-            padding: 3px 10px;
             font-size: 0.75rem;
-            font-weight: 600;
+            color: rgba(112, 85, 61, 0.85);
+            margin-top: 4px;
+        }
+        .discount-ribbon {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--deep-burgundy);
+            color: white;
+            padding: 6px 14px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            border-bottom-left-radius: 12px;
+            box-shadow: 0 6px 16px rgba(139, 75, 92, 0.25);
+            z-index: 2;
+            pointer-events: none;
         }
         .promotion-text {
             color: var(--deep-burgundy);
             font-weight: 600;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             display: inline-block;
+            margin-left: 4px;
         }
         .options-list {
             display: flex;
@@ -496,6 +505,39 @@
             return `-€${number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
         }
 
+        function resolveDiscountPercent(percent, basePrice, finalPrice) {
+            let resolved = Number(percent);
+            if (!Number.isFinite(resolved) || resolved <= 0) {
+                const base = Number(basePrice);
+                const final = Number(finalPrice);
+                if (Number.isFinite(base) && base > 0 && Number.isFinite(final)) {
+                    const computed = ((base - final) / base) * 100;
+                    resolved = computed > 0 ? computed : 0;
+                } else {
+                    resolved = 0;
+                }
+            }
+            return resolved > 0 ? resolved : 0;
+        }
+
+        function formatDiscountPercentLabel(percent) {
+            const value = Number(percent);
+            if (!Number.isFinite(value) || value <= 0) {
+                return '';
+            }
+            const rounded = Math.round(value * 10) / 10;
+            const formatted = rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1);
+            return `-${formatted}%`;
+        }
+
+        function getDiscountDisplayData(percent, basePrice, finalPrice) {
+            const resolvedPercent = resolveDiscountPercent(percent, basePrice, finalPrice);
+            return {
+                percent: resolvedPercent,
+                label: formatDiscountPercentLabel(resolvedPercent)
+            };
+        }
+
         function escapeHtml(value) {
             if (value === null || value === undefined) {
                 return '';
@@ -676,7 +718,7 @@ async function loadServiceOptions(serviceId, serviceName = '') {
             let discountAmount = 0;
             let finalPrice = basePrice;
             let promotionName = '';
-            let discountPercent = 0;
+            let discountPercentRaw = 0;
             let promotionId = null;
 
             if (discountInfo && Number(discountInfo.discount_amount) > 0) {
@@ -690,29 +732,35 @@ async function loadServiceOptions(serviceId, serviceName = '') {
                     finalPrice = Math.max(basePrice - discountAmount, 0);
                 }
                 promotionName = discountInfo.promotion_name || '';
-                discountPercent = parseFloat(discountInfo.discount_percent || 0) || 0;
+                discountPercentRaw = parseFloat(discountInfo.discount_percent || 0) || 0;
                 promotionId = discountInfo.promotion_id ? parseInt(discountInfo.promotion_id, 10) : null;
             }
 
             const hasDiscount = discountAmount > 0 && finalPrice < basePrice;
+            let resolvedDiscountPercent = 0;
+            let discountLabel = '';
             if (hasDiscount) {
+                const displayData = getDiscountDisplayData(discountPercentRaw, basePrice, finalPrice);
+                resolvedDiscountPercent = displayData.percent;
+                discountLabel = displayData.label;
                 optionElement.classList.add('promotion-active');
             }
 
-            const promotionIndicatorText = 'กำลังจัดโปรโมชั่น';
+            const ribbonHtml = discountLabel ? `<div class="discount-ribbon">${discountLabel}</div>` : '';
+            const inlinePercentHtml = discountLabel ? ` <span class="promotion-text">(${discountLabel})</span>` : '';
 
             optionElement.innerHTML = `
+                ${ribbonHtml}
                 <div class="option-info">
                     <div class="option-duration"><i class="fas fa-clock"></i><span>${durationLabel}</span></div>
                     <div class="option-pricing">
                         ${hasDiscount
                             ? `<span class="price-original">${formatCurrency(basePrice)}</span>
-                               <span class="price-final">${formatCurrency(finalPrice)}</span>
-                               <span class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionIndicatorText}</span></span>`
+                               <span class="price-final">${formatCurrency(finalPrice)}</span>`
                             : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
                     </div>
                 </div>
-                ${hasDiscount ? `<span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}</span>` : ''}
+                ${hasDiscount ? `<span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}${inlinePercentHtml}</span>` : ''}
             `;
 
             const enrichedOption = {
@@ -724,7 +772,8 @@ async function loadServiceOptions(serviceId, serviceName = '') {
                 discount_amount: hasDiscount ? discountAmount : 0,
                 promotion_name: promotionName,
                 promotion_id: promotionId,
-                discount_percent: discountPercent
+                discount_percent: resolvedDiscountPercent,
+                discount_label: discountLabel
             };
 
             optionElement.addEventListener('click', () => addToCart(serviceId, enrichedOption, resolvedServiceName));
@@ -757,6 +806,10 @@ function addToCart(serviceId, option, serviceName = '') {
     const promotionName = option.promotion_name || '';
     const promotionId = option.promotion_id || null;
     const discountPercent = typeof option.discount_percent !== 'undefined' ? parseFloat(option.discount_percent) || 0 : 0;
+    const discountLabelFromOption = option.discount_label || '';
+    const discountDisplay = getDiscountDisplayData(discountPercent, basePrice, finalPrice);
+    const resolvedDiscountPercent = discountDisplay.percent;
+    const resolvedDiscountLabel = discountLabelFromOption || discountDisplay.label;
 
     const existingIndex = selectedItems.findIndex(item => item.serviceId === serviceId);
     const itemData = {
@@ -770,7 +823,8 @@ function addToCart(serviceId, option, serviceName = '') {
         discountAmount: discountAmount,
         promotionName: promotionName,
         promotionId: promotionId,
-        discountPercent: discountPercent
+        discountPercent: resolvedDiscountPercent,
+        discountLabel: resolvedDiscountLabel
     };
 
     if (existingIndex === -1) {
@@ -814,11 +868,13 @@ function updateCartDisplay() {
         const hasDiscount = Number(item.discountAmount) > 0;
         const serviceName = escapeHtml(item.serviceName || '');
         const description = escapeHtml(item.description || '');
+        const discountLabel = item.discountLabel || formatDiscountPercentLabel(resolveDiscountPercent(item.discountPercent, item.originalPrice, item.price));
+        const inlinePercentHtml = discountLabel ? ` <span class="promotion-text">(${discountLabel})</span>` : '';
         const priceSection = hasDiscount
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)}${inlinePercentHtml}</div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -1083,11 +1139,13 @@ function generatePaymentSummary() {
         const hasDiscount = Number(item.discountAmount) > 0;
         const serviceName = escapeHtml(item.serviceName || '');
         const description = escapeHtml(item.description || '');
+        const discountLabel = item.discountLabel || formatDiscountPercentLabel(resolveDiscountPercent(item.discountPercent, item.originalPrice, item.price));
+        const inlinePercentHtml = discountLabel ? ` <span class="promotion-text">(${discountLabel})</span>` : '';
         const priceSection = hasDiscount
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)}${inlinePercentHtml}</div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -1096,7 +1154,6 @@ function generatePaymentSummary() {
                 <div class="summary-service">
                     <div class="summary-service-name">${serviceName}</div>
                     <div class="summary-service-details">${description}</div>
-                    ${hasDiscount ? `<div class="promotion-text">กำลังจัดโปรโมชั่น</div>` : ''}
                 </div>
                 <div class="summary-price">${priceSection}</div>
             </div>

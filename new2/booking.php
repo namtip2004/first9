@@ -213,7 +213,7 @@
         }
 
         .summary-card .price-discount {
-            color: #ffffff;
+            color: #ffffffc1;
         }
 
     </style>

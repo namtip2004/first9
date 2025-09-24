@@ -63,10 +63,10 @@
     .upload-box {
       border: 2px dashed #ced4da;
       border-radius: 12px;
-      padding: 20px;
+      padding: 16px;
       text-align: center;
       position: relative;
-      min-height: 180px;
+      min-height: 140px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -89,13 +89,13 @@
     #previewImage {
       display: none;
       max-width: 100%;
-      max-height: 240px;
+      max-height: 200px;
       object-fit: contain;
     }
 
     #uploadText {
       color: #6c757d;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
     }
 
     @media (max-width: 991.98px) {
@@ -263,7 +263,7 @@
                 </div>
 
                 <div class="col-12 d-flex justify-content-end">
-                  <button type="submit" class="btn btn-primary btn-lg px-4 mt-2 mt-lg-0">Confirm Booking</button>
+                  <button type="submit" class="btn btn-primary px-4 py-2 mt-2 mt-lg-0">Confirm Booking</button>
                 </div>
               </div>
             </form>

@@ -15,14 +15,92 @@
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
   <style>
-    .upload-box{
-      border:2px dashed #ced4da; border-radius:8px; padding:16px; text-align:center; position:relative;
-      min-height:150px; display:flex; align-items:center; justify-content:center; background:#fff;
+    body {
+      background-color: #f5f7fb;
     }
-    .upload-box.dragover{ background:#f8f9fa; border-color:#0d6efd; }
-    .upload-box input[type="file"]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
-    #previewImage{ display:none; max-width:100%; max-height:260px; }
-    #uploadText{ color:#6c757d; }
+
+    .card h5.card-title {
+      font-weight: 600;
+    }
+
+    .form-section-description {
+      font-size: 0.9rem;
+      color: #6c757d;
+    }
+
+    .service-row {
+      border: 1px dashed #ced4da;
+      border-radius: 12px;
+      background: rgba(13, 110, 253, 0.03);
+    }
+
+    .service-row .form-label {
+      font-weight: 500;
+    }
+
+    .service-row .remove-service {
+      margin-top: 0;
+    }
+
+    .summary-card .table {
+      font-size: 0.95rem;
+    }
+
+    .summary-card .table tbody td {
+      vertical-align: middle;
+    }
+
+    .summary-card .table tfoot th {
+      font-weight: 600;
+    }
+
+    .summary-card .table tfoot th:last-child {
+      font-size: 1rem;
+    }
+
+    .upload-box {
+      border: 2px dashed #ced4da;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      min-height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      transition: all 0.2s ease-in-out;
+    }
+
+    .upload-box.dragover {
+      background: #f1f5ff;
+      border-color: #0d6efd;
+    }
+
+    .upload-box input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    #previewImage {
+      display: none;
+      max-width: 100%;
+      max-height: 240px;
+      object-fit: contain;
+    }
+
+    #uploadText {
+      color: #6c757d;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 991.98px) {
+      .sticky-lg-top {
+        position: static !important;
+      }
+    }
   </style>
 </head>
 
@@ -30,6 +108,12 @@
 <?php $pdo = new PDO("mysql:host=127.0.0.1;dbname=first9", "root", ""); ?>
 <?php include("header.php"); ?>
 <?php include("slidebar.php"); ?>
+<?php
+  $customers = $pdo->query("SELECT customer_id, customer_name FROM customer ORDER BY customer_name")
+                   ->fetchAll(PDO::FETCH_ASSOC);
+  $services = $pdo->query("SELECT service_id, service_name FROM service WHERE is_active = 1 ORDER BY service_name")
+                  ->fetchAll(PDO::FETCH_ASSOC);
+?>
 
 <main id="main" class="main pt-5 mt-5">
 
@@ -41,122 +125,152 @@
   <section class="section">
     <div class="row">
       <div class="col-lg-12">
-        <div class="card">
-          <div class="card-body">
+        <div class="card border-0 shadow-none bg-transparent">
+          <div class="card-body p-0">
 
             <form id="bookingForm" action="submit_booking.php" method="POST" enctype="multipart/form-data">
-
-              <!-- Customer -->
-              <div class="mb-3">
-                <label for="customer" class="form-label">Select Customer</label>
-                <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
-                  <option value="">Select a customer</option>
-                  <?php
-                    $customers = $pdo->query("SELECT customer_id, customer_name FROM customer")->fetchAll(PDO::FETCH_ASSOC);
-                    foreach ($customers as $customer) {
-                      echo "<option value='{$customer['customer_id']}'>{$customer['customer_id']} - {$customer['customer_name']}</option>";
-                    }
-                  ?>
-                </select>
-              </div>
-
-              <!-- Services -->
-              <div id="servicesContainer">
-                <div class="service-row card p-3 mb-3">
-                  <div class="row">
-                    <div class="col-md-6">
-                      <label class="form-label">Select Service</label>
-                      <select class="form-select service-select" name="services[]" onchange="loadOptions(this)">
-                        <option value="">Select a service</option>
-                        <?php
-                          $services = $pdo->query("SELECT service_id, service_name FROM service WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC);
-                          foreach ($services as $service) {
-                            echo "<option value='{$service['service_id']}'>{$service['service_name']}</option>";
-                          }
-                        ?>
-                      </select>
+              <div class="row g-4">
+                <div class="col-lg-8 d-flex flex-column gap-4">
+                  <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
+                        <div>
+                          <h5 class="card-title mb-1">Customer &amp; Schedule</h5>
+                          <p class="form-section-description mb-0">Choose the customer and set the details for this appointment.</p>
+                        </div>
+                      </div>
+                      <div class="row g-3">
+                        <div class="col-12">
+                          <label for="customer" class="form-label">Select Customer</label>
+                          <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
+                            <option value="">Select a customer</option>
+                            <?php foreach ($customers as $customer) { ?>
+                              <option value="<?php echo htmlspecialchars($customer['customer_id']); ?>"><?php echo htmlspecialchars($customer['customer_id'] . ' - ' . $customer['customer_name']); ?></option>
+                            <?php } ?>
+                          </select>
+                        </div>
+                        <div class="col-sm-6">
+                          <label for="bookingDate" class="form-label">Select Date</label>
+                          <input type="text" class="form-control" id="bookingDate" name="booking_date" required>
+                        </div>
+                        <div class="col-sm-6">
+                          <label for="startTime" class="form-label">Select Start Time</label>
+                          <select class="form-select" id="startTime" name="start_time" onchange="loadAvailableStaff()" required>
+                            <option value="">Select a time</option>
+                          </select>
+                        </div>
+                        <div class="col-sm-6">
+                          <label for="staff" class="form-label">Select Staff</label>
+                          <select class="form-select" id="staff" name="staff_id" required>
+                            <option value="">Select a staff member</option>
+                          </select>
+                        </div>
+                        <div class="col-sm-6 col-lg-4">
+                          <label class="form-label">Total Duration</label>
+                          <input type="text" class="form-control" id="totalDuration" value="0 minutes" readonly>
+                        </div>
+                      </div>
                     </div>
-                    <div class="col-md-5">
-                      <label class="form-label">Select Option</label>
-                      <select class="form-select option-select" name="options[]" onchange="onOptionChange(this)">
-                        <option value="">Select an option</option>
-                      </select>
-                    </div>
-                    <div class="col-md-1">
-                      <button type="button" class="btn btn-danger mt-4" onclick="removeService(this)">X</button>
+                  </div>
+
+                  <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                        <div>
+                          <h5 class="card-title mb-1">Services</h5>
+                          <p class="form-section-description mb-0">Add each service required for this booking. You can add more than one option.</p>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addService()">Add Service</button>
+                      </div>
+
+                      <div id="servicesContainer" class="d-flex flex-column gap-3">
+                        <div class="service-row p-3">
+                          <div class="row g-3 align-items-end">
+                            <div class="col-12 col-md-6">
+                              <label class="form-label">Select Service</label>
+                              <select class="form-select service-select" name="services[]" onchange="loadOptions(this)">
+                                <option value="">Select a service</option>
+                                <?php foreach ($services as $service) { ?>
+                                  <option value="<?php echo htmlspecialchars($service['service_id']); ?>"><?php echo htmlspecialchars($service['service_name']); ?></option>
+                                <?php } ?>
+                              </select>
+                            </div>
+                            <div class="col-12 col-md-5">
+                              <label class="form-label">Select Option</label>
+                              <select class="form-select option-select" name="options[]" onchange="onOptionChange(this)">
+                                <option value="">Select an option</option>
+                              </select>
+                            </div>
+                            <div class="col-12 col-md-3 col-lg-2 col-xl-1">
+                              <button type="button" class="btn btn-outline-danger btn-sm w-100 remove-service" onclick="removeService(this)">Remove</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="alert alert-info mt-4 mb-0 small" role="alert">
+                        Total duration and price summary will update automatically when you choose service options.
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <button type="button" class="btn btn-primary mb-3" onclick="addService()">Add Another Service</button>
+                <div class="col-lg-4">
+                  <div class="d-flex flex-column gap-4 sticky-lg-top" style="top: 5.5rem;">
+                    <div class="card shadow-sm summary-card border-0">
+                      <div class="card-body">
+                        <h5 class="card-title mb-3">Price Summary</h5>
+                        <div class="table-responsive">
+                          <table class="table table-sm align-middle mb-0">
+                            <thead class="table-light">
+                              <tr>
+                                <th>Service</th>
+                                <th>Option</th>
+                                <th class="text-end">Price (€)</th>
+                              </tr>
+                            </thead>
+                            <tbody id="priceTable">
+                              <tr>
+                                <td colspan="3" class="text-center text-muted py-4">Select service options to see pricing.</td>
+                              </tr>
+                            </tbody>
+                            <tfoot>
+                              <tr>
+                                <th colspan="2">Total</th>
+                                <th id="totalPrice" class="text-end">€0.00</th>
+                              </tr>
+                              <tr>
+                                <th colspan="2">Discount</th>
+                                <th id="discountAmount" class="text-end">-€0.00</th>
+                              </tr>
+                              <tr>
+                                <th colspan="2">Final Price</th>
+                                <th id="finalPrice" class="text-end">€0.00</th>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
 
-              <!-- Total Duration -->
-              <div class="mb-3">
-                <label class="form-label">Total Duration</label>
-                <input type="text" class="form-control" id="totalDuration" readonly>
-              </div>
+                    <div class="card shadow-sm border-0">
+                      <div class="card-body">
+                        <h5 class="card-title mb-3">Supporting Evidence</h5>
+                        <p class="form-section-description mb-3">Upload any reference file that will be helpful for the appointment.</p>
+                        <div class="upload-box" id="uploadBox">
+                          <div class="upload-text" id="uploadText">Add evidence (JPG, PNG, PDF)</div>
+                          <input type="file" id="imgprofile" name="imgprofile" />
+                          <img id="previewImage" alt="Preview" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-              <!-- Date & Time -->
-              <div class="mb-3">
-                <label for="bookingDate" class="form-label">Select Date</label>
-                <input type="text" class="form-control" id="bookingDate" name="booking_date" required>
-              </div>
-              <div class="mb-3">
-                <label for="startTime" class="form-label">Select Start Time</label>
-                <select class="form-select" id="startTime" name="start_time" onchange="loadAvailableStaff()" required>
-                  <option value="">Select a time</option>
-                </select>
-              </div>
-
-              <!-- Staff -->
-              <div class="mb-3">
-                <label for="staff" class="form-label">Select Staff</label>
-                <select class="form-select" id="staff" name="staff_id" required>
-                  <option value="">Select a staff member</option>
-                </select>
-              </div>
-
-              <!-- Price Summary -->
-              <div class="summary-card">
-                <h4>Price Summary</h4>
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Service</th>
-                      <th>Option</th>
-                      <th>Price (€)</th>
-                    </tr>
-                  </thead>
-                  <tbody id="priceTable"></tbody>
-                  <tfoot>
-                    <tr>
-                      <th colspan="2">Total</th>
-                      <th id="totalPrice">€0.00</th>
-                    </tr>
-                    <tr>
-                      <th colspan="2">Discount</th>
-                      <th id="discountAmount">-€0.00</th>
-                    </tr>
-                    <tr>
-                      <th colspan="2">Final Price</th>
-                      <th id="finalPrice">€0.00</th>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              <!-- Upload evidence -->
-              <div class="col-md-12">
-                <div class="upload-box" id="uploadBox">
-                  <div class="upload-text" id="uploadText">add evidence</div>
-                  <input type="file" id="imgprofile" name="imgprofile" />
-                  <img id="previewImage" alt="Preview" />
+                <div class="col-12 d-flex justify-content-end">
+                  <button type="submit" class="btn btn-primary btn-lg px-4 mt-3 mt-lg-0">Confirm Booking</button>
                 </div>
               </div>
-
-              <!-- Submit -->
-              <button type="submit" class="btn btn-primary mt-3">Confirm Booking</button>
             </form>
 
           </div>
@@ -237,34 +351,38 @@
     function addService(){
       const container = document.getElementById('servicesContainer');
       const newRow = document.createElement('div');
-      newRow.className = 'service-row card p-3 mb-3';
+      newRow.className = 'service-row p-3';
       newRow.innerHTML = `
-        <div class="row">
-          <div class="col-md-6">
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-6">
             <label class="form-label">Select Service</label>
             <select class="form-select service-select" name="services[]" onchange="loadOptions(this)">
               <option value="">Select a service</option>
               <?php foreach ($services as $service) { ?>
-                <option value="<?php echo $service['service_id']; ?>"><?php echo htmlspecialchars($service['service_name']); ?></option>
+                <option value="<?php echo htmlspecialchars($service['service_id']); ?>"><?php echo htmlspecialchars($service['service_name']); ?></option>
               <?php } ?>
             </select>
           </div>
-          <div class="col-md-5">
+          <div class="col-12 col-md-5">
             <label class="form-label">Select Option</label>
             <select class="form-select option-select" name="options[]" onchange="onOptionChange(this)">
               <option value="">Select an option</option>
             </select>
           </div>
-          <div class="col-md-1">
-            <button type="button" class="btn btn-danger mt-4" onclick="removeService(this)">X</button>
+          <div class="col-12 col-md-3 col-lg-2 col-xl-1">
+            <button type="button" class="btn btn-outline-danger btn-sm w-100 remove-service" onclick="removeService(this)">Remove</button>
           </div>
         </div>`;
       container.appendChild(newRow);
     }
 
     function removeService(btn){
+      const container = document.getElementById('servicesContainer');
       const row = btn.closest('.service-row');
       row.remove();
+      if (!container.querySelector('.service-row')) {
+        addService();
+      }
       refreshTotalDuration();
       calculatePrices();
     }
@@ -362,6 +480,7 @@
       let totalPrice = 0;
       let totalDiscount = 0;
       let optionIds = [];
+      let hasRows = false;
 
       const rows = document.querySelectorAll('.service-row');
 
@@ -411,20 +530,25 @@
           totalPrice += price;
           totalDiscount += discountAmount;
 
-          let priceCell = `€${price.toFixed(2)}`;
+          let priceCell = `<span class="fw-semibold">€${price.toFixed(2)}</span>`;
           if (discountAmount > 0){
-            priceCell = `€${finalPrice.toFixed(2)}<div class="text-muted small">ลด -€${discountAmount.toFixed(2)} จาก €${price.toFixed(2)}</div>`;
+            priceCell = `<span class="fw-semibold text-success">€${finalPrice.toFixed(2)}</span><div class="text-muted small">Saved €${discountAmount.toFixed(2)} (was €${price.toFixed(2)})</div>`;
           }
 
           priceTable.insertAdjacentHTML('beforeend', `
             <tr>
               <td>${serviceName}</td>
               <td>${optionText}</td>
-              <td>${priceCell}</td>
+              <td class="text-end">${priceCell}</td>
             </tr>
           `);
+          hasRows = true;
         }
       });
+
+      if (!hasRows) {
+        priceTable.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Select service options to see pricing.</td></tr>';
+      }
 
       document.getElementById('totalPrice').textContent = `€${totalPrice.toFixed(2)}`;
       document.getElementById('discountAmount').textContent = `-€${totalDiscount.toFixed(2)}`;

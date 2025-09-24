@@ -26,11 +26,6 @@
       font-weight: 600;
     }
 
-    .form-section-description {
-      font-size: 0.9rem;
-      color: #6c757d;
-    }
-
     .service-row {
       border: 1px dashed #ced4da;
       border-radius: 12px;
@@ -136,11 +131,21 @@
                 <div class="col-lg-8 d-flex flex-column gap-4">
                   <div class="card shadow-sm border-0">
                     <div class="card-body">
+                      <h5 class="card-title mb-3">Customer</h5>
+                      <label for="customer" class="form-label">Select Customer</label>
+                      <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
+                        <option value="">Select a customer</option>
+                        <?php foreach ($customers as $customer) { ?>
+                          <option value="<?php echo htmlspecialchars($customer['customer_id']); ?>"><?php echo htmlspecialchars($customer['customer_id'] . ' - ' . $customer['customer_name']); ?></option>
+                        <?php } ?>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="card shadow-sm border-0">
+                    <div class="card-body">
                       <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
-                        <div>
-                          <h5 class="card-title mb-1">Services</h5>
-                          <p class="form-section-description mb-0">Start by selecting the services required for this booking. You can add more than one option.</p>
-                        </div>
+                        <h5 class="card-title mb-0">Services</h5>
                         <button type="button" class="btn btn-outline-primary btn-sm" onclick="addService()">Add Service</button>
                       </div>
 
@@ -170,31 +175,13 @@
                           </div>
                         </div>
                       </div>
-
-                      <div class="alert alert-info mt-4 mb-0 small" role="alert">
-                        Total duration and price summary will update automatically when you choose service options.
-                      </div>
                     </div>
                   </div>
 
                   <div class="card shadow-sm border-0">
                     <div class="card-body">
-                      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4">
-                        <div>
-                          <h5 class="card-title mb-1">Customer &amp; Schedule</h5>
-                          <p class="form-section-description mb-0">After selecting services, choose the customer and suitable time slot.</p>
-                        </div>
-                      </div>
+                      <h5 class="card-title mb-3">Schedule</h5>
                       <div class="row g-3">
-                        <div class="col-12">
-                          <label for="customer" class="form-label">Select Customer</label>
-                          <select class="form-select" id="customer" name="customer_id" required style="width: 100%;">
-                            <option value="">Select a customer</option>
-                            <?php foreach ($customers as $customer) { ?>
-                              <option value="<?php echo htmlspecialchars($customer['customer_id']); ?>"><?php echo htmlspecialchars($customer['customer_id'] . ' - ' . $customer['customer_name']); ?></option>
-                            <?php } ?>
-                          </select>
-                        </div>
                         <div class="col-sm-6">
                           <label for="bookingDate" class="form-label">Select Date</label>
                           <input type="text" class="form-control" id="bookingDate" name="booking_date" required disabled>
@@ -261,7 +248,6 @@
                     <div class="card shadow-sm border-0">
                       <div class="card-body">
                         <h5 class="card-title mb-3">Supporting Evidence</h5>
-                        <p class="form-section-description mb-3">Upload any reference file that will be helpful for the appointment.</p>
                         <div class="upload-box" id="uploadBox">
                           <div class="upload-text" id="uploadText">Add evidence (JPG, PNG, PDF)</div>
                           <input type="file" id="imgprofile" name="imgprofile" />

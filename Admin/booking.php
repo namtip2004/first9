@@ -14,6 +14,9 @@
   <!-- Select2 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
   <style>
     body {
       background-color: #f5f7fb;
@@ -160,7 +163,9 @@
                               </select>
                             </div>
                             <div class="col-12 col-md-3 col-lg-2 col-xl-1">
-                              <button type="button" class="btn btn-outline-danger btn-sm w-100 remove-service" onclick="removeService(this)">Remove</button>
+                              <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center w-100 remove-service" onclick="removeService(this)" aria-label="Remove service">
+                                <i class="bi bi-x-lg"></i>
+                              </button>
                             </div>
                           </div>
                         </div>
@@ -216,10 +221,6 @@
                     <div class="card shadow-sm summary-card border-0">
                       <div class="card-body">
                         <h5 class="card-title mb-3">Price Summary</h5>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                          <span class="text-muted text-uppercase small">Total Duration</span>
-                          <span id="totalDurationDisplay" class="fw-semibold">0 minutes</span>
-                        </div>
                         <div class="table-responsive">
                           <table class="table table-sm align-middle mb-0">
                             <thead class="table-light">
@@ -235,6 +236,10 @@
                               </tr>
                             </tbody>
                             <tfoot>
+                              <tr>
+                                <th colspan="2" class="text-muted text-uppercase small">Total Duration</th>
+                                <th id="totalDurationDisplay" class="text-end text-muted small">0 minutes</th>
+                              </tr>
                               <tr>
                                 <th colspan="2">Total</th>
                                 <th id="totalPrice" class="text-end">€0.00</th>
@@ -404,7 +409,9 @@
             </select>
           </div>
           <div class="col-12 col-md-3 col-lg-2 col-xl-1">
-            <button type="button" class="btn btn-outline-danger btn-sm w-100 remove-service" onclick="removeService(this)">Remove</button>
+            <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center justify-content-center w-100 remove-service" onclick="removeService(this)" aria-label="Remove service">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
         </div>`;
       container.appendChild(newRow);
@@ -439,10 +446,11 @@
         .then(options => {
           options.forEach(o => {
             const opt = document.createElement('option');
+            const priceValue = parseFloat(o.price);
             opt.value = o.option_id;
             opt.dataset.duration = o.duration;
             opt.dataset.price = o.price;
-            opt.textContent = `${o.duration} minutes (€${o.price})`;
+            opt.textContent = `${o.duration} minutes${!isNaN(priceValue) ? ` - €${priceValue.toFixed(2)}` : ''}`;
             optionSelect.appendChild(opt);
           });
           // หลังโหลดตัวเลือก เสนอให้ผู้ใช้เลือกเอง → แค่รีเฟรชสรุปเวลาราคา
@@ -583,7 +591,7 @@
 
           let priceCell = `<span class="fw-semibold">€${price.toFixed(2)}</span>`;
           if (discountAmount > 0){
-            priceCell = `<span class="fw-semibold text-success">€${finalPrice.toFixed(2)}</span><div class="text-muted small">Saved €${discountAmount.toFixed(2)} (was €${price.toFixed(2)})</div>`;
+            priceCell = `<span class="fw-semibold text-success d-block">€${finalPrice.toFixed(2)}</span><span class="text-muted text-decoration-line-through small d-block">€${price.toFixed(2)}</span>`;
           }
 
           priceTable.insertAdjacentHTML('beforeend', `

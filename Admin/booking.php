@@ -132,7 +132,7 @@
 
             <form id="bookingForm" action="submit_booking.php" method="POST" enctype="multipart/form-data">
               <div class="row g-2">
-                <div class="col-lg-8 d-flex flex-column gap-2">
+                <div class="col-lg-8 d-flex flex-column gap-1">
                   <div class="card shadow-sm border-0 compact-card">
                     <div class="card-body">
                       <h5 class="card-title mb-2">Customer</h5>
@@ -208,7 +208,7 @@
                 </div>
 
                 <div class="col-lg-4">
-                  <div class="d-flex flex-column gap-2 sticky-lg-top" style="top: 5.5rem;">
+                  <div class="d-flex flex-column gap-1 sticky-lg-top" style="top: 5.5rem;">
                     <div class="card shadow-sm summary-card border-0 compact-card">
                       <div class="card-body">
                         <h5 class="card-title mb-2">Price Summary</h5>

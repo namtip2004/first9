@@ -325,7 +325,7 @@
       if (!text) {
         return '';
       }
-      return `${text.split('').join('\u0336')}\u0336`;
+      return Array.from(text, char => `${char}\u0336`).join('');
     }
 
     function buildOptionLabel(durationValue, priceValue, discountInfo){
@@ -333,6 +333,11 @@
       const hasDuration = !Number.isNaN(duration) && duration > 0;
       const durationText = hasDuration ? `${duration} minutes` : '';
       const basePrice = parseNumber(priceValue);
+      const baseSegments = [];
+
+      if (durationText){
+        baseSegments.push(durationText);
+      }
 
       if (discountInfo && basePrice !== null){
         let finalPrice = parseNumber(discountInfo.final_price);
@@ -344,10 +349,15 @@
           const finalText = formatCurrency(finalPrice);
           const baseText = formatCurrency(basePrice);
           if (finalText && baseText){
+            const segments = [...baseSegments];
             const baseStruck = applyStrikethrough(baseText);
-            return durationText
-              ? `${durationText} – ${finalText} (${baseStruck})`
-              : `${finalText} (${baseStruck})`;
+            if (segments.length){
+              segments.push('–', finalText);
+            } else {
+              segments.push(finalText);
+            }
+            segments.push(baseStruck);
+            return segments.join(' ');
           }
         }
       }
@@ -355,7 +365,13 @@
       if (basePrice !== null && basePrice > 0){
         const baseText = formatCurrency(basePrice);
         if (baseText){
-          return durationText ? `${durationText} – ${baseText}` : baseText;
+          const segments = [...baseSegments];
+          if (segments.length){
+            segments.push('–', baseText);
+          } else {
+            segments.push(baseText);
+          }
+          return segments.join(' ');
         }
       }
 
@@ -705,9 +721,29 @@
       }
 
       const totalDiscount = Math.max(totalBase - totalFinal, 0);
-      document.getElementById('totalPrice').textContent = `€${totalBase.toFixed(2)}`;
-      document.getElementById('discountAmount').textContent = `-€${totalDiscount.toFixed(2)}`;
-      document.getElementById('finalPrice').textContent = `€${totalFinal.toFixed(2)}`;
+      const totalPriceEl = document.getElementById('totalPrice');
+      const discountEl = document.getElementById('discountAmount');
+      const finalPriceEl = document.getElementById('finalPrice');
+
+      if (totalPriceEl){
+        if (totalDiscount > 0){
+          totalPriceEl.innerHTML = `<span class="text-muted text-decoration-line-through">€${totalBase.toFixed(2)}</span>`;
+        } else {
+          totalPriceEl.textContent = `€${totalBase.toFixed(2)}`;
+        }
+      }
+
+      if (discountEl){
+        discountEl.textContent = `-€${totalDiscount.toFixed(2)}`;
+      }
+
+      if (finalPriceEl){
+        if (totalDiscount > 0){
+          finalPriceEl.innerHTML = `<span class="fw-semibold text-success">€${totalFinal.toFixed(2)}</span>`;
+        } else {
+          finalPriceEl.textContent = `€${totalFinal.toFixed(2)}`;
+        }
+      }
     }
   </script>
 </main>

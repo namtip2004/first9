@@ -798,7 +798,7 @@ function updateCartDisplay() {
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text">(โปรโมชั่น)</span></div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -878,33 +878,43 @@ function updateCartDisplay() {
         }
 
         // Display staff options in modal
-        function displayStaffOptions(staff) {
-            const container = document.getElementById('staffContainer');
-            container.innerHTML = '';
-            
-            if (staff.length === 0) {
-                container.innerHTML = '<div class="col-12 text-center text-muted">ไม่มีผู้ให้บริการว่างในเวลานี้</div>';
-                return;
-            }
-            
-            staff.forEach(s => {
-                const staffCard = document.createElement('div');
-                staffCard.className = 'col-md-4 mb-3';
-                staffCard.innerHTML = `
-                    <div class="staff-card" onclick="selectStaff(${s.staff_id}, '${s.staff_name}', '${s.image || ''}')">
-                        <div class="staff-avatar">
-                            ${s.image ? `<img src="${s.image}" alt="${s.staff_name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">` : '<i class="fas fa-user"></i>'}
-                        </div>
-                        <h6 class="mb-2" style="color: var(--charcoal);">${s.staff_name}</h6>
-                        
-                        <div class="mt-2">
+function displayStaffOptions(staff) {
+  const container = document.getElementById('staffContainer');
+  container.innerHTML = '';
 
-                        </div>
-                    </div>
-                `;
-                container.appendChild(staffCard);
-            });
-        }
+  if (!Array.isArray(staff) || staff.length === 0) {
+    container.innerHTML = '<div class="col-12 text-center text-muted">ไม่มีผู้ให้บริการว่างในเวลานี้</div>';
+    return;
+  }
+
+  staff.forEach(s => {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 mb-3';
+    col.innerHTML = `
+      <div class="staff-card" data-id="${s.staff_id}" data-name="${s.staff_name}" data-img="${s.image_url || ''}">
+        <div class="staff-avatar">
+          ${s.image_url
+            ? `<img src="${s.image_url}" alt="${s.staff_name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+            : `<i class="fas fa-user"></i>`}
+        </div>
+        <h6 class="mb-2" style="color: var(--charcoal);">${s.staff_name}</h6>
+      </div>
+    `;
+
+    col.querySelector('.staff-card').addEventListener('click', function(){
+      document.querySelectorAll('.staff-card').forEach(c => c.classList.remove('selected'));
+      this.classList.add('selected');
+      selectedStaff = {
+        id:   this.getAttribute('data-id'),
+        name: this.getAttribute('data-name'),
+        image:this.getAttribute('data-img')
+      };
+      document.getElementById('confirmStaffBtn').disabled = false;
+    });
+
+    container.appendChild(col);
+  });
+}
 
         // Select staff member
         function selectStaff(staffId, staffName, image) {
@@ -1057,7 +1067,7 @@ function generatePaymentSummary() {
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text">(โปรโมชั่น)</span></div>
+                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 

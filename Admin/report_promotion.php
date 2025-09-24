@@ -341,6 +341,51 @@ if ($serviceFilter > 0) {
 }
 $usageWhereSql = implode(' AND ', $usageWhere);
 
+$promotionColumns = getPromotionColumns($conn);
+$listSelectFields = [
+    'p.promotion_id',
+    'p.pm_name',
+    'p.pm_start_date',
+    'p.pm_end_date',
+];
+
+if (in_array('pm_created_at', $promotionColumns, true)) {
+    $listSelectFields[] = 'p.pm_created_at';
+} else {
+    $listSelectFields[] = 'NULL AS pm_created_at';
+}
+
+if (in_array('description', $promotionColumns, true)) {
+    $listSelectFields[] = 'p.description';
+} else {
+    $listSelectFields[] = "'' AS description";
+}
+
+if (in_array('percent', $promotionColumns, true)) {
+    $listSelectFields[] = 'p.percent';
+} else {
+    $listSelectFields[] = 'NULL AS percent';
+}
+
+if (in_array('discount', $promotionColumns, true)) {
+    $listSelectFields[] = 'p.discount';
+} else {
+    $listSelectFields[] = 'NULL AS discount';
+}
+
+$listSelectFields = array_merge($listSelectFields, [
+    'COALESCE(svc.service_count, 0) AS service_count',
+    'COALESCE(opt.option_count, 0) AS option_count',
+    'COALESCE(opt.max_percent, 0) AS max_percent',
+    'COALESCE(opt.max_amount, 0) AS max_amount',
+    'COALESCE(usage_stat.booking_count, 0) AS booking_count',
+    'COALESCE(usage_stat.gross_sum, 0) AS gross_sum',
+    'COALESCE(usage_stat.discount_sum, 0) AS discount_sum',
+    'COALESCE(usage_stat.net_sum, 0) AS net_sum',
+]);
+
+$listSelect = implode(",\n        ", $listSelectFields);
+
 $sortMap = [
     'name' => 'p.pm_name ' . $dir,
     'start' => 'p.pm_start_date ' . $dir,
@@ -384,22 +429,7 @@ $usageSubquery = "
 
 $listSql = "
     SELECT
-        p.promotion_id,
-        p.pm_name,
-        p.pm_start_date,
-        p.pm_end_date,
-        p.pm_created_at,
-        p.description,
-        p.percent,
-        p.discount,
-        COALESCE(svc.service_count, 0) AS service_count,
-        COALESCE(opt.option_count, 0) AS option_count,
-        COALESCE(opt.max_percent, 0) AS max_percent,
-        COALESCE(opt.max_amount, 0) AS max_amount,
-        COALESCE(usage_stat.booking_count, 0) AS booking_count,
-        COALESCE(usage_stat.gross_sum, 0) AS gross_sum,
-        COALESCE(usage_stat.discount_sum, 0) AS discount_sum,
-        COALESCE(usage_stat.net_sum, 0) AS net_sum
+        {$listSelect}
     FROM promotion p
     LEFT JOIN (
         SELECT promotion_id, COUNT(DISTINCT service_id) AS service_count

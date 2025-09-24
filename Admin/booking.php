@@ -306,6 +306,119 @@
       reader.readAsDataURL(file);
     }
 
+    function parseNumber(value){
+      if (value === undefined || value === null || value === '') {
+        return null;
+      }
+      const num = Number.parseFloat(value);
+      return Number.isNaN(num) ? null : num;
+    }
+
+    function formatCurrency(amount){
+      if (typeof amount !== 'number' || Number.isNaN(amount)) {
+        return '';
+      }
+      return `€${amount.toFixed(2)}`;
+    }
+
+    function buildOptionLabel(durationValue, priceValue, discountInfo){
+      const duration = Number.parseInt(durationValue ?? '', 10);
+      const hasDuration = !Number.isNaN(duration) && duration > 0;
+      const durationText = hasDuration ? `${duration} minutes` : '';
+      const basePrice = parseNumber(priceValue);
+
+      if (discountInfo && basePrice !== null){
+        let finalPrice = parseNumber(discountInfo.final_price);
+        const discountAmount = parseNumber(discountInfo.discount_amount);
+        if (finalPrice === null && discountAmount !== null){
+          finalPrice = Math.max(basePrice - discountAmount, 0);
+        }
+        if (finalPrice !== null && finalPrice < basePrice){
+          const finalText = formatCurrency(finalPrice);
+          const baseText = formatCurrency(basePrice);
+          if (finalText && baseText){
+            return durationText ? `${durationText} – ${finalText} (was ${baseText})` : `${finalText} (was ${baseText})`;
+          }
+        }
+      }
+
+      if (basePrice !== null && basePrice > 0){
+        const baseText = formatCurrency(basePrice);
+        if (baseText){
+          return durationText ? `${durationText} – ${baseText}` : baseText;
+        }
+      }
+
+      return durationText || 'Option';
+    }
+
+    function setOptionDisplay(option, discountInfo){
+      const label = buildOptionLabel(option.dataset.duration, option.dataset.price, discountInfo);
+      if (label){
+        option.textContent = label;
+      }
+
+      const basePrice = parseNumber(option.dataset.price);
+      let resolvedFinal = basePrice;
+      let resolvedDiscount = 0;
+
+      if (discountInfo && basePrice !== null){
+        const fetchedFinal = parseNumber(discountInfo.final_price);
+        const fetchedDiscount = parseNumber(discountInfo.discount_amount);
+        if (fetchedFinal !== null && fetchedFinal < resolvedFinal){
+          resolvedFinal = fetchedFinal;
+        } else if (fetchedDiscount !== null && fetchedDiscount > 0){
+          resolvedFinal = Math.max(basePrice - fetchedDiscount, 0);
+        }
+        if (resolvedFinal !== null && basePrice !== null){
+          resolvedDiscount = Math.max(basePrice - resolvedFinal, 0);
+        }
+      }
+
+      if (resolvedFinal !== null && typeof resolvedFinal === 'number'){
+        option.dataset.finalPrice = resolvedFinal.toFixed(2);
+      } else {
+        option.dataset.finalPrice = '';
+      }
+      option.dataset.discountAmount = resolvedDiscount.toFixed(2);
+    }
+
+    async function applyOptionDiscountLabels(selectEl){
+      if (!selectEl){ return; }
+
+      const optionElements = Array.from(selectEl.options).filter(opt => Number.parseInt(opt.value || '0', 10) > 0);
+      optionElements.forEach(opt => setOptionDisplay(opt, null));
+
+      if (!optionElements.length){
+        calculatePrices();
+        return;
+      }
+
+      const optionIds = optionElements.map(opt => Number.parseInt(opt.value, 10));
+      const { date, time } = getCurrentBookingMoment();
+
+      try {
+        const response = await fetch('get_applicable_promotions.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ option_ids: optionIds, date, time })
+        });
+
+        if (response.ok){
+          const data = await response.json();
+          const discountMap = (data && typeof data === 'object') ? (data.option_discounts || {}) : {};
+          optionElements.forEach(opt => {
+            const optionId = Number.parseInt(opt.value, 10);
+            setOptionDisplay(opt, discountMap[optionId] || null);
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to load option discount details', error);
+      } finally {
+        calculatePrices();
+      }
+    }
+
     // ---------- Select2 for customer ----------
     document.addEventListener('DOMContentLoaded', function () {
       const customerSelect = document.getElementById('customer');
@@ -425,9 +538,9 @@
       const serviceId = serviceSelectEl.value;
 
       optionSelect.innerHTML = '<option value="">Select an option</option>';
+      refreshTotalDuration();
+      calculatePrices();
       if (!serviceId){
-        refreshTotalDuration();
-        calculatePrices();
         return;
       }
 
@@ -439,12 +552,12 @@
             opt.value = o.option_id;
             opt.dataset.duration = o.duration;
             opt.dataset.price = o.price;
-            opt.textContent = `${o.duration} minutes`;
+            opt.textContent = buildOptionLabel(o.duration, o.price, null);
             optionSelect.appendChild(opt);
           });
+          applyOptionDiscountLabels(optionSelect);
           // หลังโหลดตัวเลือก เสนอให้ผู้ใช้เลือกเอง → แค่รีเฟรชสรุปเวลาราคา
           refreshTotalDuration();
-          calculatePrices();
         })
         .catch(() => { /* เงียบไว้ก่อน หรือจะแจ้ง error ก็ได้ */ });
     }
@@ -522,85 +635,69 @@
     }
 
     // ---------- Price summary ----------
-    async function calculatePrices(){
+    function calculatePrices(){
       const priceTable = document.getElementById('priceTable');
+      if (!priceTable){ return; }
+
       priceTable.innerHTML = '';
-      let totalPrice = 0;
-      let totalDiscount = 0;
-      let optionIds = [];
+      let totalBase = 0;
+      let totalFinal = 0;
       let hasRows = false;
 
-      const rows = document.querySelectorAll('.service-row');
-
-      rows.forEach(row => {
-        const oSel = row.querySelector('.option-select');
-        const optionId = parseInt(oSel?.value || '0', 10);
-        if (optionId > 0) {
-          optionIds.push(optionId);
-        }
-      });
-
-      let discountMap = {};
-      const { date: bookingDate, time: bookingTime } = getCurrentBookingMoment();
-
-      if (optionIds.length){
-        try {
-          const response = await fetch('get_applicable_promotions.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ option_ids: optionIds, date: bookingDate, time: bookingTime })
-          });
-          if (response.ok){
-            const data = await response.json();
-            if (data && typeof data === 'object'){
-              discountMap = data.option_discounts || {};
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to fetch promotions', err);
-        }
-      }
-
       document.querySelectorAll('.service-row').forEach(row => {
-        const sSel = row.querySelector('.service-select');
-        const oSel = row.querySelector('.option-select');
+        const serviceSelect = row.querySelector('.service-select');
+        const optionSelect = row.querySelector('.option-select');
+        const selectedService = serviceSelect?.options[serviceSelect.selectedIndex];
+        const selectedOption = optionSelect?.options[optionSelect.selectedIndex];
 
-        const serviceName = sSel?.options[sSel.selectedIndex]?.text || '';
-        const optionText  = oSel?.options[oSel.selectedIndex]?.text || '';
-        const price = parseFloat(oSel?.options[oSel.selectedIndex]?.dataset.price || 0);
-        const optionId = parseInt(oSel?.value || '0', 10);
-
-        if (serviceName && optionText && !isNaN(price) && price > 0){
-          const discountInfo = discountMap[optionId] || null;
-          const discountAmount = discountInfo ? parseFloat(discountInfo.discount_amount || 0) : 0;
-          const finalPrice = discountInfo ? parseFloat(discountInfo.final_price || (price - discountAmount)) : price;
-
-          totalPrice += price;
-          totalDiscount += discountAmount;
-
-          let priceCell = `<span class="fw-semibold">€${price.toFixed(2)}</span>`;
-          if (discountAmount > 0){
-            priceCell = `<span class="fw-semibold text-success d-block">€${finalPrice.toFixed(2)}</span><span class="text-muted text-decoration-line-through small d-block">€${price.toFixed(2)}</span>`;
-          }
-
-          priceTable.insertAdjacentHTML('beforeend', `
-            <tr>
-              <td>${serviceName}</td>
-              <td>${optionText}</td>
-              <td class="text-end">${priceCell}</td>
-            </tr>
-          `);
-          hasRows = true;
+        if (!selectedService || !selectedOption){
+          return;
         }
+
+        const serviceName = selectedService.text || '';
+        const optionId = Number.parseInt(selectedOption.value || '0', 10);
+        if (!serviceName || optionId <= 0){
+          return;
+        }
+
+        const basePrice = parseNumber(selectedOption.dataset.price);
+        if (basePrice === null){
+          return;
+        }
+
+        const finalPrice = parseNumber(selectedOption.dataset.finalPrice);
+        const resolvedFinal = finalPrice !== null ? finalPrice : basePrice;
+        const durationValue = Number.parseInt(selectedOption.dataset.duration || '', 10);
+        const optionLabel = !Number.isNaN(durationValue) && durationValue > 0
+          ? `${durationValue} minutes`
+          : (selectedOption.textContent || '');
+
+        totalBase += basePrice;
+        totalFinal += resolvedFinal;
+
+        let priceCell = `<span class="fw-semibold">€${basePrice.toFixed(2)}</span>`;
+        if (resolvedFinal < basePrice){
+          priceCell = `<span class="fw-semibold text-success d-block">€${resolvedFinal.toFixed(2)}</span><span class="text-muted text-decoration-line-through small d-block">€${basePrice.toFixed(2)}</span>`;
+        }
+
+        priceTable.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${serviceName}</td>
+            <td>${optionLabel}</td>
+            <td class="text-end">${priceCell}</td>
+          </tr>
+        `);
+        hasRows = true;
       });
 
-      if (!hasRows) {
+      if (!hasRows){
         priceTable.innerHTML = '<tr><td colspan="3" class="text-center text-muted py-4">Select service options to see pricing.</td></tr>';
       }
 
-      document.getElementById('totalPrice').textContent = `€${totalPrice.toFixed(2)}`;
+      const totalDiscount = Math.max(totalBase - totalFinal, 0);
+      document.getElementById('totalPrice').textContent = `€${totalBase.toFixed(2)}`;
       document.getElementById('discountAmount').textContent = `-€${totalDiscount.toFixed(2)}`;
-      document.getElementById('finalPrice').textContent = `€${(totalPrice - totalDiscount).toFixed(2)}`;
+      document.getElementById('finalPrice').textContent = `€${totalFinal.toFixed(2)}`;
     }
   </script>
 </main>

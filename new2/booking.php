@@ -72,6 +72,8 @@
             margin-bottom: 10px;
             cursor: pointer;
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
         .option-item:hover {
@@ -88,56 +90,71 @@
             border-color: rgba(201, 169, 110, 0.6);
             box-shadow: 0 8px 20px rgba(201, 169, 110, 0.25);
         }
-        .option-price-wrapper {
-            margin-top: 6px;
+        .option-info {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 2px;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+        }
+        .option-duration {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--deep-brown);
+            font-weight: 600;
+        }
+        .option-pricing {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .option-pricing .price-original {
+            text-decoration: line-through;
+            color: rgba(112, 85, 61, 0.55);
+            font-size: 0.85rem;
+        }
+        .option-pricing .price-final,
+        .option-pricing .option-price-normal {
+            color: var(--luxury-gold);
+            font-weight: 600;
+            font-size: 1rem;
         }
         .price-original {
             text-decoration: line-through;
             color: rgba(112, 85, 61, 0.55);
             font-size: 0.9rem;
         }
-        .price-final {
-            color: var(--luxury-gold);
-            font-weight: 600;
-            font-size: 1rem;
-        }
+        .price-final,
         .option-price-normal {
             color: var(--luxury-gold);
             font-weight: 600;
             font-size: 1rem;
         }
         .price-discount {
-            color: #1f9d55;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        .promotion-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(201, 169, 110, 0.18);
             color: var(--deep-burgundy);
-            border-radius: 999px;
-            padding: 3px 10px;
+            font-weight: 600;
+        }
+        .discount-ribbon {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--deep-burgundy);
+            color: white;
+            padding: 6px 14px;
             font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .promotion-text {
-            color: var(--deep-burgundy);
-            font-weight: 600;
-            font-size: 0.8rem;
-            display: inline-block;
+            font-weight: 700;
+            border-bottom-left-radius: 12px;
+            box-shadow: 0 6px 16px rgba(139, 75, 92, 0.25);
+            z-index: 2;
+            pointer-events: none;
         }
         .options-list {
-    display: flex;
-    flex-direction: row; /* จัดเรียงในแนวนอน */
-    flex-wrap: wrap; /* ถ้ามีหลายตัวเลือกให้ขึ้นบรรทัดใหม่ */
-    gap: 10px; /* ระยะห่างระหว่างตัวเลือก */
-}
+            display: flex;
+            flex-direction: row; /* จัดเรียงในแนวนอน */
+            flex-wrap: wrap; /* ถ้ามีหลายตัวเลือกให้ขึ้นบรรทัดใหม่ */
+            gap: 10px; /* ระยะห่างระหว่างตัวเลือก */
+        }
 
         .cart-item {
             background: var(--soft-cream);
@@ -193,6 +210,10 @@
             border-radius: 15px;
             padding: 25px;
             margin-top: 20px;
+        }
+
+        .summary-card .price-discount {
+            color: #ffffffc1;
         }
 
     </style>
@@ -478,6 +499,39 @@
             return `-€${number.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
         }
 
+        function resolveDiscountPercent(percent, basePrice, finalPrice) {
+            let resolved = Number(percent);
+            if (!Number.isFinite(resolved) || resolved <= 0) {
+                const base = Number(basePrice);
+                const final = Number(finalPrice);
+                if (Number.isFinite(base) && base > 0 && Number.isFinite(final)) {
+                    const computed = ((base - final) / base) * 100;
+                    resolved = computed > 0 ? computed : 0;
+                } else {
+                    resolved = 0;
+                }
+            }
+            return resolved > 0 ? resolved : 0;
+        }
+
+        function formatDiscountPercentLabel(percent) {
+            const value = Number(percent);
+            if (!Number.isFinite(value) || value <= 0) {
+                return '';
+            }
+            const rounded = Math.round(value * 10) / 10;
+            const formatted = rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1);
+            return `-${formatted}%`;
+        }
+
+        function getDiscountDisplayData(percent, basePrice, finalPrice) {
+            const resolvedPercent = resolveDiscountPercent(percent, basePrice, finalPrice);
+            return {
+                percent: resolvedPercent,
+                label: formatDiscountPercentLabel(resolvedPercent)
+            };
+        }
+
         function escapeHtml(value) {
             if (value === null || value === undefined) {
                 return '';
@@ -642,10 +696,10 @@ async function loadServiceOptions(serviceId, serviceName = '') {
             const optionElement = document.createElement('div');
             optionElement.className = 'option-item';
             optionElement.style.backgroundColor = '#f8f9fa';
-            optionElement.style.padding = '10px';
+            optionElement.style.padding = '14px 18px';
             optionElement.style.borderRadius = '5px';
             optionElement.style.minWidth = '120px';
-            optionElement.style.textAlign = 'center';
+            optionElement.style.textAlign = 'left';
             optionElement.style.border = '1px solid #ddd';
             optionElement.style.cursor = 'pointer';
 
@@ -658,7 +712,7 @@ async function loadServiceOptions(serviceId, serviceName = '') {
             let discountAmount = 0;
             let finalPrice = basePrice;
             let promotionName = '';
-            let discountPercent = 0;
+            let discountPercentRaw = 0;
             let promotionId = null;
 
             if (discountInfo && Number(discountInfo.discount_amount) > 0) {
@@ -672,26 +726,34 @@ async function loadServiceOptions(serviceId, serviceName = '') {
                     finalPrice = Math.max(basePrice - discountAmount, 0);
                 }
                 promotionName = discountInfo.promotion_name || '';
-                discountPercent = parseFloat(discountInfo.discount_percent || 0) || 0;
+                discountPercentRaw = parseFloat(discountInfo.discount_percent || 0) || 0;
                 promotionId = discountInfo.promotion_id ? parseInt(discountInfo.promotion_id, 10) : null;
             }
 
             const hasDiscount = discountAmount > 0 && finalPrice < basePrice;
+            let resolvedDiscountPercent = 0;
+            let discountLabel = '';
             if (hasDiscount) {
+                const displayData = getDiscountDisplayData(discountPercentRaw, basePrice, finalPrice);
+                resolvedDiscountPercent = displayData.percent;
+                discountLabel = displayData.label;
                 optionElement.classList.add('promotion-active');
+                optionElement.style.paddingTop = '20px';
+                optionElement.style.paddingRight = '78px';
             }
 
-            const promotionIndicatorText = 'กำลังจัดโปรโมชั่น';
+            const ribbonHtml = discountLabel ? `<div class="discount-ribbon">${discountLabel}</div>` : '';
 
             optionElement.innerHTML = `
-                ${hasDiscount ? `<div class="promotion-chip"><i class="fas fa-tags"></i><span>${promotionIndicatorText}</span></div>` : ''}
-                <div class="option-duration"><strong>${durationLabel}</strong></div>
-                <div class="option-price-wrapper">
-                    ${hasDiscount
-                        ? `<span class="price-original">${formatCurrency(basePrice)}</span>
-                           <span class="price-final">${formatCurrency(finalPrice)}</span>
-                           <span class="price-discount">ประหยัด ${formatCurrency(discountAmount)}</span>`
-                        : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
+                ${ribbonHtml}
+                <div class="option-info">
+                    <div class="option-duration"><i class="fas fa-clock"></i><span>${durationLabel}</span></div>
+                    <div class="option-pricing">
+                        ${hasDiscount
+                            ? `<span class="price-original">${formatCurrency(basePrice)}</span>
+                               <span class="price-final">${formatCurrency(finalPrice)}</span>`
+                            : `<span class="option-price-normal">${formatCurrency(basePrice)}</span>`}
+                    </div>
                 </div>
             `;
 
@@ -704,7 +766,8 @@ async function loadServiceOptions(serviceId, serviceName = '') {
                 discount_amount: hasDiscount ? discountAmount : 0,
                 promotion_name: promotionName,
                 promotion_id: promotionId,
-                discount_percent: discountPercent
+                discount_percent: resolvedDiscountPercent,
+                discount_label: discountLabel
             };
 
             optionElement.addEventListener('click', () => addToCart(serviceId, enrichedOption, resolvedServiceName));
@@ -737,6 +800,10 @@ function addToCart(serviceId, option, serviceName = '') {
     const promotionName = option.promotion_name || '';
     const promotionId = option.promotion_id || null;
     const discountPercent = typeof option.discount_percent !== 'undefined' ? parseFloat(option.discount_percent) || 0 : 0;
+    const discountLabelFromOption = option.discount_label || '';
+    const discountDisplay = getDiscountDisplayData(discountPercent, basePrice, finalPrice);
+    const resolvedDiscountPercent = discountDisplay.percent;
+    const resolvedDiscountLabel = discountLabelFromOption || discountDisplay.label;
 
     const existingIndex = selectedItems.findIndex(item => item.serviceId === serviceId);
     const itemData = {
@@ -750,16 +817,14 @@ function addToCart(serviceId, option, serviceName = '') {
         discountAmount: discountAmount,
         promotionName: promotionName,
         promotionId: promotionId,
-        discountPercent: discountPercent
+        discountPercent: resolvedDiscountPercent,
+        discountLabel: resolvedDiscountLabel
     };
 
     if (existingIndex === -1) {
         selectedItems.push(itemData);
-        showToast(`เพิ่ม ${serviceName} (${durationLabel}) ในรายการแล้ว`, 'success');
     } else {
-        const oldLabel = selectedItems[existingIndex].description || `${selectedItems[existingIndex].duration} min`;
         selectedItems[existingIndex] = itemData;
-        showToast(`เปลี่ยน ${serviceName} จาก ${oldLabel} เป็น ${durationLabel}`, 'info');
     }
 
     updateCartDisplay();
@@ -798,7 +863,6 @@ function updateCartDisplay() {
             ? `
                 <div class="price-original">${formatCurrency(item.originalPrice)}</div>
                 <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
             `
             : `<div class="price-final">${formatCurrency(item.price)}</div>`;
 
@@ -1031,91 +1095,120 @@ function generatePaymentSummary() {
     const container = document.getElementById('paymentSummaryDetails');
     const date = document.getElementById('hiddenBookingDate').value;
     const time = document.getElementById('startTime').value;
-    const staffName = selectedStaff ? selectedStaff.name : 'ไม่ระบุ';
-    const totals = getPriceTotals();
+    const staffName = selectedStaff ? selectedStaff.name : 'Not specified';
 
-    const dateDisplay = date ? `${formatEnglishDate(date)} เวลา ${time || '-'}` : '-';
-    const staffDisplay = escapeHtml(staffName || 'ไม่ระบุ');
+    // คำนวณเวลาสิ้นสุดจาก totalDuration (นาที)
+    const startDate = time ? new Date(`2000-01-01T${time}:00`) : null;
+    const endDate = startDate ? new Date(startDate.getTime() + (totalDuration || 0) * 60000) : null;
+    const endTime = endDate
+        ? `${String(endDate.getHours()).padStart(2,'0')}:${String(endDate.getMinutes()).padStart(2,'0')}`
+        : '-';
+
+    // รวมราคา (รองรับกรณีมีหรือไม่มี getPriceTotals())
+    let totals;
+    if (typeof getPriceTotals === 'function') {
+        totals = getPriceTotals(); // { original, discount, final }
+    } else {
+        totals = selectedItems.reduce((acc, item) => {
+            const base  = Number(item.originalPrice ?? item.base_price ?? item.price) || 0;
+            const final = Number(item.price ?? item.final_price ?? base) || 0;
+            const disc  = Math.max(base - final, 0);
+            acc.original += base;
+            acc.discount += disc;
+            acc.final    += final;
+            return acc;
+        }, { original: 0, discount: 0, final: 0 });
+    }
 
     let summaryHTML = `
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">วันที่และเวลา</div>
-                <div class="summary-service-details">${escapeHtml(dateDisplay)}</div>
+                <div class="summary-service-name">Date - Time</div>
+                <div class="summary-service-details">${date ? formatEnglishDate(date) : '-'}</div>
+                <div class="summary-service-details">Time ${time || '-'} ${endDate ? `- ${endTime}` : ''}</div>
             </div>
         </div>
+
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ผู้ให้บริการ</div>
-                <div class="summary-service-details">${staffDisplay}</div>
+                <div class="summary-service-name">Therapist</div>
+                <div class="summary-service-details">${escapeHtml(staffName)}</div>
             </div>
         </div>
+
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ระยะเวลารวม</div>
-                <div class="summary-service-details">${totalDuration} นาที</div>
-            </div>
-        </div>
+                <div class="summary-service-name">Service</div>
+                <div class="summary-subitem">
     `;
 
-    // Add selected services
+    // แสดงแต่ละบริการ: ชื่อ / เวลา / ราคา (มีราคาก่อนลด-หลังลดต่อบรรทัดถ้ามีส่วนลด)
     selectedItems.forEach(item => {
-        const hasDiscount = Number(item.discountAmount) > 0;
-        const serviceName = escapeHtml(item.serviceName || '');
-        const description = escapeHtml(item.description || '');
-        const priceSection = hasDiscount
+        const base  = Number(item.originalPrice ?? item.base_price ?? item.price) || 0;
+        const final = Number(item.price ?? item.final_price ?? base) || 0;
+        const hasDiscount = final < base;
+
+        const priceHtml = hasDiscount
             ? `
-                <div class="price-original">${formatCurrency(item.originalPrice)}</div>
-                <div class="price-final">${formatCurrency(item.price)}</div>
-                <div class="price-discount">ประหยัด ${formatCurrency(item.discountAmount)} <span class="promotion-text"></span></div>
-            `
-            : `<div class="price-final">${formatCurrency(item.price)}</div>`;
+                <div class="summary-price-block">
+                    <div class="summary-price-original">${formatCurrency(base)}</div>
+                    <div class="summary-price-final">${formatCurrency(final)}</div>
+                </div>
+              `
+            : `<div class="summary-price">${formatCurrency(final)}</div>`;
 
         summaryHTML += `
-            <div class="summary-item">
-                <div class="summary-service">
-                    <div class="summary-service-name">${serviceName}</div>
-                    <div class="summary-service-details">${description}</div>
-                    ${hasDiscount ? `<div class="promotion-text">กำลังจัดโปรโมชั่น</div>` : ''}
+            <div class="service-row">
+                <div class="col-name">
+                    <div class="summary-service-details">${escapeHtml(item.serviceName || '')}</div>
                 </div>
-                <div class="summary-price">${priceSection}</div>
+                <div class="col-time">
+                    <div class="summary-service-details">${escapeHtml(item.description || '')}</div>
+                </div>
+                <div class="col-price">
+                    ${priceHtml}
+                </div>
             </div>
         `;
     });
 
-    // Totals
     summaryHTML += `
+                </div>
+            </div>
+        </div>
+
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ยอดรวมก่อนส่วนลด</div>
+                <div class="summary-service-name">Total Duration</div>
+                <div class="summary-service-details">${totalDuration || 0} Min</div>
+            </div>
+        </div>
+
+        <!-- สรุปราคา -->
+        <div class="summary-item">
+            <div class="summary-service">
+                <div class="summary-service-name">Total</div>
             </div>
             <div class="summary-price">${formatCurrency(totals.original)}</div>
         </div>
-    `;
 
-    if (totals.discount > 0) {
-        summaryHTML += `
-            <div class="summary-item">
-                <div class="summary-service">
-                    <div class="summary-service-name">ส่วนลดทั้งหมด</div>
-                </div>
-                <div class="summary-price price-discount">${formatDiscount(totals.discount)}</div>
-            </div>
-        `;
-    }
-
-    summaryHTML += `
         <div class="summary-item">
             <div class="summary-service">
-                <div class="summary-service-name">ยอดชำระสุทธิ</div>
+                <div class="summary-service-name">Discount</div>
             </div>
-            <div class="summary-price price-final">${formatCurrency(totals.final)}</div>
+            <div class="summary-price summary-price-discount">-${formatCurrency(totals.discount).replace('€','')}</div>
+        </div>
+
+        <div class="summary-item">
+            <div class="summary-service">
+                <div class="summary-service-name">Grand Total</div>
+            </div>
+            <div class="summary-price">${formatCurrency(totals.final)}</div>
         </div>
     `;
 
     container.innerHTML = summaryHTML;
 }
-
 // Format Thai date
 function formatThaiDate(dateString) {
     const date = new Date(dateString);
@@ -1516,6 +1609,62 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
     font-weight: 600;
     color: var(--luxury-gold);
     text-align: right;
+}
+
+.summary-subitem {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* ระยะห่างแต่ละแถว */
+    width: 100%;
+}
+
+/* 3 คอลัมน์: ชื่อ / เวลา / ราคา */
+.summary-subitem .service-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px;
+    align-items: center;
+    gap: 8px;
+}
+
+.col-price {
+    text-align: right;
+    color: var(--luxury-gold);
+    font-weight: 600;
+}
+
+/* คุมสีราคาให้เด่น (ถ้าอยากโทนส้มพาสเทลแบบตัวอย่าง) */
+/* .summary-price { color: #e58b73; font-weight: 600; } */
+/* ถ้าต้องการตามธีมเดิม ให้ใช้โทนทอง: */
+.summary-price {
+    color: var(--luxury-gold);
+    font-weight: 600;
+}
+
+/* ราคาต่อบรรทัดเวลาแสดงทั้งก่อนลดและหลังลด */
+.summary-price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* ราคาก่อนลด (ขีดฆ่า สีอ่อน) */
+.summary-price-original {
+  text-decoration: line-through;
+  opacity: 0.6;
+  font-weight: 500;
+}
+
+/* ราคาใหม่หลังลด (เด่นสีทอง) */
+.summary-price-final {
+  color: var(--luxury-gold);
+  font-weight: 700;
+}
+
+/* สีส่วนลดในสรุป */
+.summary-price-discount {
+  color: #e58b73;
+  font-weight: 700;
 }
 
 /* Loading Spinner Styles */

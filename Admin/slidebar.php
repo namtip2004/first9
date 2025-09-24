@@ -67,7 +67,7 @@ $isAdmin2 = isset($_SESSION['staff_level']) && $_SESSION['staff_level'] === 'sta
             <li class="nav-item">
         <a class="nav-link collapsed<?php if ($current_page == 'report_income.php') echo ' active'; ?>" href="report_income.php">
           <i class="bi bi-layout-text-window-reverse"></i>
-          <span>income</span>
+          <span>Income</span>
         </a>
       </li>
 

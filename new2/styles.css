@@ -252,6 +252,7 @@ body {
     text-decoration: none;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     transition: all 0.5s ease;
     letter-spacing: 3px;

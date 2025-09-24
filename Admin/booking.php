@@ -321,6 +321,13 @@
       return `€${amount.toFixed(2)}`;
     }
 
+    function applyStrikethrough(text){
+      if (!text) {
+        return '';
+      }
+      return `${text.split('').join('\u0336')}\u0336`;
+    }
+
     function buildOptionLabel(durationValue, priceValue, discountInfo){
       const duration = Number.parseInt(durationValue ?? '', 10);
       const hasDuration = !Number.isNaN(duration) && duration > 0;
@@ -337,7 +344,10 @@
           const finalText = formatCurrency(finalPrice);
           const baseText = formatCurrency(basePrice);
           if (finalText && baseText){
-            return durationText ? `${durationText} – ${finalText} (was ${baseText})` : `${finalText} (was ${baseText})`;
+            const baseStruck = applyStrikethrough(baseText);
+            return durationText
+              ? `${durationText} – ${finalText} (${baseStruck})`
+              : `${finalText} (${baseStruck})`;
           }
         }
       }

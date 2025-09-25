@@ -190,11 +190,49 @@ try {
         $final_price = 0.0;
     }
 
-    $end_time = date("H:i", strtotime("+$total_duration minutes", strtotime($start_time)));
+    if ($total_duration <= 0) {
+        throw new Exception('กรุณาเลือกบริการอย่างน้อยหนึ่งรายการ');
+    }
+
+    $startTimestamp = strtotime($booking_date . ' ' . $start_time);
+    if ($startTimestamp === false) {
+        throw new Exception('เวลาเริ่มต้นไม่ถูกต้อง');
+    }
+
+    $endTimestamp = strtotime("+$total_duration minutes", $startTimestamp);
+    $end_time = date('H:i', $endTimestamp);
+
+    $businessDay = date('l', strtotime($booking_date));
+    $stmt = $pdo->prepare("SELECT open_time, close_time, is_closed FROM business_hours WHERE day_of_week = ?");
+    $stmt->execute([$businessDay]);
+    $businessHours = $stmt->fetch();
+
+    if (!$businessHours) {
+        throw new Exception('ยังไม่ได้ตั้งค่าเวลาเปิด-ปิดสำหรับวันที่เลือก');
+    }
+
+    if ((int)$businessHours['is_closed'] === 1) {
+        throw new Exception('ร้านปิดทำการในวันที่เลือก');
+    }
+
+    $openTimestamp = strtotime($booking_date . ' ' . $businessHours['open_time']);
+    $closeTimestamp = strtotime($booking_date . ' ' . $businessHours['close_time']);
+
+    if ($openTimestamp === false || $closeTimestamp === false || $closeTimestamp <= $openTimestamp) {
+        throw new Exception('การตั้งค่าเวลาเปิด-ปิดไม่ถูกต้อง');
+    }
+
+    if ($startTimestamp < $openTimestamp || $endTimestamp > $closeTimestamp) {
+        throw new Exception('เวลาจองอยู่นอกเวลาทำการ');
+    }
+
+    if ((int)date('i', $startTimestamp) % 15 !== 0) {
+        throw new Exception('กรุณาเลือกเวลาเป็นช่วง 15 นาที (เช่น 09:00, 09:15, 09:30)');
+    }
 
     // Check staff availability
     $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM booking 
+        SELECT COUNT(*) FROM booking
         WHERE staff_id = ? AND booking_date = ?
         AND (
             (time_start <= ? AND time_end > ?) OR

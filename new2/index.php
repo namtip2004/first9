@@ -406,42 +406,44 @@ in a tranquil and luxurious setting, for true relaxation.
                     </p>
                 </div>
                 
-                <div class="row g-4">
-                    <?php if (!empty($teamMembers)): ?>
-                        <?php foreach ($teamMembers as $index => $member): ?>
-                            <?php $animationDelay = number_format(0.1 + ($index * 0.1), 1, '.', ''); ?>
-                            <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: <?= htmlspecialchars($animationDelay) ?>s;">
-                                <div class="team-card">
-                                    <div class="team-image">
-                                        <?php if (!empty($member['image_path'])): ?>
-                                            <img src="<?= htmlspecialchars($member['image_path']) ?>" alt="<?= htmlspecialchars($member['name']) ?>">
-                                        <?php else: ?>
-                                            <i class="fas fa-user"></i>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="team-content">
-                                        <div class="team-badge"><?= htmlspecialchars($member['badge']) ?></div>
-                                        <h3 class="font-display"><?= htmlspecialchars($member['name']) ?></h3>
-                                        <p class="team-description">
-                                            <?= htmlspecialchars($member['description']) ?>
-                                        </p>
-                                        <?php if (!empty($member['expertise_tags'])): ?>
-                                            <div class="team-expertise">
-                                                <?php foreach ($member['expertise_tags'] as $tag): ?>
-                                                    <span><?= htmlspecialchars($tag) ?></span>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        <?php endif; ?>
+                <?php if (!empty($teamMembers)): ?>
+                    <div class="team-scroll-container fade-in">
+                        <div class="team-scroll-track">
+                            <?php foreach ($teamMembers as $index => $member): ?>
+                                <?php $animationDelay = number_format(0.1 + ($index * 0.1), 1, '.', ''); ?>
+                                <div class="team-card-wrapper fade-in" style="animation-delay: <?= htmlspecialchars($animationDelay) ?>s;">
+                                    <div class="team-card">
+                                        <div class="team-image">
+                                            <?php if (!empty($member['image_path'])): ?>
+                                                <img src="<?= htmlspecialchars($member['image_path']) ?>" alt="<?= htmlspecialchars($member['name']) ?>">
+                                            <?php else: ?>
+                                                <i class="fas fa-user"></i>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="team-content">
+                                            <div class="team-badge"><?= htmlspecialchars($member['badge']) ?></div>
+                                            <h3 class="font-display"><?= htmlspecialchars($member['name']) ?></h3>
+                                            <p class="team-description">
+                                                <?= htmlspecialchars($member['description']) ?>
+                                            </p>
+                                            <?php if (!empty($member['expertise_tags'])): ?>
+                                                <div class="team-expertise">
+                                                    <?php foreach ($member['expertise_tags'] as $tag): ?>
+                                                        <span><?= htmlspecialchars($tag) ?></span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="col-12 text-center">
-                            <p class="text-muted">ขณะนี้ยังไม่มีข้อมูลทีมงานสำหรับแสดง</p>
+                            <?php endforeach; ?>
                         </div>
-                    <?php endif; ?>
-                </div>
+                    </div>
+                <?php else: ?>
+                    <div class="team-empty text-center">
+                        <p class="text-muted">ขณะนี้ยังไม่มีข้อมูลทีมงานสำหรับแสดง</p>
+                    </div>
+                <?php endif; ?>
             </div>
         </section>
 

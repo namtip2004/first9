@@ -563,16 +563,46 @@ body {
     position: relative;
 }
 
+.team-scroll-container {
+    overflow-x: auto;
+    padding-bottom: 10px;
+    margin: 0 -15px;
+}
+
+.team-scroll-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.team-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(201, 169, 110, 0.4);
+    border-radius: 4px;
+}
+
+.team-scroll-track {
+    display: flex;
+    gap: 28px;
+    padding: 10px 15px 20px;
+    scroll-snap-type: x mandatory;
+    align-items: stretch;
+}
+
+.team-card-wrapper {
+    flex: 0 0 280px;
+    scroll-snap-align: start;
+    display: flex;
+}
+
 .team-card {
     background: var(--pearl-white);
-    padding: 50px 40px;
+    padding: 40px 32px;
     text-align: center;
     transition: all 0.5s ease;
     border: 1px solid rgba(201, 169, 110, 0.1);
     position: relative;
     overflow: hidden;
-    height: 100%;
+    width: 100%;
     border-radius: 15px;
+    height: 100%;
 }
 
 .team-card::before {
@@ -603,18 +633,20 @@ body {
 }
 
 .team-image {
-    width: 100px;
-    height: 100px;
+    width: 88px;
+    height: 88px;
     background: linear-gradient(135deg, var(--luxury-gold), var(--deep-burgundy));
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 30px;
-    font-size: 2.5rem;
+    margin: 0 auto 24px;
+    font-size: 2rem;
     color: white;
     box-shadow: 0 15px 40px rgba(201, 169, 110, 0.3);
     transition: all 0.5s ease;
+    padding: 4px;
+    box-sizing: border-box;
 }
 
 .team-image img {
@@ -671,6 +703,10 @@ body {
     border-radius: 15px;
     font-size: 0.8rem;
     border: 1px solid rgba(201, 169, 110, 0.2);
+}
+
+.team-empty {
+    padding: 40px 0;
 }
 
 /* Hot Services Section */

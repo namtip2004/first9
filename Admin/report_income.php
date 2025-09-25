@@ -634,6 +634,7 @@ const chartHint=document.getElementById('chartHint');
 const monthTableWrap=document.getElementById('monthTable');
 let chart;
 let currentYear=null;
+let lastChartState=null;
 
 const nf=(v)=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
@@ -665,6 +666,19 @@ function updateCards(cards, labels){
   }
 }
 
+function rememberChartState(data){
+  if(!data) return;
+  lastChartState={
+    cards:data.cards||null,
+    labels:data.cardLabels||null
+  };
+}
+
+function restoreChartCards(){
+  if(!lastChartState) return;
+  updateCards(lastChartState.cards || null, lastChartState.labels || null);
+}
+
 function attachMonthTableBack(){
   const backBtn=document.getElementById('monthTableBack');
   if(!backBtn) return;
@@ -672,6 +686,7 @@ function attachMonthTableBack(){
     if(monthTableWrap) monthTableWrap.innerHTML='';
     chartWrapper?.classList.remove('d-none');
     chartHint?.classList.remove('d-none');
+    restoreChartCards();
   });
 }
 
@@ -692,6 +707,7 @@ async function loadChart(view='years', year=null){
     const res=await fetch(url.toString(),{cache:'no-store'});
     const data=await res.json();
     updateCards(data.cards || null, data.cardLabels || null);
+    rememberChartState(data);
     renderChart(data);
   }catch(err){
     console.error(err);
@@ -702,6 +718,7 @@ function renderChart(data){
   if(!chartCtx) return;
   chartWrapper?.classList.remove('d-none');
   chartHint?.classList.remove('d-none');
+  rememberChartState(data);
   if(monthTableWrap) monthTableWrap.innerHTML='';
   const labels=data.labels || [];
   const netSeries=data.series?.net || [];

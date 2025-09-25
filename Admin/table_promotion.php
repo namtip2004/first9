@@ -72,8 +72,8 @@ $result = $conn->query($sql);
                       <th scope="col">วัน-เวลาเริ่มต้น</th>
                       <th scope="col">วัน-เวลาสิ้นสุด</th>
                       <th scope="col">สถานะ</th>
-                      <th scope="col">บริการที่เข้าร่วม</th>
-                      <th scope="col">ส่วนลดสูงสุด (%)</th>
+                      <th scope="col" class="text-end">บริการที่เข้าร่วม</th>
+                      <th scope="col" class="text-end">ส่วนลดสูงสุด (%)</th>
                       <th scope="col" class="text-center">การจัดการ</th>
                     </tr>
                   </thead>
@@ -109,8 +109,8 @@ $result = $conn->query($sql);
                               <?= htmlspecialchars($statusLabel) ?>
                             </span>
                           </td>
-                          <td><?= $serviceCount ?></td>
-                          <td><?= number_format((float) $maxPercent, 2) ?></td>
+                          <td class="text-end"><?= $serviceCount ?></td>
+                          <td class="text-end"><?= number_format((float) $maxPercent, 2) ?></td>
                           <td class="text-center">
                             <div class="d-flex justify-content-center flex-wrap gap-2">
                               <a

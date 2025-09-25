@@ -90,22 +90,18 @@ $isAdmin2 = isset($_SESSION['staff_level']) && $_SESSION['staff_level'] === 'sta
           <span>Staff</span>
         </a>
       </li>
-
-      <!-- <li class="nav-item">
+            <li class="nav-item">
         <a class="nav-link collapsed<?php if ($current_page == 'report_service.php') echo ' active'; ?>" href="report_service.php">
           <i class="bi bi-layout-text-window-reverse"></i>
           <span>Service</span>
         </a>
-      </li> -->
-       
-      <!-- <li class="nav-item">
-        <a class="nav-link collapsed<?php if ($current_page == 'report_staff.php') echo ' active'; ?>" href="report_staff.php">
+      </li>
+            <li class="nav-item">
+        <a class="nav-link collapsed<?php if ($current_page == 'report_promotion.php') echo ' active'; ?>" href="report_promotion.php">
           <i class="bi bi-layout-text-window-reverse"></i>
-          <span>Staff</span>
+          <span>Promotion</span>
         </a>
-      </li> -->
-
-
+      </li>
 
       
     <?php endif; ?>

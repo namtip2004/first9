@@ -216,9 +216,39 @@ $stmt=$conn->prepare($sqlCount);
 if(!empty($params)) $stmt->bind_param($types,...$params);
 $stmt->execute(); $total=(int)$stmt->get_result()->fetch_assoc()['cnt']; $stmt->close();
 
-$page=max(1,(int)($_GET['page']??1)); $per=20; $off=($page-1)*$per;
+$per = 20;
+$pages = max(1, (int)ceil($total / $per));
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1) { $page = 1; }
+if ($page > $pages) { $page = $pages; }
+$off=($page-1)*$per;
 
 // Aggregated list per service
+$sqlSummary = "
+  SELECT
+    COUNT(DISTINCT b.booking_id) AS tx,
+    COUNT(DISTINCT b.customer_id) AS customers,
+    COALESCE(SUM(COALESCE(bs.price_booking, so.price)),0) AS gross,
+    COALESCE(SUM(COALESCE(bs.discount_booking,0)),0) AS discount,
+    COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net
+  FROM booking b
+  JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+  JOIN service_option so ON so.option_id=bs.option_id
+  JOIN service sv ON sv.service_id=so.service_id
+  WHERE $whereSql
+";
+$summarySvc = ['tx'=>0,'customers'=>0,'gross'=>0,'discount'=>0,'net'=>0];
+$stmt=$conn->prepare($sqlSummary);
+if(!empty($params)) $stmt->bind_param($types,...$params);
+$stmt->execute();
+$summarySvc = $stmt->get_result()->fetch_assoc() ?: $summarySvc;
+$stmt->close();
+$summarySvc['tx'] = (int)($summarySvc['tx'] ?? 0);
+$summarySvc['customers'] = (int)($summarySvc['customers'] ?? 0);
+$summarySvc['gross'] = (float)($summarySvc['gross'] ?? 0);
+$summarySvc['discount'] = (float)($summarySvc['discount'] ?? 0);
+$summarySvc['net'] = (float)($summarySvc['net'] ?? 0);
+
 $sqlList="
   SELECT
     sv.service_id, sv.service_name,
@@ -246,6 +276,15 @@ $rows=[]; while($r=$rs->fetch_assoc()) $rows[]=$r; $stmt->close();
 // Dropdowns
 $staffOps = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name");
 $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
+
+$baseQuery = $_GET;
+unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
+$baseQuery['tab'] = 'table';
+$pageUrl = function(int $target) use ($baseQuery): string {
+  $query = $baseQuery;
+  $query['page'] = $target;
+  return '?' . http_build_query($query);
+};
 ?>
 <!doctype html>
 <html lang="th">
@@ -377,6 +416,24 @@ $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER B
             </tfoot>
           </table>
         </div>
+
+        <?php if($pages > 1): ?>
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <div class="btn-group">
+            <?php if($page > 1): ?>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+            <?php else: ?>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+            <?php endif; ?>
+            <?php if($page < $pages): ?>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+            <?php else: ?>
+              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+            <?php endif; ?>
+          </div>
+        </div>
+        <?php endif; ?>
 
       </div></div>
     </div>

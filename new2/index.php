@@ -108,56 +108,6 @@ in a tranquil and luxurious setting, for true relaxation.
             </div>
         </section>
 
-        
-
-        <!-- Services Section -->
-        <section class="services-section">
-            <div class="container">
-                <div class="section-header fade-in">
-                    <div class="section-subtitle">Our Signature Services</div>
-                    <h2 class="section-title font-display">Luxury Wellness Treatments</h2>
-                    <p class="section-description">
-                        บริการสปาระดับพรีเมียม ด้วยเทคนิคการนวดโบราณผสมผสานกับนวัตกรรมสมัยใหม่ 
-                        เพื่อประสบการณ์การผ่อนคลายที่เหนือระดับ
-                    </p>
-                </div>
-
-
-                
-                <div class="row g-4">
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.1s;">
-                        <div class="service-card">
-                            <div class="service-icon">
-                                <i class="fas fa-hands-helping"></i>
-                            </div>
-                            <h3 class="font-display">Royal Thai Massage</h3>
-                            <p>การนวดไทยโบราณแบบราชการ ด้วยเทคนิควิชาการระดับสูง ช่วยปรับสมดุลร่างกายและจิตใจ เพื่อความผ่อนคลายอย่างลึกซึ้ง</p>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.2s;">
-                        <div class="service-card">
-                            <div class="service-icon">
-                                <i class="fas fa-seedling"></i>
-                            </div>
-                            <h3 class="font-display">Aromatherapy Bliss</h3>
-                            <p>การนวดด้วยน้ำมันหอมระเหยธรรมชาติจากทั่วโลก ผสมผสานกับเทคนิคพิเศษ เพื่อการบำรุงผิวและผ่อนคลายทั้งกายและใจ</p>
-                        </div>
-                    </div>
-                    
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.3s;">
-                        <div class="service-card">
-                            <div class="service-icon">
-                                <i class="fas fa-gem"></i>
-                            </div>
-                            <h3 class="font-display">Luxury Holistic Spa</h3>
-                            <p>การดูแลแบบองค์รวมด้วยสมุนไพรธรรมชาติและเทคนิคสมัยใหม่ เพื่อความงามและสุขภาพที่ดีอย่างยั่งยืน</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
                 <!-- Hot Services Section -->
         <section class="hot-services-section">
             <div class="container">
@@ -212,8 +162,58 @@ in a tranquil and luxurious setting, for true relaxation.
             </div>
         </section>
 
+        <!-- Services Section -->
+        <!-- <section class="services-section">
+            <div class="container">
+                <div class="section-header fade-in">
+                    <div class="section-subtitle">Our Signature Services</div>
+                    <h2 class="section-title font-display">Luxury Wellness Treatments</h2>
+                    <p class="section-description">
+                        บริการสปาระดับพรีเมียม ด้วยเทคนิคการนวดโบราณผสมผสานกับนวัตกรรมสมัยใหม่ 
+                        เพื่อประสบการณ์การผ่อนคลายที่เหนือระดับ
+                    </p>
+                </div>
+
+
+                
+                <div class="row g-4">
+                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.1s;">
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-hands-helping"></i>
+                            </div>
+                            <h3 class="font-display">Royal Thai Massage</h3>
+                            <p>การนวดไทยโบราณแบบราชการ ด้วยเทคนิควิชาการระดับสูง ช่วยปรับสมดุลร่างกายและจิตใจ เพื่อความผ่อนคลายอย่างลึกซึ้ง</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.2s;">
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-seedling"></i>
+                            </div>
+                            <h3 class="font-display">Aromatherapy Bliss</h3>
+                            <p>การนวดด้วยน้ำมันหอมระเหยธรรมชาติจากทั่วโลก ผสมผสานกับเทคนิคพิเศษ เพื่อการบำรุงผิวและผ่อนคลายทั้งกายและใจ</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.3s;">
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-gem"></i>
+                            </div>
+                            <h3 class="font-display">Luxury Holistic Spa</h3>
+                            <p>การดูแลแบบองค์รวมด้วยสมุนไพรธรรมชาติและเทคนิคสมัยใหม่ เพื่อความงามและสุขภาพที่ดีอย่างยั่งยืน</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section> -->
+
+
+
         <!-- About Section -->
-        <section class="about-section">
+        <!-- <section class="about-section">
             <div class="container">
                 <div class="row align-items-center">
                     <div class="col-lg-6 slide-in-left">
@@ -251,7 +251,7 @@ in a tranquil and luxurious setting, for true relaxation.
                     </div>
                 </div>
             </div>
-        </section>
+        </section> -->
 
 <!-- เพิ่มหลัง About Section และก่อน </div> ของ HOME PAGE -->
 
@@ -316,7 +316,7 @@ in a tranquil and luxurious setting, for true relaxation.
         </section>
 
         <!-- Team Section -->
-        <section class="team-section">
+        <!-- <section class="team-section">
             <div class="container">
                 <div class="section-header fade-in">
                     <div class="section-subtitle">Our Professional Team</div>
@@ -391,7 +391,7 @@ in a tranquil and luxurious setting, for true relaxation.
                     </div>
                 </div>
             </div>
-        </section>
+        </section> -->
 
 
 

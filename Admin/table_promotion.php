@@ -113,20 +113,42 @@ $result = $conn->query($sql);
                           <td><?= number_format((float) $maxPercent, 2) ?></td>
                           <td class="text-center">
                             <div class="d-flex justify-content-center flex-wrap gap-2">
-                              <a href="promotion_detail.php?id=<?= $promotionId ?>" class="btn btn-outline-primary btn-sm">รายละเอียด</a>
+                              <a
+                                href="promotion_detail.php?id=<?= $promotionId ?>"
+                                class="btn btn-outline-primary btn-sm"
+                                title="รายละเอียด"
+                                aria-label="รายละเอียด"
+                              >
+                                <i class="bi bi-eye"></i>
+                                <span class="visually-hidden">รายละเอียด</span>
+                              </a>
                               <?php if ($status !== 'ended'): ?>
-                                <a href="promotion_update_form.php?id=<?= $promotionId ?>" class="btn btn-outline-secondary btn-sm">แก้ไข</a>
+                                <a
+                                  href="promotion_update_form.php?id=<?= $promotionId ?>"
+                                  class="btn btn-outline-secondary btn-sm"
+                                  title="แก้ไข"
+                                  aria-label="แก้ไข"
+                                >
+                                  <i class="bi bi-pencil-square"></i>
+                                  <span class="visually-hidden">แก้ไข</span>
+                                </a>
                               <?php endif; ?>
 
                               <?php if ($status === 'upcoming'): ?>
                                 <form action="promotion_delete.php" method="post" class="d-inline" onsubmit="return confirm('ต้องการลบโปรโมชั่นนี้หรือไม่?');">
                                   <input type="hidden" name="promotion_id" value="<?= $promotionId ?>">
-                                  <button type="submit" class="btn btn-outline-danger btn-sm">ลบ</button>
+                                  <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ" aria-label="ลบ">
+                                    <i class="bi bi-trash"></i>
+                                    <span class="visually-hidden">ลบ</span>
+                                  </button>
                                 </form>
                               <?php elseif ($status === 'running'): ?>
                                 <form action="promotion_end.php" method="post" class="d-inline" onsubmit="return confirm('ต้องการสิ้นสุดโปรโมชั่นนี้ทันทีหรือไม่?');">
                                   <input type="hidden" name="promotion_id" value="<?= $promotionId ?>">
-                                  <button type="submit" class="btn btn-outline-warning btn-sm">สิ้นสุดทันที</button>
+                                  <button type="submit" class="btn btn-outline-warning btn-sm" title="สิ้นสุดทันที" aria-label="สิ้นสุดทันที">
+                                    <i class="bi bi-stop-circle"></i>
+                                    <span class="visually-hidden">สิ้นสุดทันที</span>
+                                  </button>
                                 </form>
                               <?php else: ?>
 

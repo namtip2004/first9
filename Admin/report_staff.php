@@ -25,200 +25,398 @@ $minYear = (int)($yr['miny'] ?? date('Y'));
 $maxYear = (int)($yr['maxy'] ?? date('Y'));
 if ($minYear === 0) { $minYear = (int)date('Y'); $maxYear = (int)date('Y'); }
 
-// ==================== AJAX: KPIs + Charts ====================
-if (isset($_GET['action']) && $_GET['action']==='stats') {
-  header('Content-Type: application/json; charset=utf-8');
+// ==================== Helpers & AJAX ====================
+function lastDayOfMonth(int $year, int $month): int {
+  return (int)date('t', strtotime(sprintf('%04d-%02d-01', $year, $month)));
+}
 
-  $period = $_GET['period'] ?? 'month';    // all | month | year
-  $year   = isset($_GET['year'])  ? (int)$_GET['year']  : (int)date('Y');
-  $month  = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
-  $startY = isset($_GET['start_year']) ? (int)$_GET['start_year'] : $minYear;
-  $endY   = isset($_GET['end_year'])   ? (int)$_GET['end_year']   : $maxYear;
-  if ($startY > $endY) { $t=$startY; $startY=$endY; $endY=$t; }
+function resolveTableDateRange(array $input): array {
+  $type = $input['date_filter_type'] ?? 'range';
+  $type = in_array($type, ['range', 'month', 'year', 'all'], true) ? $type : 'range';
 
-  $staffId   = isset($_GET['staff'])   ? (int)$_GET['staff']   : 0;
-  $serviceId = isset($_GET['service']) ? (int)$_GET['service'] : 0;
+  $startDate = trim($input['start_date'] ?? '');
+  $endDate   = trim($input['end_date'] ?? '');
+  $monthVal  = trim($input['month_value'] ?? '');
+  $startYear = trim($input['start_year'] ?? '');
+  $endYear   = trim($input['end_year'] ?? '');
 
-  // ---------- KPI (GLOBAL; all time) ----------
-  $total_staff = (int)$conn->query("SELECT COUNT(*) c FROM staff")->fetch_assoc()['c'];
-  $confirmed_rev = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE status={$confirmedStatus}")->fetch_assoc()['s'];
-  $confirmed_tx  = (int)$conn->query("SELECT COUNT(*) c FROM booking WHERE status={$confirmedStatus}")->fetch_assoc()['c'];
-  $avg_rev_per_staff = $total_staff>0 ? $confirmed_rev / $total_staff : 0.0;
-
-  // Top performer overall
-  $tp = $conn->query("
-    SELECT s.staff_name, COALESCE(SUM(b.final_price),0) net
-    FROM staff s
-    LEFT JOIN booking b ON b.staff_id=s.staff_id AND b.status={$confirmedStatus}
-    GROUP BY s.staff_id
-    ORDER BY net DESC
-    LIMIT 1
-  ")->fetch_assoc();
-  $top_name = $tp['staff_name'] ?? null;
-  $top_net  = isset($tp['net']) ? (float)$tp['net'] : 0.0;
-
-  // ---------- Build time buckets ----------
-  $labels=[]; $groupExpr=""; $rangeWhere="1=1"; $axis='';
-  $rangeStartDate=""; $rangeEndDate="";
-  if ($period==='month') {
-    $days=cal_days_in_month(CAL_GREGORIAN, $month, $year);
-    for($d=1;$d<=$days;$d++) $labels[]=str_pad((string)$d,2,'0',STR_PAD_LEFT);
-    $groupExpr="DATE_FORMAT(b.booking_date,'%d')";
-    $rangeWhere="YEAR(b.booking_date)=$year AND MONTH(b.booking_date)=$month";
-    $axis='วัน'; $rangeStartDate=sprintf('%04d-%02d-01',$year,$month); $rangeEndDate=sprintf('%04d-%02d-%02d',$year,$month,$days);
-  } elseif ($period==='year') {
-    $labels=['01','02','03','04','05','06','07','08','09','10','11','12'];
-    $groupExpr="DATE_FORMAT(b.booking_date,'%m')";
-    $rangeWhere="YEAR(b.booking_date)=$year";
-    $axis='เดือน'; $rangeStartDate=sprintf('%04d-01-01',$year); $rangeEndDate=sprintf('%04d-12-31',$year);
-  } else { // all
-    for($y=$startY;$y<=$endY;$y++) $labels[]=(string)$y;
-    $groupExpr="YEAR(b.booking_date)";
-    $rangeWhere="YEAR(b.booking_date) BETWEEN $startY AND $endY";
-    $axis='ปี'; $rangeStartDate=sprintf('%04d-01-01',$startY); $rangeEndDate=sprintf('%04d-12-31',$endY);
+  if ($type === 'all') {
+    $startDate = '';
+    $endDate = '';
+  } elseif ($type === 'month') {
+    if (preg_match('/^(\d{4})-(\d{2})$/', $monthVal, $m)) {
+      $y = (int)$m[1];
+      $mo = (int)$m[2];
+      $startDate = sprintf('%04d-%02d-01', $y, $mo);
+      $endDate = sprintf('%04d-%02d-%02d', $y, $mo, lastDayOfMonth($y, $mo));
+    } else {
+      $startDate = '';
+      $endDate = '';
+    }
+  } elseif ($type === 'year') {
+    if (preg_match('/^\d{4}$/', $startYear)) {
+      $startYear = (int)$startYear;
+    } else {
+      $startYear = (int)date('Y');
+    }
+    if (preg_match('/^\d{4}$/', $endYear)) {
+      $endYear = (int)$endYear;
+    } else {
+      $endYear = $startYear;
+    }
+    if ($startYear > $endYear) {
+      $tmp = $startYear;
+      $startYear = $endYear;
+      $endYear = $tmp;
+    }
+    $startDate = sprintf('%04d-01-01', $startYear);
+    $endDate = sprintf('%04d-12-31', $endYear);
+  } else {
+    if ($startDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+      $startDate = '';
+    }
+    if ($endDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+      $endDate = '';
+    }
   }
 
-  // Optional filters (chart scope)
-  $w=[]; $w[]=$rangeWhere;
-  if ($staffId>0)   $w[]="b.staff_id=".$staffId;
-  if ($serviceId>0) $w[]="EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=".$serviceId.")";
-  $where = implode(" AND ", $w);
-
-  // ---------- Time series: bookings count per status + net revenue ----------
-  $sql="
-    SELECT $groupExpr AS bucket,
-           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
-           SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
-           SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled,
-           COUNT(*) AS total,
-           COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net_rev
-    FROM booking b
-    WHERE $where
-    GROUP BY bucket
-    ORDER BY bucket
-  ";
-  $rs=$conn->query($sql);
-  $mapT=[]; $mapC=[]; $mapP=[]; $mapX=[]; $mapR=[];
-  while($row=$rs->fetch_assoc()){
-    $k=(string)$row['bucket'];
-    $mapT[$k]=(int)$row['total'];
-    $mapC[$k]=(int)$row['confirmed'];
-    $mapP[$k]=(int)$row['pending'];
-    $mapX[$k]=(int)$row['cancelled'];
-    $mapR[$k]=(float)$row['net_rev'];
-  }
-  $sTotal=[]; $sConfirmed=[]; $sPending=[]; $sCancelled=[]; $sNet=[];
-  foreach($labels as $b){
-    $sTotal[]=$mapT[$b]??0;
-    $sConfirmed[]=$mapC[$b]??0;
-    $sPending[]=$mapP[$b]??0;
-    $sCancelled[]=$mapX[$b]??0;
-    $sNet[]=round($mapR[$b]??0,2);
+  if ($startDate !== '' && $endDate !== '' && $startDate > $endDate) {
+    $tmp = $startDate;
+    $startDate = $endDate;
+    $endDate = $tmp;
   }
 
-  // ---------- Leaderboards (selected range): Top Staff by Net / by Bookings ----------
-  $ws = "b.booking_date BETWEEN '$rangeStartDate' AND '$rangeEndDate'";
-  if ($serviceId>0) $ws .= " AND EXISTS (SELECT 1 FROM booking_seviceop bs2 JOIN service_option so2 ON bs2.option_id=so2.option_id WHERE bs2.booking_id=b.booking_id AND so2.service_id=".$serviceId.")";
-
-  $sqlTopNet="
-    SELECT s.staff_name, COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net,
-           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf
-    FROM staff s
-    LEFT JOIN booking b ON b.staff_id=s.staff_id AND $ws
-    GROUP BY s.staff_id
-    ORDER BY net DESC
-    LIMIT 10
-  ";
-  $topNet=[]; $res=$conn->query($sqlTopNet);
-  while($row=$res->fetch_assoc()){ $topNet[]=['name'=>$row['staff_name']?:'N/A','net'=>(float)$row['net'],'tx'=>(int)$row['tx_conf']]; }
-
-  $sqlTopTx="
-    SELECT s.staff_name,
-           SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf,
-           COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) AS net
-    FROM staff s
-    LEFT JOIN booking b ON b.staff_id=s.staff_id AND $ws
-    GROUP BY s.staff_id
-    ORDER BY tx_conf DESC, net DESC
-    LIMIT 10
-  ";
-  $topTx=[]; $res=$conn->query($sqlTopTx);
-  while($row=$res->fetch_assoc()){ $topTx[]=['name'=>$row['staff_name']?:'N/A','tx'=>(int)$row['tx_conf'],'net'=>(float)$row['net']]; }
-
-  // ---------- Status mix for a specific staff (or overall) ----------
-  $wm = $ws;
-  if ($staffId>0) $wm .= " AND b.staff_id=".$staffId;
-  $mix = $conn->query("
-    SELECT
-      SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
-      SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled
-    FROM booking b
-    WHERE $wm
-  ")->fetch_assoc();
-  $mix = [
-    'confirmed'=>(int)($mix['confirmed']??0),
-    'pending'=>(int)($mix['pending']??0),
-    'cancelled'=>(int)($mix['cancelled']??0)
+  return [
+    'type' => $type,
+    'start' => $startDate,
+    'end' => $endDate,
+    'month_value' => $type === 'month' ? $monthVal : '',
+    'year_start' => $type === 'year' ? $startYear : '',
+    'year_end' => $type === 'year' ? $endYear : ''
   ];
+}
 
-  echo json_encode([
-    'cards'=>[
-      'total_staff'=>$total_staff,
-      'confirmed_rev'=>$confirmed_rev,
-      'confirmed_tx'=>$confirmed_tx,
-      'avg_rev_per_staff'=>$avg_rev_per_staff,
-      'top'=>['name'=>$top_name,'net'=>$top_net]
-    ],
-    'chart'=>[
-      'labels'=>$labels,'axis'=>$axis,
-      'series'=>[
-        'total'=>$sTotal,'confirmed'=>$sConfirmed,'pending'=>$sPending,'cancelled'=>$sCancelled,'net'=>$sNet
-      ]
-    ],
-    'top'=>[ 'by_net'=>$topNet, 'by_tx'=>$topTx ],
-    'status_mix'=>$mix
-  ]);
-  exit;
+$dateBounds = $conn->query("SELECT MIN(booking_date) AS min_date, MAX(booking_date) AS max_date FROM booking")->fetch_assoc();
+$globalMinDate = $dateBounds['min_date'] ?? date('Y-01-01');
+$globalMaxDate = $dateBounds['max_date'] ?? date('Y-m-d');
+
+function resolveChartRange(string $period, array $input, string $globalMin, string $globalMax): array {
+  $period = in_array($period, ['all', 'year', 'month', 'day'], true) ? $period : 'all';
+  $rangeStart = $globalMin;
+  $rangeEnd   = $globalMax;
+  $granularity = 'year';
+
+  if ($period === 'year') {
+    $startYear = isset($input['start_year']) ? (int)$input['start_year'] : (int)date('Y');
+    $endYear   = isset($input['end_year'])   ? (int)$input['end_year']   : $startYear;
+    if ($startYear > $endYear) { $tmp=$startYear; $startYear=$endYear; $endYear=$tmp; }
+    $rangeStart = sprintf('%04d-01-01', $startYear);
+    $rangeEnd   = sprintf('%04d-12-31', $endYear);
+    $granularity = 'month';
+  } elseif ($period === 'month') {
+    $startMonth = $input['start_month'] ?? date('Y-m');
+    $endMonth   = $input['end_month']   ?? $startMonth;
+    if (!preg_match('/^(\d{4})-(\d{2})$/', $startMonth)) {
+      $startMonth = date('Y-m');
+    }
+    if (!preg_match('/^(\d{4})-(\d{2})$/', $endMonth)) {
+      $endMonth = $startMonth;
+    }
+    $startTime = strtotime($startMonth . '-01');
+    $endTime   = strtotime($endMonth . '-01');
+    if ($startTime !== false && $endTime !== false) {
+      if ($startTime > $endTime) { $tmp=$startTime; $startTime=$endTime; $endTime=$tmp; }
+      $sY = (int)date('Y', $startTime); $sM = (int)date('n', $startTime);
+      $eY = (int)date('Y', $endTime);   $eM = (int)date('n', $endTime);
+      $rangeStart = sprintf('%04d-%02d-01', $sY, $sM);
+      $rangeEnd   = sprintf('%04d-%02d-%02d', $eY, $eM, lastDayOfMonth($eY, $eM));
+    }
+    $granularity = 'day';
+  } elseif ($period === 'day') {
+    $startDate = $input['start_date'] ?? date('Y-m-d');
+    $endDate   = $input['end_date']   ?? $startDate;
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+      $startDate = $globalMin;
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+      $endDate = $startDate;
+    }
+    if ($startDate > $endDate) { $tmp=$startDate; $startDate=$endDate; $endDate=$tmp; }
+    $rangeStart = $startDate;
+    $rangeEnd   = $endDate;
+    $granularity = 'day';
+  }
+
+  if ($rangeStart === null || $rangeStart === '') { $rangeStart = $globalMin; }
+  if ($rangeEnd === null || $rangeEnd === '')     { $rangeEnd   = $globalMax; }
+
+  return [
+    'period' => $period,
+    'start' => $rangeStart,
+    'end'   => $rangeEnd,
+    'granularity' => $granularity
+  ];
+}
+
+if (isset($_GET['action'])) {
+  $action = $_GET['action'];
+  if ($action === 'chart_overview') {
+    header('Content-Type: application/json; charset=utf-8');
+    $period = $_GET['period'] ?? 'all';
+    $range = resolveChartRange($period, $_GET, $globalMinDate, $globalMaxDate);
+
+    $joinConds = [];
+    if ($range['start']) { $joinConds[] = "b.booking_date >= '" . $conn->real_escape_string($range['start']) . "'"; }
+    if ($range['end'])   { $joinConds[] = "b.booking_date <= '" . $conn->real_escape_string($range['end']) . "'"; }
+    $joinFilter = $joinConds ? implode(' AND ', $joinConds) : '1=1';
+
+    $sql = "
+      SELECT
+        s.staff_id,
+        s.staff_name,
+        COUNT(b.booking_id) AS total,
+        SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
+        SUM(CASE WHEN b.status={$completedStatus} THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
+        SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled
+      FROM staff s
+      LEFT JOIN booking b ON b.staff_id=s.staff_id AND $joinFilter
+      WHERE LOWER(COALESCE(s.st_status,'')) IN ('active','')
+      GROUP BY s.staff_id
+      ORDER BY s.staff_name
+    ";
+    $rs = $conn->query($sql);
+    $staffs = [];
+    while ($row = $rs->fetch_assoc()) {
+      $staffs[] = [
+        'id' => (int)$row['staff_id'],
+        'name' => $row['staff_name'] ?: 'N/A',
+        'total' => (int)($row['total'] ?? 0),
+        'confirmed' => (int)($row['confirmed'] ?? 0),
+        'completed' => (int)($row['completed'] ?? 0),
+        'pending' => (int)($row['pending'] ?? 0),
+        'cancelled' => (int)($row['cancelled'] ?? 0)
+      ];
+    }
+
+    $top = $staffs;
+    usort($top, function ($a, $b) {
+      if ($a['total'] === $b['total']) {
+        return $b['confirmed'] <=> $a['confirmed'];
+      }
+      return $b['total'] <=> $a['total'];
+    });
+    $top = array_slice($top, 0, 10);
+
+    echo json_encode([
+      'range' => $range,
+      'staffs' => $staffs,
+      'top' => $top
+    ]);
+    exit;
+  }
+
+  if ($action === 'chart_staff_detail') {
+    header('Content-Type: application/json; charset=utf-8');
+    $staffId = isset($_GET['staff_id']) ? (int)$_GET['staff_id'] : 0;
+    if ($staffId <= 0) {
+      echo json_encode(['labels' => [], 'series' => []]);
+      exit;
+    }
+
+    $period = $_GET['period'] ?? 'all';
+    $range = resolveChartRange($period, $_GET, $globalMinDate, $globalMaxDate);
+
+    $labels = [];
+    $groupExpr = '';
+    if ($range['granularity'] === 'day') {
+      $groupExpr = "DATE_FORMAT(b.booking_date,'%Y-%m-%d')";
+      $start = new DateTime($range['start']);
+      $end = new DateTime($range['end']);
+      $end->modify('+1 day');
+      $periodObj = new DatePeriod($start, new DateInterval('P1D'), $end);
+      foreach ($periodObj as $dt) { $labels[] = $dt->format('Y-m-d'); }
+    } elseif ($range['granularity'] === 'month') {
+      $groupExpr = "DATE_FORMAT(b.booking_date,'%Y-%m')";
+      $start = new DateTime(substr($range['start'], 0, 7) . '-01');
+      $end = new DateTime(substr($range['end'], 0, 7) . '-01');
+      $end->modify('+1 month');
+      $periodObj = new DatePeriod($start, new DateInterval('P1M'), $end);
+      foreach ($periodObj as $dt) { $labels[] = $dt->format('Y-m'); }
+    } else {
+      $groupExpr = "DATE_FORMAT(b.booking_date,'%Y')";
+      $startYear = (int)substr($range['start'], 0, 4);
+      $endYear   = (int)substr($range['end'], 0, 4);
+      if ($startYear > $endYear) { $tmp=$startYear; $startYear=$endYear; $endYear=$tmp; }
+      for ($y=$startYear; $y<=$endYear; $y++) { $labels[] = (string)$y; }
+    }
+
+    $conditions = ["b.staff_id=$staffId"];
+    if ($range['start']) { $conditions[] = "b.booking_date >= '" . $conn->real_escape_string($range['start']) . "'"; }
+    if ($range['end'])   { $conditions[] = "b.booking_date <= '" . $conn->real_escape_string($range['end']) . "'"; }
+    $where = implode(' AND ', $conditions);
+
+    $sql = "
+      SELECT $groupExpr AS bucket,
+             COUNT(*) AS total,
+             SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS confirmed,
+             SUM(CASE WHEN b.status={$completedStatus} THEN 1 ELSE 0 END) AS completed,
+             SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS pending,
+             SUM(CASE WHEN b.status={$cancelledStatus} THEN 1 ELSE 0 END) AS cancelled
+      FROM booking b
+      WHERE $where
+      GROUP BY bucket
+      ORDER BY bucket
+    ";
+    $rs = $conn->query($sql);
+    $map = [];
+    while ($row = $rs->fetch_assoc()) {
+      $bucket = (string)$row['bucket'];
+      $map[$bucket] = [
+        'total' => (int)($row['total'] ?? 0),
+        'confirmed' => (int)($row['confirmed'] ?? 0),
+        'completed' => (int)($row['completed'] ?? 0),
+        'pending' => (int)($row['pending'] ?? 0),
+        'cancelled' => (int)($row['cancelled'] ?? 0)
+      ];
+    }
+
+    $series = [
+      'total' => [],
+      'confirmed' => [],
+      'completed' => [],
+      'pending' => [],
+      'cancelled' => []
+    ];
+    foreach ($labels as $label) {
+      $series['total'][]     = $map[$label]['total']     ?? 0;
+      $series['confirmed'][] = $map[$label]['confirmed'] ?? 0;
+      $series['completed'][] = $map[$label]['completed'] ?? 0;
+      $series['pending'][]   = $map[$label]['pending']   ?? 0;
+      $series['cancelled'][] = $map[$label]['cancelled'] ?? 0;
+    }
+
+    echo json_encode([
+      'labels' => $labels,
+      'series' => $series,
+      'range'  => $range
+    ]);
+    exit;
+  }
+
+  if ($action === 'staff-bookings') {
+    header('Content-Type: application/json; charset=utf-8');
+    $staffId = isset($_GET['staff_id']) ? (int)$_GET['staff_id'] : 0;
+    $statusKey = $_GET['status'] ?? '';
+    $statusMap = [
+      'total' => null,
+      'confirmed' => $confirmedStatus,
+      'completed' => $completedStatus,
+      'pending' => $pendingStatus,
+      'cancelled' => $cancelledStatus
+    ];
+    if ($staffId <= 0 || !array_key_exists($statusKey, $statusMap)) {
+      echo json_encode(['bookings' => []]);
+      exit;
+    }
+
+    $rangeTable = resolveTableDateRange($_GET);
+    $startDate = $rangeTable['start'];
+    $endDate   = $rangeTable['end'];
+    $serviceId = isset($_GET['service']) ? (int)$_GET['service'] : 0;
+
+    $where = ["b.staff_id=$staffId"];
+    if ($statusMap[$statusKey] !== null) {
+      $where[] = "b.status=" . (int)$statusMap[$statusKey];
+    }
+    if ($startDate !== '') {
+      $where[] = "b.booking_date >= '" . $conn->real_escape_string($startDate) . "'";
+    }
+    if ($endDate !== '') {
+      $where[] = "b.booking_date <= '" . $conn->real_escape_string($endDate) . "'";
+    }
+    if ($serviceId > 0) {
+      $where[] = "EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=$serviceId)";
+    }
+    $whereSql = implode(' AND ', $where);
+
+    $sql = "
+      SELECT
+        b.booking_id,
+        b.booking_date,
+        b.time_start,
+        b.time_end,
+        b.final_price,
+        b.status,
+        c.customer_name,
+        GROUP_CONCAT(DISTINCT sv.service_name ORDER BY sv.service_name SEPARATOR ', ') AS services
+      FROM booking b
+      LEFT JOIN customer c ON c.customer_id=b.customer_id
+      LEFT JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+      LEFT JOIN service_option so ON so.option_id=bs.option_id
+      LEFT JOIN service sv ON sv.service_id=so.service_id
+      WHERE $whereSql
+      GROUP BY b.booking_id
+      ORDER BY b.booking_date DESC, b.time_start DESC
+    ";
+    $rs = $conn->query($sql);
+    $bookings = [];
+    while ($row = $rs->fetch_assoc()) {
+      $bookings[] = [
+        'id' => (int)$row['booking_id'],
+        'date' => $row['booking_date'],
+        'time_start' => $row['time_start'],
+        'time_end' => $row['time_end'],
+        'price' => (float)($row['final_price'] ?? 0),
+        'status' => (int)$row['status'],
+        'customer' => $row['customer_name'] ?? '-',
+        'services' => $row['services'] ?? ''
+      ];
+    }
+
+    echo json_encode(['bookings' => $bookings]);
+    exit;
+  }
 }
 
 // ==================== TABLE: summary by staff ====================
 $search    = trim($_GET['q'] ?? '');
 $serviceF  = isset($_GET['service']) ? (int)$_GET['service'] : 0;
-$startDate = $_GET['start_date'] ?? '';
-$endDate   = $_GET['end_date']   ?? '';
-$sort      = $_GET['sort'] ?? 'net';
-$dir       = strtoupper($_GET['dir'] ?? 'DESC'); $dir=$dir==='ASC'?'ASC':'DESC';
+$rangeTable = resolveTableDateRange($_GET);
+$filterType = $rangeTable['type'];
+$startDate  = $rangeTable['start'];
+$endDate    = $rangeTable['end'];
+$monthValue = $rangeTable['month_value'];
+$yearStart  = $rangeTable['year_start'];
+$yearEnd    = $rangeTable['year_end'];
+$sort       = $_GET['sort'] ?? 'revenue';
+$dirDefault = $sort === 'name' ? 'ASC' : 'DESC';
+$dirParam   = strtoupper($_GET['dir'] ?? $dirDefault);
+$dir        = in_array($dirParam, ['ASC','DESC'], true) ? $dirParam : $dirDefault;
 
 $sortMap=[
-  'name'   => "s.staff_name $dir",
-  'net'    => "net_rev $dir",
-  'tx'     => "tx_total $dir",
-  'conf'   => "tx_conf $dir",
-  'comp'   => "tx_comp $dir",
-  'pend'   => "tx_pend $dir",
-  'canc'   => "tx_canc $dir",
-  'aov'    => "aov $dir",
-  'cust'   => "custs $dir",
-  'hrs'    => "hrs $dir",
-  'avgdur' => "avgdur $dir",
-  'first'  => "first_bk $dir",
-  'last'   => "last_bk $dir"
+  'name'       => "s.staff_name $dir",
+  'revenue'    => "net_rev $dir",
+  'popularity' => "tx_total $dir",
+  'hours'      => "hrs $dir"
 ];
-$orderBy = $sortMap[$sort] ?? $sortMap['net'];
+$orderBy = $sortMap[$sort] ?? $sortMap['revenue'];
+
+$activeStaffTotalRow = $conn->query("SELECT COUNT(*) AS c FROM staff WHERE LOWER(COALESCE(st_status,'')) IN ('active','')")->fetch_assoc();
+$activeStaffTotal = (int)($activeStaffTotalRow['c'] ?? 0);
 
 // WHERE for bookings range
-$wb = ["1=1"];
-if ($startDate!=='') $wb[]="b.booking_date>='$startDate'";
-if ($endDate!=='')   $wb[]="b.booking_date<='$endDate'";
+$wb = [];
+if ($startDate!=='') $wb[]="b.booking_date>='" . $conn->real_escape_string($startDate) . "'";
+if ($endDate!=='')   $wb[]="b.booking_date<='" . $conn->real_escape_string($endDate) . "'";
 if ($serviceF>0)     $wb[]="EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=$serviceF)";
-$wbSql = implode(" AND ", $wb);
+$wbSql = $wb ? implode(' AND ', $wb) : '1=1';
 
 // Aggregation per staff
 $sql="
   SELECT
     s.staff_id, s.staff_name,
-    SUM(1)                                   AS tx_total,
+    COUNT(b.booking_id) AS tx_total,
     SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END) AS tx_conf,
     SUM(CASE WHEN b.status={$completedStatus} THEN 1 ELSE 0 END) AS tx_comp,
     SUM(CASE WHEN b.status={$pendingStatus}   THEN 1 ELSE 0 END) AS tx_pend,
@@ -227,7 +425,7 @@ $sql="
     CASE WHEN SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END)=0
          THEN 0
          ELSE COALESCE(SUM(CASE WHEN b.status={$confirmedStatus} THEN b.final_price ELSE 0 END),0) /
-              SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END)
+              NULLIF(SUM(CASE WHEN b.status={$confirmedStatus} THEN 1 ELSE 0 END),0)
     END AS aov,
     COUNT(DISTINCT CASE WHEN b.status={$confirmedStatus} THEN b.customer_id END) AS custs,
     COALESCE(SUM(TIME_TO_SEC(TIMEDIFF(b.time_end, b.time_start)))/3600,0) AS hrs,
@@ -236,6 +434,7 @@ $sql="
     MAX(b.booking_date) AS last_bk
   FROM staff s
   LEFT JOIN booking b ON b.staff_id=s.staff_id AND $wbSql
+  WHERE LOWER(COALESCE(s.st_status,'')) IN ('active','')
   GROUP BY s.staff_id
   ORDER BY $orderBy
 ";
@@ -251,7 +450,8 @@ if ($search!=='') {
   }));
 }
 
-$totalRows = count($rows);
+$filteredCount = count($rows);
+$totalRows = $filteredCount;
 $summary = [
   'tx_total' => 0,
   'tx_conf'  => 0,
@@ -287,7 +487,6 @@ $rows = array_slice($rows, $offset, $per);
 
 // Dropdown options
 $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
-$staffOps   = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name");
 
 $baseQuery = $_GET;
 unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
@@ -307,12 +506,15 @@ $pageUrl = function(int $target) use ($baseQuery): string {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="assets/css/style.css">
   <style>
     .small-label{font-size:.9rem;color:#6c757d}
     .kpi-value{font-size:28px;font-weight:700;margin:0}
     .card-icon{font-size:28px}
     .table-sm td, .table-sm th { padding: .45rem .5rem; }
+    .chart-wrapper{position:relative;height:360px}
+    #staffMainChart{width:100% !important;height:100% !important}
+    @media (max-width: 992px){.chart-wrapper{height:320px}}
   </style>
 </head>
 <body>
@@ -333,15 +535,15 @@ $pageUrl = function(int $target) use ($baseQuery): string {
     <div class="tab-pane fade show active" id="t-table">
       <div class="card mt-3"><div class="card-body">
 
-        <form class="row g-2 align-items-end" method="get">
+        <form class="row g-2 align-items-end" method="get" id="staffFilterForm">
           <input type="hidden" name="tab" value="table">
-          <div class="col-md-auto">
-            <label class="form-label small-label">ค้นหาสตาฟ</label>
-            <input type="text" class="form-control" name="q" value="<?=esc($search)?>" placeholder="ชื่อสตาฟ">
+          <div class="col-md-3 col-lg-2">
+            <label class="form-label small-label" for="staffSearch">ค้นหาสตาฟ</label>
+            <input type="text" class="form-control" id="staffSearch" name="q" value="<?=esc($search)?>" placeholder="ชื่อสตาฟ">
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">บริการ</label>
-            <select class="form-select" name="service">
+            <label class="form-label small-label" for="serviceFilter">บริการ</label>
+            <select class="form-select" id="serviceFilter" name="service">
               <option value="0">ทั้งหมด</option>
               <?php while($sv=$serviceOps->fetch_assoc()): ?>
                 <option value="<?=$sv['service_id']?>" <?= $serviceF==$sv['service_id']?'selected':'' ?>><?=esc($sv['service_name'])?></option>
@@ -349,43 +551,64 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงวันที่</label>
+            <label class="form-label small-label" for="date_filter_type">ช่วงเวลา</label>
+            <select class="form-select" id="date_filter_type" name="date_filter_type">
+              <option value="range" <?= $filterType==='range'?'selected':'' ?>>ช่วงวันที่</option>
+              <option value="month" <?= $filterType==='month'?'selected':'' ?>>เดือน</option>
+              <option value="year" <?= $filterType==='year'?'selected':'' ?>>ปี</option>
+              <option value="all" <?= $filterType==='all'?'selected':'' ?>>ทั้งหมด</option>
+            </select>
+          </div>
+          <div class="col-md-auto <?= $filterType==='range'?'':'d-none' ?>" id="date_range_group">
+            <label class="form-label small-label">วันที่</label>
             <div class="d-flex gap-2">
-              <input type="date" class="form-control" name="start_date" value="<?=esc($startDate)?>">
-              <input type="date" class="form-control" name="end_date"   value="<?=esc($endDate)?>">
+              <input type="date" class="form-control" name="start_date" value="<?=esc($filterType==='range'?$startDate:'')?>">
+              <input type="date" class="form-control" name="end_date"   value="<?=esc($filterType==='range'?$endDate:'')?>">
+            </div>
+          </div>
+          <div class="col-md-auto <?= $filterType==='month'?'':'d-none' ?>" id="month_group">
+            <label class="form-label small-label" for="month_value">เดือน</label>
+            <input type="month" class="form-control" id="month_value" name="month_value" value="<?=esc($filterType==='month'?$monthValue:'')?>">
+          </div>
+          <div class="col-md-auto <?= $filterType==='year'?'':'d-none' ?>" id="year_group">
+            <label class="form-label small-label">ปี</label>
+            <div class="d-flex gap-2">
+              <select class="form-select" name="start_year" id="start_year">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= ($filterType==='year' && (int)$yearStart===$y)?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
+              <select class="form-select" name="end_year" id="end_year">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= ($filterType==='year' && (int)$yearEnd===$y)?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
             </div>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">Sort by</label>
+            <label class="form-label small-label" for="sort_field">เรียงตาม</label>
             <div class="input-group">
-              <select class="form-select" name="sort">
-                <option value="net"   <?= $sort==='net'?'selected':'' ?>>Net Revenue</option>
-                <option value="tx"    <?= $sort==='tx'?'selected':'' ?>>Bookings (ทั้งหมด)</option>
-                <option value="conf"  <?= $sort==='conf'?'selected':'' ?>>Confirmed</option>
-                <option value="comp"  <?= $sort==='comp'?'selected':'' ?>>Complate</option>
-                <option value="pend"  <?= $sort==='pend'?'selected':'' ?>>Pending</option>
-                <option value="canc"  <?= $sort==='canc'?'selected':'' ?>>Cancelled</option>
-                <option value="aov"   <?= $sort==='aov'?'selected':'' ?>>AOV</option>
-                <option value="cust"  <?= $sort==='cust'?'selected':'' ?>>Distinct Customers</option>
-                <option value="hrs"   <?= $sort==='hrs'?'selected':'' ?>>Hours</option>
-                <option value="avgdur"<?= $sort==='avgdur'?'selected':'' ?>>Avg Duration</option>
-                <option value="first" <?= $sort==='first'?'selected':'' ?>>First Booking</option>
-                <option value="last"  <?= $sort==='last'?'selected':'' ?>>Last Booking</option>
-                <option value="name"  <?= $sort==='name'?'selected':'' ?>>ชื่อสตาฟ</option>
+              <select class="form-select" id="sort_field" name="sort">
+                <option value="name" <?= $sort==='name'?'selected':'' ?>>ชื่อ</option>
+                <option value="popularity" <?= $sort==='popularity'?'selected':'' ?>>ความนิยม</option>
+                <option value="hours" <?= $sort==='hours'?'selected':'' ?>>จำนวนชั่วโมง</option>
+                <option value="revenue" <?= $sort==='revenue'?'selected':'' ?>>รายได้</option>
               </select>
-              <select class="form-select" name="dir">
-                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>ASC</option>
-                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>DESC</option>
+              <select class="form-select" id="sort_dir" name="dir">
+                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>A → Z</option>
+                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>Z → A</option>
               </select>
             </div>
           </div>
           <div class="col-md-auto">
-            <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
-          </div>
-                    <div class="ms-auto col-md-auto d-flex gap-2 align-items-center">
-            <span class="badge bg-primary">สตาฟที่พบ: <?=number_format($totalRows)?> คน</span>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
           </div>
         </form>
+
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+          <span class="badge bg-secondary">พนักงาน Active ทั้งหมด: <?=number_format($activeStaffTotal)?> คน</span>
+          <span class="badge bg-primary">ผลลัพธ์จากตัวกรอง: <?=number_format($filteredCount)?> คน</span>
+        </div>
 
         <div class="table-responsive mt-3">
           <table class="table table-striped table-hover align-middle table-sm">
@@ -417,24 +640,33 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               ?>
                 <tr>
                   <td><?=esc($r['staff_name']?:'N/A')?></td>
-                  <td class="text-end"><?=number_format((int)$r['tx_total'])?></td>
-                  <td class="text-end"><span class="badge bg-success"><?=number_format((int)$r['tx_conf'])?></span></td>
-                  <td class="text-end"><span class="badge bg-primary"><?=number_format((int)$r['tx_comp'])?></span></td>
-                  <td class="text-end"><span class="badge bg-warning text-dark"><?=number_format((int)$r['tx_pend'])?></span></td>
-                  <td class="text-end"><span class="badge bg-danger"><?=number_format((int)$r['tx_canc'])?></span></td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-link p-0 status-link" data-status="total" data-staff="<?= (int)$r['staff_id'] ?>" data-staff-name="<?=esc($r['staff_name']?:'N/A')?>">
+                      <span class="fw-semibold"><?=number_format((int)$r['tx_total'])?></span>
+                    </button>
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-link p-0 status-link" data-status="confirmed" data-staff="<?= (int)$r['staff_id'] ?>" data-staff-name="<?=esc($r['staff_name']?:'N/A')?>">
+                      <span class="badge bg-success"><?=number_format((int)$r['tx_conf'])?></span>
+                    </button>
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-link p-0 status-link" data-status="completed" data-staff="<?= (int)$r['staff_id'] ?>" data-staff-name="<?=esc($r['staff_name']?:'N/A')?>">
+                      <span class="badge bg-primary"><?=number_format((int)$r['tx_comp'])?></span>
+                    </button>
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-link p-0 status-link" data-status="pending" data-staff="<?= (int)$r['staff_id'] ?>" data-staff-name="<?=esc($r['staff_name']?:'N/A')?>">
+                      <span class="badge bg-warning text-dark"><?=number_format((int)$r['tx_pend'])?></span>
+                    </button>
+                  </td>
+                  <td class="text-end">
+                    <button type="button" class="btn btn-link p-0 status-link" data-status="cancelled" data-staff="<?= (int)$r['staff_id'] ?>" data-staff-name="<?=esc($r['staff_name']?:'N/A')?>">
+                      <span class="badge bg-danger"><?=number_format((int)$r['tx_canc'])?></span>
+                    </button>
+                  </td>
                   <td class="text-end fw-bold text-success">฿<?=number_format((float)$r['net_rev'],2)?></td>
-                  <!-- <td class="text-end">฿<?=number_format((float)$r['aov'],2)?></td>
-                  <td class="text-end"><?=number_format((int)$r['custs'])?></td> -->
                   <td class="text-end"><?=number_format($hrs,2)?></td>
-                  <!-- <td class="text-end"><?=number_format($avgdur,1)?></td>
-                  <td><?=esc($r['first_bk']?:'-')?></td>
-                  <td><?=esc($r['last_bk']?:'-')?></td>
-                  <td>
-                    <div class="btn-group">
-                      <a href="staff_detail.php?id=<?= (int)$r['staff_id'] ?>" class="btn btn-sm btn-outline-primary" title="View Staff"><i class="bi bi-person"></i></a>
-                      <a href="booking.php?staff=<?= (int)$r['staff_id'] ?>" class="btn btn-sm btn-outline-secondary" title="View Bookings"><i class="bi bi-calendar3"></i></a>
-                    </div>
-                  </td> -->
                 </tr>
               <?php endforeach; endif; ?>
             </tbody>
@@ -480,149 +712,106 @@ $pageUrl = function(int $target) use ($baseQuery): string {
       </div></div>
     </div>
 
+    <div class="modal fade" id="bookingStatusModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="bookingStatusTitle">รายการจอง</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle">
+                <thead><tr><th>รหัส</th><th>ลูกค้า</th><th>บริการ</th><th>วันที่</th><th>เวลา</th><th class="text-end">ราคา</th></tr></thead>
+                <tbody id="bookingStatusBody"><tr><td colspan="6" class="text-center text-muted">กำลังโหลด...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- TAB: CHART -->
     <div class="tab-pane fade" id="t-chart">
       <div class="card mt-3"><div class="card-body">
 
-        <!-- KPI Cards (GLOBAL; not filtered) -->
-        <div class="row g-3">
-          <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
-            <i class="bi bi-people card-icon text-primary"></i>
-            <div><div class="kpi-value" id="k_staff">0</div><div class="text-muted">Total Staff</div></div>
-          </div></div></div>
-          <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
-            <i class="bi bi-graph-up-arrow card-icon text-success"></i>
-            <div><div class="kpi-value" id="k_rev">0</div><div class="text-muted">Net Revenue (confirmed)</div></div>
-          </div></div></div>
-          <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
-            <i class="bi bi-receipt card-icon text-secondary"></i>
-            <div><div class="kpi-value" id="k_tx">0</div><div class="text-muted">Confirmed Bookings</div></div>
-          </div></div></div>
-          <div class="col-md-3"><div class="card"><div class="card-body">
-            <div class="small text-muted">Avg Net / Staff</div>
-            <div class="kpi-value" id="k_avg_rev">0</div>
-            <div class="small text-muted mt-2">Top Performer</div>
-            <div><strong id="k_top_name">-</strong> <span class="text-success" id="k_top_net"></span></div>
-          </div></div></div>
-        </div>
-        <div class="text-muted">* การ์ดไม่ใช้ตัวกรอง</div>
-
-        <!-- Chart filters -->
-        <div class="row g-3 align-items-end mt-2">
-          <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงเวลา</label>
-            <div class="btn-group" role="group">
-              <input type="radio" class="btn-check" name="period" id="p_all" value="all">
-              <label class="btn btn-outline-primary" for="p_all">All</label>
-              <input type="radio" class="btn-check" name="period" id="p_month" value="month" checked>
-              <label class="btn btn-outline-primary" for="p_month">Month</label>
-              <input type="radio" class="btn-check" name="period" id="p_year" value="year">
-              <label class="btn btn-outline-primary" for="p_year">Year</label>
-            </div>
-          </div>
-          <div class="col-md-auto">
-            <label class="form-label small-label">สตาฟ</label>
-            <select id="chart_staff" class="form-select">
-              <option value="0">ทั้งหมด</option>
-              <?php while($s=$staffOps->fetch_assoc()): ?>
-                <option value="<?=$s['staff_id']?>"><?=esc($s['staff_name'])?></option>
-              <?php endwhile; ?>
+        <div class="row g-3 align-items-end">
+          <div class="col-md-3 col-lg-2">
+            <label class="form-label small-label" for="chart_period">ช่วงเวลา</label>
+            <select class="form-select" id="chart_period">
+              <option value="all">ทั้งหมด</option>
+              <option value="year">ช่วงปี</option>
+              <option value="month">ช่วงเดือน</option>
+              <option value="day">ช่วงวัน</option>
             </select>
           </div>
-          <div class="col-md-auto">
-            <label class="form-label small-label">บริการ</label>
-            <select id="chart_service" class="form-select">
-              <option value="0">ทั้งหมด</option>
-              <?php $serviceOps2 = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name"); while($sv=$serviceOps2->fetch_assoc()): ?>
-                <option value="<?=$sv['service_id']?>"><?=esc($sv['service_name'])?></option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <!-- Period-specific controls -->
-          <div class="col-md-auto" id="ctl-month">
-            <label class="form-label small-label">เดือน/ปี</label>
+          <div class="col-md-auto d-none" id="chart_year_group">
+            <label class="form-label small-label">ปี (จาก-ถึง)</label>
             <div class="d-flex gap-2">
-              <select id="month" class="form-select">
-                <?php for($m=1;$m<=12;$m++): ?>
-                  <option value="<?=$m?>" <?= $m==(int)date('n')?'selected':'' ?>><?=$m?></option>
+              <select class="form-select" id="chart_start_year">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
                 <?php endfor; ?>
               </select>
-              <select id="year_m" class="form-select">
+              <select class="form-select" id="chart_end_year">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
                   <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
                 <?php endfor; ?>
               </select>
             </div>
           </div>
-          <div class="col-md-auto d-none" id="ctl-year">
-            <label class="form-label small-label">ปี</label>
-            <select id="year_y" class="form-select">
-              <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
-              <?php endfor; ?>
-            </select>
-          </div>
-          <div class="col-md-auto d-none" id="ctl-all">
-            <label class="form-label small-label">ช่วงปี</label>
+          <div class="col-md-auto d-none" id="chart_month_group">
+            <label class="form-label small-label">เดือน (จาก-ถึง)</label>
             <div class="d-flex gap-2">
-              <select id="start_year" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==$minYear?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
-              <select id="end_year" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==$maxYear?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
+              <input type="month" class="form-control" id="chart_start_month" value="<?=date('Y-m')?>">
+              <input type="month" class="form-control" id="chart_end_month" value="<?=date('Y-m')?>">
+            </div>
+          </div>
+          <div class="col-md-auto d-none" id="chart_day_group">
+            <label class="form-label small-label">วันที่ (จาก-ถึง)</label>
+            <div class="d-flex gap-2">
+              <input type="date" class="form-control" id="chart_start_day" value="<?=date('Y-m-01')?>">
+              <input type="date" class="form-control" id="chart_end_day" value="<?=date('Y-m-d')?>">
             </div>
           </div>
           <div class="col-md-auto">
-            <button id="applyChart" class="btn btn-primary"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+            <button class="btn btn-primary" id="chartApply"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
           </div>
         </div>
 
-        <!-- Charts -->
         <div class="row mt-3 g-3">
           <div class="col-lg-8">
             <div class="card h-100"><div class="card-body">
-              <h6 class="card-title">Bookings & Net by Time</h6>
-              <canvas id="staffMainChart" height="120"></canvas>
-              <div class="text-muted mt-2">* เส้น: Confirmed/Pending/Cancelled/Total | แท่ง: Net (confirmed)</div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="card-title mb-0" id="chartTitle">ภาพรวมจำนวนการจองของสตาฟ</h6>
+                <button class="btn btn-sm btn-outline-secondary d-none" id="chartBack"><i class="bi bi-arrow-left"></i> กลับ</button>
+              </div>
+              <div class="chart-wrapper">
+                <canvas id="staffMainChart"></canvas>
+              </div>
+              <div class="mt-3">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <strong>เลือกพนักงาน</strong>
+                  <button class="btn btn-sm btn-outline-dark" id="toggleStaffList" type="button">เลือกบางคน</button>
+                  <button class="btn btn-sm btn-outline-primary" id="selectAllStaff" type="button">เลือกทั้งหมด</button>
+                  <button class="btn btn-sm btn-outline-secondary" id="clearAllStaff" type="button">ล้างทั้งหมด</button>
+                </div>
+                <div id="staffCheckboxes" class="d-flex flex-wrap gap-2 d-none"></div>
+              </div>
             </div></div>
           </div>
           <div class="col-lg-4">
             <div class="card h-100"><div class="card-body">
-              <h6 class="card-title">Status Mix (ช่วงที่เลือก)</h6>
-              <canvas id="mixChart" height="120"></canvas>
+              <h6 class="card-title">Top 10 Staff</h6>
+              <ol class="list-group list-group-numbered" id="topStaffList"></ol>
             </div></div>
           </div>
         </div>
 
-        <div class="row mt-3 g-3">
-          <div class="col-lg-6">
-            <div class="card h-100"><div class="card-body">
-              <h6 class="card-title">Top Staff by Net (ช่วงที่เลือก)</h6>
-              <div class="table-responsive">
-                <table class="table table-sm" id="tblTopNet">
-                  <thead><tr><th>#</th><th>Staff</th><th class="text-end">Net</th><th class="text-end">Tx (conf)</th></tr></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div></div>
-          </div>
-          <div class="col-lg-6">
-            <div class="card h-100"><div class="card-body">
-              <h6 class="card-title">Top Staff by Confirmed Tx (ช่วงที่เลือก)</h6>
-              <div class="table-responsive">
-                <table class="table table-sm" id="tblTopTx">
-                  <thead><tr><th>#</th><th>Staff</th><th class="text-end">Tx (conf)</th><th class="text-end">Net</th></tr></thead>
-                  <tbody></tbody>
-                </table>
-              </div>
-            </div></div>
-          </div>
-        </div>
+        <p class="text-muted mt-3" id="chartHint">* คลิกแท่งกราฟของพนักงานเพื่อดูรายละเอียดแบบกราฟเส้น และกดปุ่ม "กลับ" เพื่อย้อนกลับ</p>
 
       </div></div>
     </div>
@@ -632,91 +821,439 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function updateCtl(){
-  const p=document.querySelector('input[name=period]:checked')?.value||'month';
-  document.getElementById('ctl-month').classList.toggle('d-none',p!=='month');
-  document.getElementById('ctl-year').classList.toggle('d-none',p!=='year');
-  document.getElementById('ctl-all').classList.toggle('d-none',p!=='all');
+const filterForm = document.getElementById('staffFilterForm');
+const searchInput = document.getElementById('staffSearch');
+const dateTypeSelect = document.getElementById('date_filter_type');
+const dateRangeGroup = document.getElementById('date_range_group');
+const monthGroup = document.getElementById('month_group');
+const yearGroup = document.getElementById('year_group');
+const sortField = document.getElementById('sort_field');
+const sortDir = document.getElementById('sort_dir');
+
+function toggleDateInputs() {
+  const type = dateTypeSelect?.value || 'range';
+  if (dateRangeGroup) dateRangeGroup.classList.toggle('d-none', type !== 'range');
+  if (monthGroup) monthGroup.classList.toggle('d-none', type !== 'month');
+  if (yearGroup) yearGroup.classList.toggle('d-none', type !== 'year');
 }
-['p_all','p_month','p_year'].forEach(id=>document.getElementById(id).addEventListener('change',updateCtl));
-updateCtl();
+toggleDateInputs();
+dateTypeSelect?.addEventListener('change', toggleDateInputs);
 
-let mainChart, mixChart;
-function fmt(x,dec=2){ return Number(x||0).toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec}); }
+function updateSortLabels() {
+  if (!sortField || !sortDir) return;
+  const asc = sortDir.querySelector('option[value="ASC"]');
+  const desc = sortDir.querySelector('option[value="DESC"]');
+  if (!asc || !desc) return;
+  if (sortField.value === 'name') {
+    asc.textContent = 'A → Z';
+    desc.textContent = 'Z → A';
+  } else {
+    asc.textContent = 'น้อย → มาก';
+    desc.textContent = 'มาก → น้อย';
+  }
+}
+updateSortLabels();
+sortField?.addEventListener('change', updateSortLabels);
 
-async function loadStats(){
-  const p=document.querySelector('input[name=period]:checked')?.value||'month';
-  const url=new URL(location.href); url.search=''; url.searchParams.set('action','stats'); url.searchParams.set('period',p);
-  url.searchParams.set('staff',document.getElementById('chart_staff').value);
-  url.searchParams.set('service',document.getElementById('chart_service').value);
-  if(p==='month'){ url.searchParams.set('year',document.getElementById('year_m').value); url.searchParams.set('month',document.getElementById('month').value); }
-  else if(p==='year'){ url.searchParams.set('year',document.getElementById('year_y').value); }
-  else { url.searchParams.set('start_year',document.getElementById('start_year').value); url.searchParams.set('end_year',document.getElementById('end_year').value); }
+let searchTimer;
+if (searchInput && filterForm) {
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      const pageInput = filterForm.querySelector('input[name="page"]');
+      if (pageInput) pageInput.remove();
+      filterForm.requestSubmit();
+    }, 400);
+  });
+}
 
-  const res=await fetch(url.toString(),{cache:'no-store'});
-  const data=await res.json();
+const statusNames = {
+  total: 'ทั้งหมด',
+  confirmed: 'Confirmed',
+  completed: 'Complate',
+  pending: 'Pending',
+  cancelled: 'Cancelled'
+};
+const bookingModalEl = document.getElementById('bookingStatusModal');
+const bookingModal = bookingModalEl ? new bootstrap.Modal(bookingModalEl) : null;
+const bookingBody = document.getElementById('bookingStatusBody');
+const bookingTitle = document.getElementById('bookingStatusTitle');
 
-  // KPIs
-  document.getElementById('k_staff').textContent=(data.cards.total_staff||0).toLocaleString();
-  document.getElementById('k_rev').textContent='฿'+fmt(data.cards.confirmed_rev);
-  document.getElementById('k_tx').textContent=(data.cards.confirmed_tx||0).toLocaleString();
-  document.getElementById('k_avg_rev').textContent='฿'+fmt(data.cards.avg_rev_per_staff);
-  document.getElementById('k_top_name').textContent=data.cards.top?.name||'-';
-  document.getElementById('k_top_net').textContent='฿'+fmt(data.cards.top?.net||0);
+function formatCurrency(amount) {
+  return '฿' + Number(amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
 
-  // Main chart
-  const labels=data.chart.labels, axis=data.chart.axis;
-  const sT=data.chart.series.total, sC=data.chart.series.confirmed, sP=data.chart.series.pending, sX=data.chart.series.cancelled, sN=data.chart.series.net;
-  if(mainChart) mainChart.destroy();
-  const ctx=document.getElementById('staffMainChart').getContext('2d');
-  mainChart=new Chart(ctx,{
-    data:{
-      labels,
-      datasets:[
-        {type:'line', label:'Confirmed', data:sC, tension:.3, pointRadius:3, borderWidth:2},
-        {type:'line', label:'Pending',   data:sP, tension:.3, pointRadius:3, borderWidth:2},
-        {type:'line', label:'Cancelled', data:sX, tension:.3, pointRadius:3, borderWidth:2},
-        {type:'line', label:'Total',     data:sT, tension:.3, pointRadius:3, borderWidth:2},
-        {type:'bar',  label:'Net (confirmed)', data:sN, borderWidth:1}
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ x:{ title:{display:true,text:axis} }, y:{ beginAtZero:true } },
-      plugins:{ legend:{display:true}, tooltip:{mode:'index',intersect:false} }
+async function fetchStaffBookings(staffId, statusKey, staffName) {
+  if (!bookingBody || !bookingTitle) return;
+  bookingTitle.textContent = `${staffName} - ${statusNames[statusKey] || ''}`;
+  bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">กำลังโหลด...</td></tr>';
+  if (bookingModal) bookingModal.show();
+
+  const url = new URL(location.href);
+  url.search = '';
+  url.searchParams.set('action', 'staff-bookings');
+  url.searchParams.set('staff_id', staffId);
+  url.searchParams.set('status', statusKey);
+  if (filterForm) {
+    const formData = new FormData(filterForm);
+    for (const [key, value] of formData.entries()) {
+      if (value !== '') url.searchParams.set(key, value);
+    }
+  }
+  try {
+    const res = await fetch(url.toString(), {cache: 'no-store'});
+    const data = await res.json();
+    const bookings = data.bookings || [];
+    if (!bookings.length) {
+      bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูล</td></tr>';
+      return;
+    }
+    bookingBody.innerHTML = '';
+    bookings.forEach(b => {
+      const tr = document.createElement('tr');
+      const timeLabel = b.time_start && b.time_end ? `${b.time_start} - ${b.time_end}` : '-';
+      tr.innerHTML = `
+        <td>${b.id}</td>
+        <td>${b.customer || '-'}</td>
+        <td>${b.services || '-'}</td>
+        <td>${b.date || '-'}</td>
+        <td>${timeLabel}</td>
+        <td class="text-end">${formatCurrency(b.price)}</td>
+      `;
+      bookingBody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error(err);
+    bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+  }
+}
+
+document.addEventListener('click', (event) => {
+  const btn = event.target.closest('.status-link');
+  if (!btn) return;
+  event.preventDefault();
+  const staffId = btn.getAttribute('data-staff');
+  const statusKey = btn.getAttribute('data-status');
+  const staffName = btn.getAttribute('data-staff-name') || '';
+  if (!staffId || !statusKey) return;
+  fetchStaffBookings(staffId, statusKey, staffName);
+});
+
+// ---------------- Chart logic ----------------
+const chartPeriodEl = document.getElementById('chart_period');
+const chartYearGroup = document.getElementById('chart_year_group');
+const chartMonthGroup = document.getElementById('chart_month_group');
+const chartDayGroup = document.getElementById('chart_day_group');
+const chartApplyBtn = document.getElementById('chartApply');
+const chartTitleEl = document.getElementById('chartTitle');
+const chartBackBtn = document.getElementById('chartBack');
+const chartHintEl = document.getElementById('chartHint');
+const selectAllBtn = document.getElementById('selectAllStaff');
+const clearAllBtn = document.getElementById('clearAllStaff');
+const toggleStaffListBtn = document.getElementById('toggleStaffList');
+const staffCheckboxesEl = document.getElementById('staffCheckboxes');
+const topStaffListEl = document.getElementById('topStaffList');
+const chartCanvas = document.getElementById('staffMainChart');
+let staffChart = null;
+let overviewData = [];
+let selectedStaffIds = new Set();
+let detailMode = false;
+let currentDetail = null;
+let staffListVisible = false;
+
+function setStaffListVisible(visible) {
+  staffListVisible = !!visible;
+  if (staffCheckboxesEl) {
+    staffCheckboxesEl.classList.toggle('d-none', !staffListVisible);
+  }
+  if (toggleStaffListBtn) {
+    toggleStaffListBtn.textContent = staffListVisible ? 'ซ่อนรายชื่อ' : 'เลือกบางคน';
+  }
+}
+
+setStaffListVisible(false);
+
+function updateChartPeriodControls() {
+  const period = chartPeriodEl?.value || 'all';
+  chartYearGroup?.classList.toggle('d-none', period !== 'year');
+  chartMonthGroup?.classList.toggle('d-none', period !== 'month');
+  chartDayGroup?.classList.toggle('d-none', period !== 'day');
+}
+updateChartPeriodControls();
+chartPeriodEl?.addEventListener('change', updateChartPeriodControls);
+
+toggleStaffListBtn?.addEventListener('click', () => {
+  setStaffListVisible(!staffListVisible);
+});
+
+function gatherChartFilters() {
+  const period = chartPeriodEl?.value || 'all';
+  const filters = { period };
+  if (period === 'year') {
+    filters.start_year = document.getElementById('chart_start_year')?.value || '';
+    filters.end_year = document.getElementById('chart_end_year')?.value || '';
+  } else if (period === 'month') {
+    filters.start_month = document.getElementById('chart_start_month')?.value || '';
+    filters.end_month = document.getElementById('chart_end_month')?.value || '';
+  } else if (period === 'day') {
+    filters.start_date = document.getElementById('chart_start_day')?.value || '';
+    filters.end_date = document.getElementById('chart_end_day')?.value || '';
+  }
+  return filters;
+}
+
+function buildChartUrl(action, extra = {}) {
+  const url = new URL(location.href);
+  url.search = '';
+  url.searchParams.set('action', action);
+  const filters = gatherChartFilters();
+  Object.entries({...filters, ...extra}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, value);
     }
   });
-
-  // Mix chart
-  if(mixChart) mixChart.destroy();
-  const m=data.status_mix||{confirmed:0,pending:0,cancelled:0};
-  const mctx=document.getElementById('mixChart').getContext('2d');
-  mixChart=new Chart(mctx,{
-    type:'doughnut',
-    data:{ labels:['Confirmed','Pending','Cancelled'], datasets:[{ data:[m.confirmed||0,m.pending||0,m.cancelled||0] }]},
-    options:{ responsive:true, plugins:{ legend:{position:'top'} } }
-  });
-
-  // Top tables
-  const tn=document.querySelector('#tblTopNet tbody'); tn.innerHTML='';
-  (data.top.by_net||[]).forEach((r,i)=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${i+1}</td><td>${r.name||'-'}</td><td class="text-end">฿${fmt(r.net)}</td><td class="text-end">${(r.tx||0).toLocaleString()}</td>`;
-    tn.appendChild(tr);
-  });
-  if(!tn.children.length){ tn.innerHTML='<tr><td colspan="4" class="text-center text-muted">No data</td></tr>'; }
-
-  const tt=document.querySelector('#tblTopTx tbody'); tt.innerHTML='';
-  (data.top.by_tx||[]).forEach((r,i)=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${i+1}</td><td>${r.name||'-'}</td><td class="text-end">${(r.tx||0).toLocaleString()}</td><td class="text-end">฿${fmt(r.net)}</td>`;
-    tt.appendChild(tr);
-  });
-  if(!tt.children.length){ tt.innerHTML='<tr><td colspan="4" class="text-center text-muted">No data</td></tr>'; }
+  return url;
 }
 
-document.getElementById('applyChart').addEventListener('click', loadStats);
-document.getElementById('chart-tab')?.addEventListener('shown.bs.tab', ()=> loadStats());
+function renderTopList(items) {
+  if (!topStaffListEl) return;
+  topStaffListEl.innerHTML = '';
+  if (!items || !items.length) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item text-muted';
+    li.textContent = 'ไม่มีข้อมูล';
+    topStaffListEl.appendChild(li);
+    return;
+  }
+  items.forEach((item) => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    const total = Number(item.total || 0).toLocaleString();
+    li.innerHTML = `<span>${item.name || '-'}</span><span class="badge bg-primary rounded-pill">${total} ครั้ง</span>`;
+    topStaffListEl.appendChild(li);
+  });
+}
+
+function renderStaffCheckboxes() {
+  if (!staffCheckboxesEl) return;
+  staffCheckboxesEl.innerHTML = '';
+  if (!overviewData.length) {
+    staffCheckboxesEl.innerHTML = '<span class="text-muted">ไม่มีข้อมูล</span>';
+    return;
+  }
+  overviewData.forEach((staff) => {
+    const wrapper = document.createElement('label');
+    wrapper.className = 'form-check form-check-inline';
+    const checked = selectedStaffIds.has(staff.id) ? 'checked' : '';
+    wrapper.innerHTML = `
+      <input class="form-check-input staff-filter" type="checkbox" value="${staff.id}" ${checked}>
+      <span class="form-check-label">${staff.name}</span>
+    `;
+    staffCheckboxesEl.appendChild(wrapper);
+  });
+  staffCheckboxesEl.querySelectorAll('.staff-filter').forEach((input) => {
+    input.addEventListener('change', () => {
+      const id = Number(input.value);
+      if (input.checked) {
+        selectedStaffIds.add(id);
+      } else {
+        selectedStaffIds.delete(id);
+      }
+      detailMode = false;
+      currentDetail = null;
+      chartBackBtn?.classList.add('d-none');
+      chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+      renderOverviewChart();
+    });
+  });
+}
+
+function renderOverviewChart() {
+  if (!chartCanvas) return;
+  const ctx = chartCanvas.getContext('2d');
+  if (staffChart) {
+    staffChart.destroy();
+    staffChart = null;
+  }
+  let staffList;
+  if (selectedStaffIds.size === 0) {
+    staffList = [];
+  } else {
+    staffList = overviewData.filter((staff) => selectedStaffIds.has(staff.id));
+  }
+  if (!staffList.length) {
+    if (chartHintEl) chartHintEl.textContent = 'กรุณาเลือกพนักงานเพื่อแสดงข้อมูล';
+    return;
+  }
+  const labels = staffList.map((s) => s.name);
+  const palette = {
+    total: '#0d6efd',
+    confirmed: '#198754',
+    completed: '#0dcaf0',
+    pending: '#ffc107',
+    cancelled: '#dc3545'
+  };
+  staffChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {label: 'ทั้งหมด', data: staffList.map(s => Number(s.total || 0)), backgroundColor: palette.total},
+        {label: 'Confirmed', data: staffList.map(s => Number(s.confirmed || 0)), backgroundColor: palette.confirmed},
+        {label: 'Complate', data: staffList.map(s => Number(s.completed || 0)), backgroundColor: palette.completed},
+        {label: 'Pending', data: staffList.map(s => Number(s.pending || 0)), backgroundColor: palette.pending},
+        {label: 'Cancelled', data: staffList.map(s => Number(s.cancelled || 0)), backgroundColor: palette.cancelled}
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: { y: { beginAtZero: true } },
+      plugins: {
+        legend: { display: true },
+        tooltip: { mode: 'index', intersect: false }
+      },
+      onClick(evt, elements) {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const staff = staffList[idx];
+        if (staff) loadDetail(staff.id, staff.name);
+      }
+    }
+  });
+  if (chartHintEl) {
+    chartHintEl.textContent = '* คลิกแท่งกราฟของพนักงานเพื่อดูรายละเอียดแบบกราฟเส้น และกดปุ่ม "กลับ" เพื่อย้อนกลับ';
+  }
+}
+
+async function loadOverview() {
+  const url = buildChartUrl('chart_overview');
+  try {
+    const res = await fetch(url.toString(), {cache: 'no-store'});
+    const data = await res.json();
+    overviewData = data.staffs || [];
+    detailMode = false;
+    currentDetail = null;
+    chartBackBtn?.classList.add('d-none');
+    chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+    if (!overviewData.length) {
+      selectedStaffIds.clear();
+      setStaffListVisible(false);
+      renderStaffCheckboxes();
+      if (chartHintEl) chartHintEl.textContent = 'ไม่มีข้อมูลพนักงาน';
+      if (staffChart) { staffChart.destroy(); staffChart = null; }
+      renderTopList([]);
+      return;
+    }
+    selectedStaffIds = new Set(overviewData.map((s) => s.id));
+    setStaffListVisible(false);
+    renderStaffCheckboxes();
+    renderOverviewChart();
+    renderTopList(data.top || []);
+  } catch (err) {
+    console.error(err);
+    if (chartHintEl) chartHintEl.textContent = 'ไม่สามารถโหลดข้อมูลกราฟได้';
+  }
+}
+
+async function loadDetail(staffId, staffName) {
+  const url = buildChartUrl('chart_staff_detail', {staff_id: staffId});
+  try {
+    const res = await fetch(url.toString(), {cache: 'no-store'});
+    const data = await res.json();
+    const labels = data.labels || [];
+    const series = data.series || {};
+    const ctx = chartCanvas.getContext('2d');
+    if (staffChart) {
+      staffChart.destroy();
+      staffChart = null;
+    }
+    const palette = {
+      total: '#0d6efd',
+      confirmed: '#198754',
+      completed: '#0dcaf0',
+      pending: '#ffc107',
+      cancelled: '#dc3545'
+    };
+    staffChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {label: 'ทั้งหมด', data: (series.total || []).map(v => Number(v || 0)), borderColor: palette.total, backgroundColor: palette.total, fill: false, tension: 0.3, pointRadius: 3},
+          {label: 'Confirmed', data: (series.confirmed || []).map(v => Number(v || 0)), borderColor: palette.confirmed, backgroundColor: palette.confirmed, fill: false, tension: 0.3, pointRadius: 3},
+          {label: 'Complate', data: (series.completed || []).map(v => Number(v || 0)), borderColor: palette.completed, backgroundColor: palette.completed, fill: false, tension: 0.3, pointRadius: 3},
+          {label: 'Pending', data: (series.pending || []).map(v => Number(v || 0)), borderColor: palette.pending, backgroundColor: palette.pending, fill: false, tension: 0.3, pointRadius: 3},
+          {label: 'Cancelled', data: (series.cancelled || []).map(v => Number(v || 0)), borderColor: palette.cancelled, backgroundColor: palette.cancelled, fill: false, tension: 0.3, pointRadius: 3}
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { beginAtZero: true } },
+        plugins: {
+          legend: { display: true },
+          tooltip: { mode: 'index', intersect: false }
+        }
+      }
+    });
+    detailMode = true;
+    currentDetail = {staffId, staffName};
+    chartBackBtn?.classList.remove('d-none');
+    chartTitleEl.textContent = `รายละเอียดของ ${staffName}`;
+    if (chartHintEl) chartHintEl.textContent = 'กำลังแสดงกราฟเส้นของพนักงานที่เลือก';
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+chartApplyBtn?.addEventListener('click', (event) => {
+  event.preventDefault();
+  loadOverview();
+});
+
+chartBackBtn?.addEventListener('click', () => {
+  detailMode = false;
+  currentDetail = null;
+  chartBackBtn.classList.add('d-none');
+  chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  renderOverviewChart();
+});
+
+selectAllBtn?.addEventListener('click', () => {
+  selectedStaffIds = new Set(overviewData.map((s) => s.id));
+  detailMode = false;
+  currentDetail = null;
+  chartBackBtn?.classList.add('d-none');
+  chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  setStaffListVisible(false);
+  renderStaffCheckboxes();
+  renderOverviewChart();
+});
+
+clearAllBtn?.addEventListener('click', () => {
+  selectedStaffIds.clear();
+  detailMode = false;
+  currentDetail = null;
+  chartBackBtn?.classList.add('d-none');
+  chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  setStaffListVisible(true);
+  renderStaffCheckboxes();
+  if (chartHintEl) chartHintEl.textContent = 'กรุณาเลือกพนักงานเพื่อแสดงข้อมูล';
+  if (staffChart) {
+    staffChart.destroy();
+    staffChart = null;
+  }
+});
+
+const chartTabBtn = document.getElementById('chart-tab');
+if (chartTabBtn) {
+  chartTabBtn.addEventListener('shown.bs.tab', () => {
+    if (!overviewData.length) {
+      loadOverview();
+    }
+  });
+}
 </script>
 </body>
 </html>

@@ -233,6 +233,8 @@ $pageUrl = function(int $target) use ($baseQuery): string {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <style>
@@ -290,7 +292,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           </div>
           <div class="col-md-auto">
             <label class="form-label small-label">พนักงาน</label>
-            <select class="form-select" name="staff">
+            <select class="form-select select-search" name="staff" data-width="style" data-placeholder="เลือกพนักงาน" style="width:220px;">
               <option value="0">ทั้งหมด</option>
               <?php while($s=$staffOps->fetch_assoc()): ?>
                 <option value="<?=$s['staff_id']?>" <?= $staffF==$s['staff_id']?'selected':'' ?>><?=esc($s['staff_name'])?></option>
@@ -299,7 +301,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           </div>
           <div class="col-md-auto">
             <label class="form-label small-label">ลูกค้า</label>
-            <select class="form-select" name="customer">
+            <select class="form-select select-search" name="customer" data-width="style" data-placeholder="เลือกลูกค้า" style="width:220px;">
               <option value="0">ทั้งหมด</option>
               <?php while($cus=$customerOps->fetch_assoc()): ?>
                 <option value="<?=$cus['customer_id']?>" <?= $customerF==$cus['customer_id']?'selected':'' ?>><?=esc($cus['customer_name'])?></option>
@@ -556,7 +558,9 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
 </main>
 
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 const periodSelect=document.getElementById('periodSelect');
 function updatePeriodFilters(){
@@ -623,6 +627,22 @@ async function loadStats(){
 
 document.getElementById('applyChart').addEventListener('click',loadStats);
 document.getElementById('chart-tab')?.addEventListener('shown.bs.tab',()=>loadStats());
+
+$(function(){
+  $('.select-search').each(function(){
+    const $el=$(this);
+    const widthAttr=$el.data('width')||'resolve';
+    const placeholder=$el.data('placeholder')||'';
+    $el.select2({
+      theme:'bootstrap-5',
+      width:widthAttr,
+      placeholder:placeholder,
+      language:{
+        noResults:()=> 'ไม่พบข้อมูล'
+      }
+    });
+  });
+});
 </script>
 </body>
 </html>

@@ -478,12 +478,15 @@ $pageUrl = function(int $target) use ($baseQuery): string {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="assets/css/style.css">
   <style>
     .small-label{font-size:.9rem;color:#6c757d}
     .kpi-value{font-size:28px;font-weight:700;margin:0}
     .card-icon{font-size:28px}
     .table-sm td, .table-sm th { padding: .45rem .5rem; }
+    .chart-wrapper{position:relative;height:360px}
+    #staffMainChart{width:100% !important;height:100% !important}
+    @media (max-width: 992px){.chart-wrapper{height:320px}}
   </style>
 </head>
 <body>
@@ -741,7 +744,9 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                 <h6 class="card-title mb-0" id="chartTitle">ภาพรวมจำนวนการจองของสตาฟ</h6>
                 <button class="btn btn-sm btn-outline-secondary d-none" id="chartBack"><i class="bi bi-arrow-left"></i> กลับ</button>
               </div>
-              <canvas id="staffMainChart" height="260"></canvas>
+              <div class="chart-wrapper">
+                <canvas id="staffMainChart"></canvas>
+              </div>
               <div class="mt-3">
                 <div class="d-flex align-items-center gap-2 mb-2">
                   <strong>เลือกพนักงาน</strong>

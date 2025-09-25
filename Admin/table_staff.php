@@ -58,6 +58,7 @@ if (isset($_SESSION['staff_level']) && $_SESSION['staff_level'] !== 'admin') {
                     <th>End Job</th>
                     <th>Status</th>
                     <th>Detail</th>
+                    <th>Schedule</th>
                     <th>Edit</th>
                     <th>Delete</th>
                   </tr>
@@ -79,9 +80,12 @@ if (isset($_SESSION['staff_level']) && $_SESSION['staff_level'] !== 'admin') {
                       <td><?= htmlspecialchars($row['start_job']) ?></td>
                       <td><?= htmlspecialchars($row['end_job']) ?></td>
                       <td><?= htmlspecialchars($row['st_status']) ?></td>
-                                 <td>
-            <a class="btn btn-outline-primary btn-sm" href="staff_detail.php?id=<?= $row['staff_id'] ?>">Detail</a>
-        </td>
+                      <td>
+                        <a class="btn btn-outline-primary btn-sm" href="staff_detail.php?id=<?= $row['staff_id'] ?>">Detail</a>
+                      </td>
+                      <td>
+                        <a class="btn btn-outline-info btn-sm" href="staff_schedule.php?id=<?= urlencode($row['staff_id']) ?>">Schedule</a>
+                      </td>
                       <td>
                         <a class="btn btn-outline-primary btn-sm" href="staff_update_form.php?id=<?= $row['staff_id'] ?>">Edit</a>
                       </td>

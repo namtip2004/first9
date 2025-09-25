@@ -49,16 +49,33 @@ $time_end = date("H:i", strtotime("+$total_min minutes", $start_ts));
 // 1) เช็คว่าเวลาที่เลือก “มีใน get_available_times” (อย่างน้อยมีพนักงานคนไหนว่าง)
 //    — เทียบกับกติกาเดียวกับหน้าลูกค้า
 //    (เพื่อความเร็ว เราเช็คเฉพาะชนกับพนักงานที่เลือกก็ได้ แต่ถ้าต้องเป๊ะเท่าลูกค้า ให้เช็ค business hours/ช่องเวลาเหมือน service ฝั่งลูกค้า)
-$open  = strtotime("08:00"); // ปรับตามจริง
-$close = strtotime("18:00");
-if ( (int)date("w", $start_ts) == 0 ) {
-  // ตัวอย่างปิดวันอาทิตย์ (ถ้ามี)
-  // exit("ร้านปิดให้บริการวันอาทิตย์");
+$dayName = date('l', $start_ts);
+$bhStmt = $conn->prepare("SELECT open_time, close_time, is_closed FROM business_hours WHERE day_of_week = ?");
+$bhStmt->bind_param("s", $dayName);
+$bhStmt->execute();
+$businessHours = $bhStmt->get_result()->fetch_assoc();
+$bhStmt->close();
+
+if (!$businessHours) {
+  exit("ยังไม่ได้ตั้งค่าเวลาเปิด-ปิดสำหรับวันดังกล่าว");
 }
-if ($start_ts < strtotime($booking_date.' 08:00') || strtotime($time_end) > strtotime($booking_date.' 18:00')) {
+
+if ((int)$businessHours['is_closed'] === 1) {
+  exit("ร้านปิดทำการในวันที่เลือก");
+}
+
+$open_ts = strtotime($booking_date . ' ' . $businessHours['open_time']);
+$close_ts = strtotime($booking_date . ' ' . $businessHours['close_time']);
+$end_ts = strtotime($booking_date . ' ' . $time_end);
+
+if ($open_ts === false || $close_ts === false || $end_ts === false || $close_ts <= $open_ts) {
+  exit("การตั้งค่าเวลาเปิด-ปิดไม่ถูกต้อง");
+}
+
+if ($start_ts < $open_ts || $end_ts > $close_ts) {
   exit("นอกเวลาทำการ");
 }
-// (ถ้าต้องการบังคับช่วงเวลา 15 นาที)
+
 if ((date('i', $start_ts) % 15) !== 0) {
   exit("กรุณาเลือกเวลาช่วง 15 นาที (เช่น 09:00, 09:15, 09:30)");
 }

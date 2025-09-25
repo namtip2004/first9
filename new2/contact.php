@@ -83,12 +83,23 @@
                 </div>
 
                 <div class="col-lg-4 fade-in" style="animation-delay: 0.2s;">
-                    <div class="contact-info-card text-center">
-                        <h4 class="font-display mb-4" style="color: var(--charcoal);">Find Us on Google Maps</h4>
-                        <p>Plan your visit or get directions via Google Maps.</p>
-                        <a class="btn-luxury" href="https://maps.app.goo.gl/Wj8sa4f3PKxrmZ5F6" target="_blank" rel="noopener">
-                            <i class="fas fa-map-marked-alt me-2"></i>Open in Google Maps
-                        </a>
+                    <div class="contact-info-card" style="padding: 0; overflow: hidden;">
+                        <div style="position: relative; width: 100%; padding-bottom: 125%;">
+                            <iframe
+                                title="First9 Thai Massage &amp; Spa Location"
+                                src="https://www.google.com/maps?q=Marsstr.+13,+80335+M%C3%BCnchen&output=embed"
+                                style="border: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+                                allowfullscreen=""
+                                loading="lazy"
+                                referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                        <div style="padding: 24px; text-align: center;">
+                            <h4 class="font-display mb-3" style="color: var(--charcoal);">Find Us on Google Maps</h4>
+                            <p class="mb-3">Plan your visit or get directions via Google Maps.</p>
+                            <a class="btn-luxury" href="https://maps.app.goo.gl/Wj8sa4f3PKxrmZ5F6" target="_blank" rel="noopener">
+                                <i class="fas fa-map-marked-alt me-2"></i>Open in Google Maps
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -300,9 +300,12 @@
                                 <label class="form-label">
                                     <i class="fas fa-clock me-2"></i>เลือกเวลา
                                 </label>
-                                <select class="form-control" id="startTime" name="start_time" required>
+                                <select class="form-control" id="startTime" name="start_time" required disabled>
                                     <option value="">เลือกเวลา</option>
                                 </select>
+                                <div id="timeSlotMessage" class="form-text text-muted mt-1">
+                                    กรุณาเลือกบริการและวันที่เพื่อดูเวลาที่ว่าง
+                                </div>
                             </div>
 
                             <!-- Staff Selection -->
@@ -895,34 +898,129 @@ function updateCartDisplay() {
         function updateTotalDuration() {
             totalDuration = selectedItems.reduce((sum, item) => sum + item.duration, 0);
             document.getElementById('totalDuration').value = `${totalDuration} นาที`;
-            
+
+            const timeSelect = document.getElementById('startTime');
+            const timeMessage = document.getElementById('timeSlotMessage');
+
+            if (totalDuration <= 0) {
+                if (timeSelect) {
+                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.disabled = true;
+                }
+                if (timeMessage) {
+                    timeMessage.textContent = 'กรุณาเลือกบริการและวันที่เพื่อดูเวลาที่ว่าง';
+                    timeMessage.classList.remove('text-danger');
+                    timeMessage.classList.add('text-muted');
+                }
+                return;
+            }
+
             // Reload available times if date is selected
             const selectedDate = document.getElementById('hiddenBookingDate').value;
-            if (selectedDate && totalDuration > 0) {
+            if (selectedDate) {
                 loadAvailableTimes(selectedDate);
+            } else {
+                if (timeSelect) {
+                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.disabled = true;
+                }
+                if (timeMessage) {
+                    timeMessage.textContent = 'กรุณาเลือกวันที่เพื่อดูเวลาที่ว่าง';
+                    timeMessage.classList.remove('text-danger');
+                    timeMessage.classList.add('text-muted');
+                }
             }
         }
 
         // Load available time slots
         function loadAvailableTimes(date) {
-            if (!totalDuration) return;
-            
+            const timeSelect = document.getElementById('startTime');
+            const timeMessage = document.getElementById('timeSlotMessage');
+
+            if (!totalDuration) {
+                if (timeSelect) {
+                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.disabled = true;
+                }
+                if (timeMessage) {
+                    timeMessage.textContent = 'กรุณาเลือกบริการและวันที่เพื่อดูเวลาที่ว่าง';
+                    timeMessage.classList.remove('text-danger');
+                    timeMessage.classList.add('text-muted');
+                }
+                return;
+            }
+
+            if (timeSelect) {
+                timeSelect.disabled = true;
+                timeSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+            }
+            if (timeMessage) {
+                timeMessage.textContent = 'กำลังค้นหาเวลาที่ว่าง...';
+                timeMessage.classList.remove('text-danger');
+                timeMessage.classList.add('text-muted');
+            }
+
             fetch(`get_available_times.php?date=${date}&duration=${totalDuration}`)
                 .then(response => response.json())
-                .then(times => {
-                    const timeSelect = document.getElementById('startTime');
+                .then(data => {
+                    if (!timeSelect) {
+                        return;
+                    }
+
+                    const times = Array.isArray(data) ? data : [];
+                    timeSelect.innerHTML = '';
+
+                    if (!Array.isArray(data) && data && data.error) {
+                        timeSelect.innerHTML = '<option value="">ไม่สามารถโหลดเวลาได้</option>';
+                        timeSelect.disabled = true;
+                        if (timeMessage) {
+                            timeMessage.textContent = data.error;
+                            timeMessage.classList.add('text-danger');
+                            timeMessage.classList.remove('text-muted');
+                        }
+                        return;
+                    }
+
+                    if (times.length === 0) {
+                        timeSelect.innerHTML = '<option value="">ไม่มีเวลาที่ว่าง</option>';
+                        timeSelect.disabled = true;
+                        if (timeMessage) {
+                            timeMessage.textContent = 'ไม่มีเวลาที่ว่างสำหรับวันที่เลือกหรือร้านปิดทำการ';
+                            timeMessage.classList.add('text-danger');
+                            timeMessage.classList.remove('text-muted');
+                        }
+                        return;
+                    }
+
                     timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
-                    
                     times.forEach(time => {
                         const option = document.createElement('option');
                         option.value = time;
                         option.textContent = time;
                         timeSelect.appendChild(option);
                     });
-                    
-                    timeSelect.addEventListener('change', loadAvailableStaff);
+
+                    timeSelect.disabled = false;
+                    timeSelect.onchange = loadAvailableStaff;
+
+                    if (timeMessage) {
+                        timeMessage.textContent = 'เลือกเวลาที่ต้องการ';
+                        timeMessage.classList.remove('text-danger');
+                        timeMessage.classList.add('text-muted');
+                    }
                 })
-                .catch(error => console.error('Error loading times:', error));
+                .catch(error => {
+                    console.error('Error loading times:', error);
+                    if (timeSelect) {
+                        timeSelect.innerHTML = '<option value="">ไม่สามารถโหลดเวลาได้</option>';
+                        timeSelect.disabled = true;
+                    }
+                    if (timeMessage) {
+                        timeMessage.textContent = 'ไม่สามารถโหลดเวลาที่ว่างได้ กรุณาลองใหม่อีกครั้ง';
+                        timeMessage.classList.add('text-danger');
+                        timeMessage.classList.remove('text-muted');
+                    }
+                });
         }
         
 

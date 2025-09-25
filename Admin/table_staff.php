@@ -8,6 +8,7 @@ if (isset($_SESSION['staff_level']) && $_SESSION['staff_level'] !== 'admin') {
 }
 
 require_once("connect_db.php");
+require_once __DIR__ . '/../booking_status.php';
 
 $staffMembers      = [];
 $staffQueryError   = null;
@@ -22,24 +23,19 @@ if ($staffQueryResult) {
     $staffQueryError = mysqli_error($conn);
 }
 
-$selectedStaffId = isset($_GET['staff_id']) ? (int) $_GET['staff_id'] : 0;
-$selectedStaff   = null;
-$staffSchedules  = [];
+$staffSchedulesMap = [];
 
-if ($selectedStaffId > 0) {
-    $staffStmt = $conn->prepare("SELECT staff_id, staff_name FROM staff WHERE staff_id = ?");
-    if ($staffStmt) {
-        $staffStmt->bind_param("i", $selectedStaffId);
-        $staffStmt->execute();
-        $staffResult = $staffStmt->get_result();
-        $selectedStaff = $staffResult->fetch_assoc();
-        $staffStmt->close();
-    }
+if (!empty($staffMembers)) {
+    $staffIds = array_map('intval', array_column($staffMembers, 'staff_id'));
+    $staffIds = array_filter($staffIds, static function ($id) {
+        return $id > 0;
+    });
 
-    if ($selectedStaff) {
+    if (!empty($staffIds)) {
         $scheduleSql = "
             SELECT
                 b.booking_id,
+                b.staff_id,
                 b.booking_date,
                 b.time_start,
                 b.time_end,
@@ -52,41 +48,78 @@ if ($selectedStaffId > 0) {
             LEFT JOIN booking_seviceop bs ON b.booking_id = bs.booking_id
             LEFT JOIN service_option so ON bs.option_id = so.option_id
             LEFT JOIN service sv ON so.service_id = sv.service_id
-            WHERE b.staff_id = ?
+            WHERE b.staff_id IN (" . implode(',', $staffIds) . ")
             GROUP BY b.booking_id
-            ORDER BY b.b_created_at DESC";
+            ORDER BY b.booking_date DESC, b.time_start DESC";
 
-        $scheduleStmt = $conn->prepare($scheduleSql);
-        if ($scheduleStmt) {
-            $scheduleStmt->bind_param("i", $selectedStaffId);
-            $scheduleStmt->execute();
-            $scheduleResult = $scheduleStmt->get_result();
-            while ($scheduleRow = $scheduleResult->fetch_assoc()) {
-                $staffSchedules[] = $scheduleRow;
+        $scheduleResult = mysqli_query($conn, $scheduleSql);
+        if ($scheduleResult) {
+            while ($scheduleRow = mysqli_fetch_assoc($scheduleResult)) {
+                $staffId = (int) ($scheduleRow['staff_id'] ?? 0);
+                if ($staffId > 0) {
+                    $staffSchedulesMap[$staffId][] = $scheduleRow;
+                }
             }
-            $scheduleStmt->close();
         }
     }
 }
 
-$calendarEvents = [];
-foreach ($staffSchedules as $schedule) {
-    if (!empty($schedule['booking_id']) && !empty($schedule['booking_date']) && !empty($schedule['time_start']) && !empty($schedule['time_end'])) {
-        $calendarEvents[] = [
+$staffScheduleData = [];
+
+foreach ($staffMembers as $staffMember) {
+    $staffId = (int) $staffMember['staff_id'];
+    $schedules = $staffSchedulesMap[$staffId] ?? [];
+    $bookings = [];
+    $events   = [];
+
+    foreach ($schedules as $schedule) {
+        if (empty($schedule['booking_id']) || empty($schedule['booking_date']) || empty($schedule['time_start']) || empty($schedule['time_end'])) {
+            continue;
+        }
+
+        $statusCode  = booking_status_code($schedule['status'] ?? null);
+        $statusLabel = booking_status_label($statusCode);
+        $statusBadge = booking_status_badge_class($statusCode);
+        $timeRange   = trim(($schedule['time_start'] ?? '') . ' - ' . ($schedule['time_end'] ?? ''));
+        $priceNumber = number_format((float) ($schedule['final_price'] ?? 0), 2);
+
+        $bookings[] = [
+            'booking_id'     => (int) $schedule['booking_id'],
+            'date'           => $schedule['booking_date'] ?? '',
+            'time'           => $timeRange,
+            'customer'       => $schedule['customer_name'] ?? 'Unknown Customer',
+            'services'       => $schedule['services'] ?? 'No Services',
+            'price'          => $priceNumber,
+            'price_display'  => '€' . $priceNumber,
+            'status_label'   => $statusLabel,
+            'status_badge'   => $statusBadge,
+        ];
+
+        $events[] = [
             'id'            => (int) $schedule['booking_id'],
             'title'         => $schedule['customer_name'] ?? 'Unknown Customer',
-            'start'         => $schedule['booking_date'] . 'T' . $schedule['time_start'],
-            'end'           => $schedule['booking_date'] . 'T' . $schedule['time_end'],
+            'start'         => ($schedule['booking_date'] ?? '') . 'T' . ($schedule['time_start'] ?? ''),
+            'end'           => ($schedule['booking_date'] ?? '') . 'T' . ($schedule['time_end'] ?? ''),
             'extendedProps' => [
-                'customer' => $schedule['customer_name'] ?? 'Unknown Customer',
-                'services' => $schedule['services'] ?? 'No Services',
-                'price'    => '€' . number_format((float) ($schedule['final_price'] ?? 0), 2),
-                'status'   => booking_status_label($schedule['status']),
-                'time'     => ($schedule['time_start'] ?? '') . ' - ' . ($schedule['time_end'] ?? ''),
+                'bookingId' => (int) $schedule['booking_id'],
+                'date'      => $schedule['booking_date'] ?? '',
+                'time'      => $timeRange,
+                'customer'  => $schedule['customer_name'] ?? 'Unknown Customer',
+                'services'  => $schedule['services'] ?? 'No Services',
+                'price'     => '€' . $priceNumber,
+                'status'    => $statusLabel,
             ],
         ];
     }
+
+    $staffScheduleData[$staffId] = [
+        'name'     => $staffMember['staff_name'] ?? '',
+        'bookings' => $bookings,
+        'events'   => $events,
+    ];
 }
+
+$staffScheduleJson = json_encode($staffScheduleData, JSON_UNESCAPED_UNICODE);
 ?>
 
 <!DOCTYPE html>
@@ -137,6 +170,7 @@ foreach ($staffSchedules as $schedule) {
                     <th>Start Job</th>
                     <th>End Job</th>
                     <th>Status</th>
+                    <th>Schedule</th>
                     <th>Detail</th>
                     <th>Edit</th>
                     <th>Delete</th>
@@ -158,6 +192,14 @@ foreach ($staffSchedules as $schedule) {
                         <td><?= htmlspecialchars($staff['end_job']); ?></td>
                         <td><?= htmlspecialchars($staff['st_status']); ?></td>
                         <td>
+                          <button class="btn btn-outline-info btn-sm btn-view-schedule"
+                                  type="button"
+                                  data-staff-id="<?= (int) $staff['staff_id']; ?>"
+                                  data-staff-name="<?= htmlspecialchars($staff['staff_name']); ?>">
+                            Schedule
+                          </button>
+                        </td>
+                        <td>
                           <a class="btn btn-outline-primary btn-sm" href="staff_detail.php?id=<?= $staff['staff_id']; ?>">Detail</a>
                         </td>
                         <td>
@@ -170,7 +212,7 @@ foreach ($staffSchedules as $schedule) {
                     <?php endforeach; ?>
                   <?php else: ?>
                     <tr>
-                      <td colspan="14" class="text-center text-muted">No staff members found.</td>
+                      <td colspan="15" class="text-center text-muted">No staff members found.</td>
                     </tr>
                   <?php endif; ?>
                 </tbody>
@@ -183,243 +225,296 @@ foreach ($staffSchedules as $schedule) {
       </div>
     </section>
 
-    <section class="section mt-4">
-      <div class="row">
-        <div class="col-lg-12">
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">Staff Schedules</h5>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
 
-              <?php if (!empty($staffMembers)) : ?>
-                <form method="get" class="row g-2 align-items-end">
-                  <div class="col-md-6">
-                    <label for="staff_id" class="form-label">Select Staff</label>
-                    <select name="staff_id" id="staff_id" class="form-select">
-                      <option value="">-- Select staff --</option>
-                      <?php foreach ($staffMembers as $staffMember) : ?>
-                        <option value="<?= (int) $staffMember['staff_id']; ?>" <?= $selectedStaffId === (int) $staffMember['staff_id'] ? 'selected' : ''; ?>>
-                          <?= htmlspecialchars($staffMember['staff_name']); ?>
-                        </option>
-                      <?php endforeach; ?>
-                    </select>
-                  </div>
-                  <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">View Schedule</button>
-                  </div>
-                </form>
-              <?php else : ?>
-                <p class="text-muted">No staff available.</p>
-              <?php endif; ?>
+    <style>
+      #staff-schedule-calendar {
+        max-width: 100%;
+        margin: 0 auto;
+      }
 
-              <?php if ($selectedStaffId > 0) : ?>
-                <?php if ($selectedStaff) : ?>
-                  <hr>
-                  <div class="d-flex justify-content-between align-items-center flex-wrap">
-                    <h6 class="mb-3">Schedule for <?= htmlspecialchars($selectedStaff['staff_name']); ?></h6>
-                    <div class="view-toggle mb-3">
-                      <button class="btn btn-primary me-2" type="button" onclick="showAdminCalendar()">Calendar View</button>
-                      <button class="btn btn-secondary" type="button" onclick="showAdminTable()">Table View</button>
-                    </div>
-                  </div>
+      .fc-event {
+        cursor: pointer;
+      }
 
-                  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css">
-                  <style>
-                    #admin-calendar {
-                      max-width: 900px;
-                      margin: 20px auto;
-                    }
+      .schedule-view-toggle .btn + .btn {
+        margin-left: 0.5rem;
+      }
+    </style>
 
-                    .fc-event {
-                      cursor: pointer;
-                    }
-
-                    .admin-table-responsive {
-                      margin-top: 20px;
-                    }
-
-                    .view-toggle {
-                      margin-bottom: 0;
-                    }
-
-                    .fc-daygrid-day {
-                      height: 120px;
-                      overflow: hidden;
-                    }
-
-                    .fc-daygrid-day-frame {
-                      height: 100%;
-                      display: flex;
-                      flex-direction: column;
-                      overflow: hidden;
-                    }
-
-                    .fc-daygrid-day-top {
-                      flex-shrink: 0;
-                    }
-
-                    .fc-daygrid-event {
-                      font-size: 0.75rem;
-                      white-space: nowrap;
-                      overflow: hidden;
-                      text-overflow: ellipsis;
-                    }
-
-                    .fc-daygrid-day-events {
-                      flex-grow: 1;
-                      overflow: hidden;
-                    }
-                  </style>
-
-                  <div id="admin-calendar-view">
-                    <div id="admin-calendar"></div>
-                  </div>
-
-                  <div id="admin-table-view" style="display: none;">
-                    <div class="table-responsive admin-table-responsive">
-                      <table class="table table-bordered">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>Customer</th>
-                            <th>Services</th>
-                            <th>Price (€)</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <?php if (!empty($staffSchedules)) : ?>
-                            <?php foreach ($staffSchedules as $schedule) : ?>
-                              <tr>
-                                <td><?= htmlspecialchars($schedule['booking_date']); ?></td>
-                                <td><?= htmlspecialchars($schedule['time_start']); ?> - <?= htmlspecialchars($schedule['time_end']); ?></td>
-                                <td><?= htmlspecialchars($schedule['customer_name']); ?></td>
-                                <td><?= htmlspecialchars($schedule['services']); ?></td>
-                                <td>€<?= number_format((float) ($schedule['final_price'] ?? 0), 2); ?></td>
-                                <td>
-                                  <?php
-                                  $statusCode = booking_status_code($schedule['status']);
-                                  $badgeClass = booking_status_badge_class($statusCode);
-                                  $statusText = booking_status_label($statusCode);
-                                  ?>
-                                  <span class="badge <?= $badgeClass; ?>"><?= htmlspecialchars($statusText); ?></span>
-                                </td>
-                                <td>
-                                  <button class="btn btn-info btn-sm"
-                                          type="button"
-                                          data-bs-toggle="modal"
-                                          data-bs-target="#adminScheduleModal"
-                                          data-booking-id="<?= (int) $schedule['booking_id']; ?>"
-                                          data-date="<?= htmlspecialchars($schedule['booking_date']); ?>"
-                                          data-time="<?= htmlspecialchars($schedule['time_start']); ?> - <?= htmlspecialchars($schedule['time_end']); ?>"
-                                          data-customer="<?= htmlspecialchars($schedule['customer_name']); ?>"
-                                          data-services="<?= htmlspecialchars($schedule['services']); ?>"
-                                          data-price="€<?= number_format((float) ($schedule['final_price'] ?? 0), 2); ?>"
-                                          data-status="<?= htmlspecialchars(booking_status_label($schedule['status'])); ?>">
-                                    View
-                                  </button>
-                                </td>
-                              </tr>
-                            <?php endforeach; ?>
-                          <?php else : ?>
-                            <tr>
-                              <td colspan="7" class="text-center text-muted">No schedules found for this staff member.</td>
-                            </tr>
-                          <?php endif; ?>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div class="modal fade" id="adminScheduleModal" tabindex="-1" aria-labelledby="adminScheduleModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                      <div class="modal-content">
-                        <div class="modal-header">
-                          <h5 class="modal-title" id="adminScheduleModalLabel">Schedule Details</h5>
-                          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <div class="modal-body">
-                          <p><strong>Booking ID:</strong> <span id="admin-modal-booking-id"></span></p>
-                          <p><strong>Date:</strong> <span id="admin-modal-date"></span></p>
-                          <p><strong>Time:</strong> <span id="admin-modal-time"></span></p>
-                          <p><strong>Customer:</strong> <span id="admin-modal-customer"></span></p>
-                          <p><strong>Services:</strong> <span id="admin-modal-services"></span></p>
-                          <p><strong>Price:</strong> <span id="admin-modal-price"></span></p>
-                          <p><strong>Status:</strong> <span id="admin-modal-status"></span></p>
-                        </div>
-                        <div class="modal-footer">
-                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                <?php else : ?>
-                  <hr>
-                  <p class="text-danger">Selected staff not found.</p>
-                <?php endif; ?>
-              <?php endif; ?>
-
+    <div class="modal fade" id="staffScheduleModal" tabindex="-1" aria-labelledby="staffScheduleModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staffScheduleModalTitle">Staff Schedule</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-2">
+              <h6 class="mb-0" id="staffScheduleModalSubtitle"></h6>
+              <div class="btn-group schedule-view-toggle" role="group" aria-label="Schedule view toggle">
+                <button type="button" class="btn btn-primary" id="btnScheduleCalendar">Calendar View</button>
+                <button type="button" class="btn btn-outline-primary" id="btnScheduleTable">Table View</button>
+              </div>
             </div>
+
+            <div id="staff-schedule-detail" class="border rounded p-3 mb-3 d-none">
+              <h6 class="mb-2">Booking Details</h6>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <p class="mb-1"><strong>Booking ID:</strong> <span id="detail-booking-id">-</span></p>
+                  <p class="mb-1"><strong>Date:</strong> <span id="detail-date">-</span></p>
+                  <p class="mb-1"><strong>Time:</strong> <span id="detail-time">-</span></p>
+                </div>
+                <div class="col-sm-6">
+                  <p class="mb-1"><strong>Customer:</strong> <span id="detail-customer">-</span></p>
+                  <p class="mb-1"><strong>Services:</strong> <span id="detail-services">-</span></p>
+                  <p class="mb-1"><strong>Price:</strong> <span id="detail-price">-</span></p>
+                  <p class="mb-1"><strong>Status:</strong> <span id="detail-status">-</span></p>
+                </div>
+              </div>
+            </div>
+
+            <div id="staff-calendar-view" class="mb-4">
+              <div id="staff-schedule-calendar"></div>
+            </div>
+
+            <div id="staff-table-view" class="table-responsive d-none">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Customer</th>
+                    <th>Services</th>
+                    <th>Price (€)</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="staff-schedule-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>
-    </section>
+    </div>
 
   </main><!-- End #main -->
 
   <?php include("footer.php"); ?>
 
-  <?php if ($selectedStaff && $selectedStaffId > 0) : ?>
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
-    <script>
-      function showAdminCalendar() {
-        document.getElementById('admin-calendar-view').style.display = 'block';
-        document.getElementById('admin-table-view').style.display = 'none';
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var scheduleData = <?= $staffScheduleJson ?? '{}'; ?>;
+      var modalEl = document.getElementById('staffScheduleModal');
+      var modal = new bootstrap.Modal(modalEl);
+      var modalTitle = document.getElementById('staffScheduleModalTitle');
+      var modalSubtitle = document.getElementById('staffScheduleModalSubtitle');
+      var calendarView = document.getElementById('staff-calendar-view');
+      var tableView = document.getElementById('staff-table-view');
+      var calendarButton = document.getElementById('btnScheduleCalendar');
+      var tableButton = document.getElementById('btnScheduleTable');
+      var detailBox = document.getElementById('staff-schedule-detail');
+      var detailFields = {
+        booking: document.getElementById('detail-booking-id'),
+        date: document.getElementById('detail-date'),
+        time: document.getElementById('detail-time'),
+        customer: document.getElementById('detail-customer'),
+        services: document.getElementById('detail-services'),
+        price: document.getElementById('detail-price'),
+        status: document.getElementById('detail-status')
+      };
+      var tableBody = document.getElementById('staff-schedule-table-body');
+      var calendarEl = document.getElementById('staff-schedule-calendar');
+      var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        dayMaxEventRows: 3,
+        locale: 'en',
+        events: []
+      });
+      calendar.render();
+
+      function setActiveButton(activeButton, inactiveButton) {
+        activeButton.classList.add('btn-primary');
+        activeButton.classList.remove('btn-outline-primary');
+        inactiveButton.classList.add('btn-outline-primary');
+        inactiveButton.classList.remove('btn-primary');
       }
 
-      function showAdminTable() {
-        document.getElementById('admin-calendar-view').style.display = 'none';
-        document.getElementById('admin-table-view').style.display = 'block';
+      function showCalendarView() {
+        calendarView.classList.remove('d-none');
+        tableView.classList.add('d-none');
+        setActiveButton(calendarButton, tableButton);
       }
 
-      document.addEventListener('DOMContentLoaded', function () {
-        var calendarEl = document.getElementById('admin-calendar');
-        if (calendarEl) {
-          var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            dayMaxEventRows: 3,
-            locale: 'en',
-            events: <?= json_encode($calendarEvents, JSON_UNESCAPED_UNICODE); ?>,
-            eventClick: function (info) {
-              document.getElementById('admin-modal-booking-id').textContent = info.event.id;
-              document.getElementById('admin-modal-date').textContent = info.event.start.toISOString().split('T')[0];
-              document.getElementById('admin-modal-time').textContent = info.event.extendedProps.time || '';
-              document.getElementById('admin-modal-customer').textContent = info.event.extendedProps.customer || '';
-              document.getElementById('admin-modal-services').textContent = info.event.extendedProps.services || '';
-              document.getElementById('admin-modal-price').textContent = info.event.extendedProps.price || '';
-              document.getElementById('admin-modal-status').textContent = info.event.extendedProps.status || '';
-              new bootstrap.Modal(document.getElementById('adminScheduleModal')).show();
-            }
-          });
-          calendar.render();
+      function showTableView() {
+        calendarView.classList.add('d-none');
+        tableView.classList.remove('d-none');
+        setActiveButton(tableButton, calendarButton);
+      }
+
+      function updateDetail(detail) {
+        if (!detail || (!detail.booking_id && !detail.customer && !detail.services)) {
+          detailBox.classList.add('d-none');
+          return;
         }
 
-        document.querySelectorAll('#admin-table-view button[data-bs-toggle="modal"]').forEach(function (button) {
-          button.addEventListener('click', function () {
-            document.getElementById('admin-modal-booking-id').textContent = this.dataset.bookingId || '';
-            document.getElementById('admin-modal-date').textContent = this.dataset.date || '';
-            document.getElementById('admin-modal-time').textContent = this.dataset.time || '';
-            document.getElementById('admin-modal-customer').textContent = this.dataset.customer || '';
-            document.getElementById('admin-modal-services').textContent = this.dataset.services || '';
-            document.getElementById('admin-modal-price').textContent = this.dataset.price || '';
-            document.getElementById('admin-modal-status').textContent = this.dataset.status || '';
-          });
+        detailFields.booking.textContent = detail.booking_id || '-';
+        detailFields.date.textContent = detail.date || '-';
+        detailFields.time.textContent = detail.time || '-';
+        detailFields.customer.textContent = detail.customer || '-';
+        detailFields.services.textContent = detail.services || '-';
+        detailFields.price.textContent = detail.price || '-';
+        detailFields.status.textContent = detail.status || '-';
+        detailBox.classList.remove('d-none');
+      }
+
+      calendarButton.addEventListener('click', showCalendarView);
+      tableButton.addEventListener('click', showTableView);
+
+      document.querySelectorAll('.btn-view-schedule').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var staffId = this.dataset.staffId;
+          var staffName = this.dataset.staffName || '';
+          var data = scheduleData[staffId] || { bookings: [], events: [], name: staffName };
+
+          modalTitle.textContent = 'Staff Schedule';
+          modalSubtitle.textContent = data.name ? 'Schedule for ' + data.name : '';
+
+          while (tableBody.firstChild) {
+            tableBody.removeChild(tableBody.firstChild);
+          }
+
+          if (data.bookings && data.bookings.length) {
+            data.bookings.forEach(function (booking) {
+              var row = document.createElement('tr');
+
+              var dateCell = document.createElement('td');
+              dateCell.textContent = booking.date || '-';
+              row.appendChild(dateCell);
+
+              var timeCell = document.createElement('td');
+              timeCell.textContent = booking.time || '-';
+              row.appendChild(timeCell);
+
+              var customerCell = document.createElement('td');
+              customerCell.textContent = booking.customer || '-';
+              row.appendChild(customerCell);
+
+              var servicesCell = document.createElement('td');
+              servicesCell.textContent = booking.services || '-';
+              row.appendChild(servicesCell);
+
+              var priceCell = document.createElement('td');
+              priceCell.textContent = booking.price_display || ('€' + (booking.price || '0.00'));
+              row.appendChild(priceCell);
+
+              var statusCell = document.createElement('td');
+              var statusBadge = document.createElement('span');
+              statusBadge.className = 'badge ' + (booking.status_badge || 'bg-secondary');
+              statusBadge.textContent = booking.status_label || '-';
+              statusCell.appendChild(statusBadge);
+              row.appendChild(statusCell);
+
+              var actionCell = document.createElement('td');
+              var actionButton = document.createElement('button');
+              actionButton.type = 'button';
+              actionButton.className = 'btn btn-info btn-sm btn-view-booking';
+              actionButton.textContent = 'View';
+              actionButton.dataset.staffId = staffId;
+              actionButton.dataset.bookingId = booking.booking_id;
+              actionCell.appendChild(actionButton);
+              row.appendChild(actionCell);
+
+              tableBody.appendChild(row);
+            });
+
+            updateDetail({
+              booking_id: data.bookings[0].booking_id || '',
+              date: data.bookings[0].date || '',
+              time: data.bookings[0].time || '',
+              customer: data.bookings[0].customer || '',
+              services: data.bookings[0].services || '',
+              price: data.bookings[0].price_display || ('€' + (data.bookings[0].price || '0.00')),
+              status: data.bookings[0].status_label || ''
+            });
+          } else {
+            var emptyRow = document.createElement('tr');
+            var emptyCell = document.createElement('td');
+            emptyCell.colSpan = 7;
+            emptyCell.className = 'text-center text-muted';
+            emptyCell.textContent = 'No schedules found for this staff member.';
+            emptyRow.appendChild(emptyCell);
+            tableBody.appendChild(emptyRow);
+            detailBox.classList.add('d-none');
+          }
+
+          calendar.removeAllEvents();
+          if (data.events && data.events.length) {
+            data.events.forEach(function (event) {
+              calendar.addEvent(event);
+            });
+            calendar.gotoDate(data.events[0].start);
+          } else {
+            calendar.gotoDate(new Date());
+          }
+
+          showCalendarView();
+          modal.show();
         });
       });
-    </script>
-  <?php endif; ?>
+
+      calendar.on('eventClick', function (info) {
+        var props = info.event.extendedProps || {};
+        updateDetail({
+          booking_id: props.bookingId || info.event.id || '-',
+          date: props.date || (info.event.startStr ? info.event.startStr.split('T')[0] : ''),
+          time: props.time || '',
+          customer: props.customer || '',
+          services: props.services || '',
+          price: props.price || '',
+          status: props.status || ''
+        });
+      });
+
+      tableBody.addEventListener('click', function (event) {
+        var target = event.target.closest('.btn-view-booking');
+        if (!target) {
+          return;
+        }
+
+        var staffId = target.dataset.staffId;
+        var bookingId = target.dataset.bookingId;
+        var data = scheduleData[staffId];
+        if (!data || !data.bookings) {
+          return;
+        }
+
+        var booking = data.bookings.find(function (item) {
+          return String(item.booking_id) === String(bookingId);
+        });
+
+        if (!booking) {
+          return;
+        }
+
+        updateDetail({
+          booking_id: booking.booking_id || '-',
+          date: booking.date || '-',
+          time: booking.time || '-',
+          customer: booking.customer || '-',
+          services: booking.services || '-',
+          price: booking.price_display || ('€' + (booking.price || '0.00')),
+          status: booking.status_label || '-'
+        });
+      });
+    });
+  </script>
 
 </body>
 

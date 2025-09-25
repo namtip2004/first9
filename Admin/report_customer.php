@@ -119,28 +119,35 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
 $search      = trim($_GET['q'] ?? '');
 $status      = $_GET['status'] ?? 'all';      // active/inactive/all
 $genderTable = $_GET['gender'] ?? 'all';      // male/female/other/all
-$sort        = $_GET['sort'] ?? 'c_created_at';
+$ageRange    = $_GET['age_range'] ?? 'all';
+$sort        = $_GET['sort'] ?? 'customer_id';
 $dir         = strtoupper($_GET['dir'] ?? 'DESC');
 $dir         = ($dir==='ASC') ? 'ASC' : 'DESC';
 
 $sortMap = [
-  'c_created_at'      => "c.c_created_at $dir",
-  'customer_name'     => "c.customer_name $dir",
-  'total_bookings'    => "total_bookings $dir",
-  'total_spent'       => "total_spent $dir",
-  'avg_booking_value' => "avg_booking_value $dir",
-  'last_booking'      => "last_booking $dir"
+  'customer_id'    => "c.customer_id $dir",
+  'customer_name'  => "c.customer_name $dir"
 ];
-$orderBy = $sortMap[$sort] ?? $sortMap['c_created_at'];
+$orderBy = $sortMap[$sort] ?? $sortMap['customer_id'];
 
 $whereList = "1=1";
 $params    = []; 
 $types     = "";
 
 if ($search !== '') {
-  $whereList .= " AND (c.customer_name LIKE ? OR c.gmail LIKE ?)";
+  $whereList .= " AND (c.customer_name LIKE ?";
   $kw = "%$search%";
-  $params[] = $kw; $params[] = $kw; $types .= "ss";
+  $params[] = $kw; $types .= "s";
+  if (ctype_digit($search)) {
+    $whereList .= " OR c.customer_id = ?";
+    $params[] = (int)$search;
+    $types   .= "i";
+  } else {
+    $whereList .= " OR CAST(c.customer_id AS CHAR) LIKE ?";
+    $params[] = $kw;
+    $types   .= "s";
+  }
+  $whereList .= ")";
 }
 if ($status !== 'all') {
   $whereList .= " AND LOWER(COALESCE(c.account_status,'')) = LOWER(?)";
@@ -149,6 +156,28 @@ if ($status !== 'all') {
 if ($genderTable !== 'all') {
   $whereList .= " AND LOWER(COALESCE(c.gender,'')) = LOWER(?)";
   $params[] = $genderTable; $types .= "s";
+}
+$ageOptions = [
+  'all'     => [null, null],
+  'under20' => [null, 19],
+  '20_29'   => [20, 29],
+  '30_39'   => [30, 39],
+  '40_49'   => [40, 49],
+  '50plus'  => [50, null]
+];
+if ($ageRange !== 'all' && isset($ageOptions[$ageRange])) {
+  [$minAge, $maxAge] = $ageOptions[$ageRange];
+  $whereList .= " AND c.birthday IS NOT NULL";
+  if ($minAge !== null) {
+    $whereList .= " AND TIMESTAMPDIFF(YEAR, c.birthday, CURDATE()) >= ?";
+    $params[] = $minAge;
+    $types   .= "i";
+  }
+  if ($maxAge !== null) {
+    $whereList .= " AND TIMESTAMPDIFF(YEAR, c.birthday, CURDATE()) <= ?";
+    $params[] = $maxAge;
+    $types   .= "i";
+  }
 }
 
 // Count after filters
@@ -169,12 +198,15 @@ $offset  = ($page-1)*$perPage;
 // Data with aggregates
 $sqlList = "
   SELECT
-    c.customer_id, c.customer_name, c.gender, c.gmail, c.tel,
-    c.account_status, c.c_created_at, c.profileimg, c.birthday,
-    COUNT(b.booking_id)                           AS total_bookings,
-    COALESCE(SUM(b.final_price), 0)               AS total_spent,
-    MAX(COALESCE(b.b_created_at, b.booking_date)) AS last_booking,
-    AVG(b.final_price)                            AS avg_booking_value
+    c.customer_id,
+    c.customer_name,
+    c.gender,
+    c.gmail,
+    c.account_status,
+    c.birthday,
+    COUNT(b.booking_id)             AS total_bookings,
+    COALESCE(SUM(b.final_price), 0) AS total_spent,
+    TIMESTAMPDIFF(YEAR, c.birthday, CURDATE()) AS age_years
   FROM customer c
   LEFT JOIN booking b ON b.customer_id = c.customer_id
   WHERE $whereList
@@ -255,7 +287,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               <input type="hidden" name="tab" value="table">
               <div class="col-auto">
                 <label class="form-label small-label">ค้นหา</label>
-                <input type="text" class="form-control" name="q" value="<?= safe($search) ?>" placeholder="ชื่อ/อีเมล">
+                <input type="text" class="form-control" name="q" value="<?= safe($search) ?>" placeholder="ID / ชื่อลูกค้า">
               </div>
               <div class="col-auto">
                 <label class="form-label small-label">สถานะ</label>
@@ -275,19 +307,26 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                 </select>
               </div>
               <div class="col-auto">
+                <label class="form-label small-label">ช่วงอายุ</label>
+                <select class="form-select" name="age_range">
+                  <option value="all"     <?= $ageRange==='all'?'selected':'' ?>>ทั้งหมด</option>
+                  <option value="under20" <?= $ageRange==='under20'?'selected':'' ?>>ต่ำกว่า 20</option>
+                  <option value="20_29"   <?= $ageRange==='20_29'?'selected':'' ?>>20-29</option>
+                  <option value="30_39"   <?= $ageRange==='30_39'?'selected':'' ?>>30-39</option>
+                  <option value="40_49"   <?= $ageRange==='40_49'?'selected':'' ?>>40-49</option>
+                  <option value="50plus"  <?= $ageRange==='50plus'?'selected':'' ?>>50 ขึ้นไป</option>
+                </select>
+              </div>
+              <div class="col-auto">
                 <label class="form-label small-label">Sort by</label>
                 <div class="input-group">
                   <select class="form-select" name="sort">
-                    <option value="c_created_at"      <?= $sort==='c_created_at'?'selected':'' ?>>วันที่สมัคร</option>
-                    <option value="customer_name"     <?= $sort==='customer_name'?'selected':'' ?>>ชื่อลูกค้า</option>
-                    <option value="total_bookings"    <?= $sort==='total_bookings'?'selected':'' ?>>จำนวนครั้งที่จอง</option>
-                    <option value="total_spent"       <?= $sort==='total_spent'?'selected':'' ?>>ยอดใช้จ่ายรวม</option>
-                    <option value="avg_booking_value" <?= $sort==='avg_booking_value'?'selected':'' ?>>ค่าเฉลี่ยต่อบิล</option>
-                    <option value="last_booking"      <?= $sort==='last_booking'?'selected':'' ?>>จองล่าสุด</option>
+                    <option value="customer_id"   <?= $sort==='customer_id'?'selected':'' ?>>ID</option>
+                    <option value="customer_name" <?= $sort==='customer_name'?'selected':'' ?>>ชื่อ</option>
                   </select>
                   <select class="form-select" name="dir">
-                    <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>ASC</option>
-                    <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>DESC</option>
+                    <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>น้อย-มาก / A-Z</option>
+                    <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>มาก-น้อย / Z-A</option>
                   </select>
                 </div>
               </div>
@@ -304,52 +343,35 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <table class="table table-striped table-hover align-middle" id="customerTable">
               <thead class="table-light">
                 <tr>
-                  <th>#</th>
-                  <th>Profile</th>
+                  <th>ID</th>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Phone</th>
                   <th>Gender</th>
                   <th>Age</th>
                   <th>Status</th>
                   <th class="text-end">Total Bookings</th>
                   <th class="text-end">Total Spent</th>
-                  <th class="text-end">Avg. Booking</th>
-                  <th>Last Booking</th>
-                  <th>Member Since</th>
-                  <th>Action</th>
+                  <th>View Booking</th>
                 </tr>
               </thead>
               <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="14" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
-              <?php else: foreach($rows as $i=>$r):
-                // Age
-                $ageText = 'N/A';
-                if (!empty($r['birthday'])) {
-                  try { $age = (new DateTime())->diff(new DateTime($r['birthday']))->y; $ageText = $age.' years'; } catch (Exception $e) {}
+                <tr><td colspan="9" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+              <?php else: foreach($rows as $r):
+                $ageText = '-';
+                if ($r['age_years'] !== null) {
+                  $ageText = (int)$r['age_years'];
+                } elseif (!empty($r['birthday'])) {
+                  try { $age = (new DateTime())->diff(new DateTime($r['birthday']))->y; $ageText = $age; } catch (Exception $e) {}
                 }
                 $g = strtolower((string)$r['gender']);
                 $genderLabel = ucfirst($g ?: 'other');
                 $isActive = strtolower((string)$r['account_status'])==='active';
-                $lastBk   = $r['last_booking'] ? date('M d, Y', strtotime($r['last_booking'])) : null;
-                $memberSince = $r['c_created_at'] ? date('M d, Y', strtotime($r['c_created_at'])) : null;
               ?>
                 <tr>
-                  <td><?= $offset + $i + 1 ?></td>
-                  <td>
-                    <?php if (!empty($r['profileimg'])): ?>
-                      <img src="assets/img/<?= safe($r['profileimg']) ?>" alt="Profile"
-                           style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
-                    <?php else: ?>
-                      <div style="width:40px;height:40px;background:#f0f0f0;border-radius:50%;display:flex;align-items:center;justify-content:center">
-                        <i class="bi bi-person"></i>
-                      </div>
-                    <?php endif; ?>
-                  </td>
+                  <td><?= (int)$r['customer_id'] ?></td>
                   <td><?= safe($r['customer_name']) ?></td>
                   <td><?= safe($r['gmail']) ?></td>
-                  <td><?= safe($r['tel']) ?></td>
                   <td><?= safe($genderLabel) ?></td>
                   <td><?= $ageText ?></td>
                   <td>
@@ -359,24 +381,8 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   </td>
                   <td class="text-end"><span class="badge bg-primary"><?= number_format((int)$r['total_bookings']) ?></span></td>
                   <td class="text-end text-success fw-bold">฿<?= number_format((float)$r['total_spent'], 2) ?></td>
-                  <td class="text-end">
-                    <?php if ($r['avg_booking_value'] !== null): ?>
-                      ฿<?= number_format((float)$r['avg_booking_value'], 2) ?>
-                    <?php else: ?>
-                      <span class="text-muted">No bookings</span>
-                    <?php endif; ?>
-                  </td>
-                  <td><?= $lastBk ? '<small class="text-muted">'.$lastBk.'</small>' : '<span class="text-muted">Never</span>' ?></td>
-                  <td><small class="text-muted"><?= $memberSince ?: '-' ?></small></td>
                   <td>
-                    <div class="btn-group" role="group">
-                      <a href="customer_detail.php?id=<?= (int)$r['customer_id'] ?>" class="btn btn-sm btn-outline-primary" title="View Details">
-                        <i class="bi bi-eye"></i>
-                      </a>
-                      <a href="customer_bookings.php?id=<?= (int)$r['customer_id'] ?>" class="btn btn-sm btn-outline-success" title="View Bookings">
-                        <i class="bi bi-calendar-check"></i>
-                      </a>
-                    </div>
+                    <a href="customer_bookings.php?id=<?= (int)$r['customer_id'] ?>" class="btn btn-sm btn-outline-primary">ดูการจอง</a>
                   </td>
                 </tr>
               <?php endforeach; endif; ?>

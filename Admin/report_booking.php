@@ -102,31 +102,44 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
 }
 
 // ----------------------- TABLE: filters + sort + pagination -----------------------
-$search = trim($_GET['q'] ?? '');
+$searchId = trim($_GET['booking_id'] ?? '');
 $statusParam = $_GET['status'] ?? 'all';
 $statusCode = $statusParam === 'all' ? null : booking_status_code($statusParam);
 $statusValue = $statusCode === null ? 'all' : (string)$statusCode;
 $staffF = isset($_GET['staff']) ? (int)$_GET['staff'] : 0;
 $serviceF = isset($_GET['service']) ? (int)$_GET['service'] : 0;
-$startDate = $_GET['start_date'] ?? '';
-$endDate   = $_GET['end_date']   ?? '';
-$sort   = $_GET['sort'] ?? 'date';
+$customerF = isset($_GET['customer']) ? (int)$_GET['customer'] : 0;
+$period = $_GET['period'] ?? 'all';
+$period = in_array($period, ['all','date','month','year'], true) ? $period : 'all';
+$periodDate = $_GET['period_date'] ?? '';
+$periodMonth = isset($_GET['period_month']) ? (int)$_GET['period_month'] : (int)date('n');
+$periodMonthYear = isset($_GET['period_month_year']) ? (int)$_GET['period_month_year'] : (int)date('Y');
+$periodYear = isset($_GET['period_year']) ? (int)$_GET['period_year'] : (int)date('Y');
+$periodMonth = ($periodMonth >=1 && $periodMonth <=12) ? $periodMonth : (int)date('n');
+if($periodMonthYear < $minYear) { $periodMonthYear = $minYear; }
+elseif($periodMonthYear > $maxYear) { $periodMonthYear = $maxYear; }
+if($periodYear < $minYear) { $periodYear = $minYear; }
+elseif($periodYear > $maxYear) { $periodYear = $maxYear; }
+$sort   = $_GET['sort'] ?? 'booked_at';
+$sort = in_array($sort, ['booked_at','service_time'], true) ? $sort : 'booked_at';
 $dir    = strtoupper($_GET['dir'] ?? 'DESC'); $dir=$dir==='ASC'?'ASC':'DESC';
 
 $sortMap=[
-  'date'    => "b.booking_date $dir, b.time_start $dir",
-  'price'   => "b.final_price $dir",
-  'status'  => "b.status $dir",
-  'customer'=> "c.customer_name $dir",
-  'staff'   => "s.staff_name $dir"
+  'booked_at'   => "COALESCE(b.b_created_at, CONCAT(b.booking_date, ' ', b.time_start)) $dir",
+  'service_time'=> "b.booking_date $dir, b.time_start $dir"
 ];
-$orderBy = $sortMap[$sort] ?? $sortMap['date'];
+$orderBy = $sortMap[$sort] ?? $sortMap['booked_at'];
 
 // WHERE conditions (base)
 $where = ["1=1"]; $types=""; $params=[];
-if($search!==''){
-  $where[]="(c.customer_name LIKE ? OR c.gmail LIKE ? OR s.staff_name LIKE ?)";
-  $kw="%$search%"; $params[]=$kw; $params[]=$kw; $params[]=$kw; $types.="sss";
+if($searchId!==''){
+  if(ctype_digit($searchId)){
+    $where[]="b.booking_id = ?";
+    $params[]=(int)$searchId; $types.='i';
+  }else{
+    $where[]="CAST(b.booking_id AS CHAR) LIKE ?";
+    $params[]='%'.$searchId.'%'; $types.='s';
+  }
 }
 if($statusCode !== null){
   $where[]="b.status=?"; $params[]=$statusCode; $types.="i";
@@ -134,16 +147,28 @@ if($statusCode !== null){
 if($staffF>0){
   $where[]="b.staff_id=?"; $params[]=$staffF; $types.="i";
 }
-if($startDate!==''){
-  $where[]="b.booking_date>=?"; $params[]=$startDate; $types.="s";
-}
-if($endDate!==''){
-  $where[]="b.booking_date<=?"; $params[]=$endDate; $types.="s";
+if($customerF>0){
+  $where[]="b.customer_id=?"; $params[]=$customerF; $types.='i';
 }
 // Service filter via EXISTS (avoid row dup)
 if($serviceF>0){
   $where[]="EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=?)";
   $params[]=$serviceF; $types.="i";
+}
+switch($period){
+  case 'date':
+    if($periodDate!==''){
+      $where[]="b.booking_date=?";
+      $params[]=$periodDate; $types.='s';
+    }
+    break;
+  case 'month':
+    $where[]="YEAR(b.booking_date)=?"; $params[]=$periodMonthYear; $types.='i';
+    $where[]="MONTH(b.booking_date)=?"; $params[]=$periodMonth; $types.='i';
+    break;
+  case 'year':
+    $where[]="YEAR(b.booking_date)=?"; $params[]=$periodYear; $types.='i';
+    break;
 }
 $whereSql = implode(" AND ",$where);
 
@@ -166,8 +191,8 @@ $off = ($page-1)*$per;
 
 // List with services (GROUP_CONCAT)
 $sqlList="
-  SELECT 
-    b.booking_id, b.booking_date, b.time_start, b.time_end, b.final_price, b.status,
+  SELECT
+    b.booking_id, b.booking_date, b.time_start, b.time_end, b.total_price, b.total_discount, b.final_price, b.status, b.b_created_at,
     c.customer_name, c.gmail, s.staff_name,
     GROUP_CONCAT(DISTINCT sv.service_name ORDER BY sv.service_name SEPARATOR ', ') AS services
   FROM booking b
@@ -189,6 +214,7 @@ $rows=[]; while($r=$rs->fetch_assoc()) $rows[]=$r; $stmt->close();
 // dropdown options
 $staffOps = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name");
 $serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
+$customerOps = $conn->query("SELECT customer_id, customer_name FROM customer ORDER BY customer_name");
 
 $baseQuery = $_GET;
 unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
@@ -236,8 +262,8 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <form class="row g-2 align-items-end" method="get">
           <input type="hidden" name="tab" value="table">
           <div class="col-md-auto">
-            <label class="form-label small-label">ค้นหา</label>
-            <input type="text" class="form-control" name="q" value="<?=esc($search)?>" placeholder="ลูกค้า/อีเมล/พนักงาน">
+            <label class="form-label small-label">ค้นหาจาก ID</label>
+            <input type="text" class="form-control" name="booking_id" value="<?=esc($searchId)?>" placeholder="เช่น 1001">
           </div>
           <div class="col-md-auto">
             <label class="form-label small-label">สถานะ</label>
@@ -254,15 +280,6 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">พนักงาน</label>
-            <select class="form-select" name="staff">
-              <option value="0">ทั้งหมด</option>
-              <?php while($s=$staffOps->fetch_assoc()): ?>
-                <option value="<?=$s['staff_id']?>" <?= $staffF==$s['staff_id']?'selected':'' ?>><?=esc($s['staff_name'])?></option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <div class="col-md-auto">
             <label class="form-label small-label">บริการ</label>
             <select class="form-select" name="service">
               <option value="0">ทั้งหมด</option>
@@ -272,25 +289,69 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">วันที่</label>
+            <label class="form-label small-label">พนักงาน</label>
+            <select class="form-select" name="staff">
+              <option value="0">ทั้งหมด</option>
+              <?php while($s=$staffOps->fetch_assoc()): ?>
+                <option value="<?=$s['staff_id']?>" <?= $staffF==$s['staff_id']?'selected':'' ?>><?=esc($s['staff_name'])?></option>
+              <?php endwhile; ?>
+            </select>
+          </div>
+          <div class="col-md-auto">
+            <label class="form-label small-label">ลูกค้า</label>
+            <select class="form-select" name="customer">
+              <option value="0">ทั้งหมด</option>
+              <?php while($cus=$customerOps->fetch_assoc()): ?>
+                <option value="<?=$cus['customer_id']?>" <?= $customerF==$cus['customer_id']?'selected':'' ?>><?=esc($cus['customer_name'])?></option>
+              <?php endwhile; ?>
+            </select>
+          </div>
+          <div class="col-md-auto">
+            <label class="form-label small-label">ช่วงเวลา</label>
+            <select class="form-select" name="period" id="periodSelect">
+              <option value="all" <?= $period==='all'?'selected':'' ?>>All</option>
+              <option value="date" <?= $period==='date'?'selected':'' ?>>รายวัน</option>
+              <option value="month" <?= $period==='month'?'selected':'' ?>>รายเดือน</option>
+              <option value="year" <?= $period==='year'?'selected':'' ?>>รายปี</option>
+            </select>
+          </div>
+          <div class="col-md-auto period-control <?= $period==='date'?'':'d-none' ?>" id="period-date">
+            <label class="form-label small-label">เลือกวันที่</label>
+            <input type="date" class="form-control" name="period_date" value="<?=esc($periodDate)?>">
+          </div>
+          <div class="col-md-auto period-control <?= $period==='month'?'':'d-none' ?>" id="period-month">
+            <label class="form-label small-label">เดือน / ปี</label>
             <div class="d-flex gap-2">
-              <input type="date" class="form-control" name="start_date" value="<?=esc($startDate)?>">
-              <input type="date" class="form-control" name="end_date"   value="<?=esc($endDate)?>">
+              <select class="form-select" name="period_month">
+                <?php for($m=1;$m<=12;$m++): ?>
+                  <option value="<?=$m?>" <?= $periodMonth==$m?'selected':'' ?>><?=$m?></option>
+                <?php endfor; ?>
+              </select>
+              <select class="form-select" name="period_month_year">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= $periodMonthYear==$y?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
             </div>
+          </div>
+          <div class="col-md-auto period-control <?= $period==='year'?'':'d-none' ?>" id="period-year">
+            <label class="form-label small-label">เลือกปี</label>
+            <select class="form-select" name="period_year">
+              <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                <option value="<?=$y?>" <?= $periodYear==$y?'selected':'' ?>><?=$y?></option>
+              <?php endfor; ?>
+            </select>
           </div>
           <div class="col-md-auto">
             <label class="form-label small-label">Sort by</label>
             <div class="input-group">
               <select class="form-select" name="sort">
-                <option value="date"     <?= $sort==='date'?'selected':'' ?>>วันที่จอง</option>
-                <option value="price"    <?= $sort==='price'?'selected':'' ?>>ราคา</option>
-                <option value="status"   <?= $sort==='status'?'selected':'' ?>>สถานะ</option>
-                <option value="customer" <?= $sort==='customer'?'selected':'' ?>>ลูกค้า</option>
-                <option value="staff"    <?= $sort==='staff'?'selected':'' ?>>พนักงาน</option>
+                <option value="booked_at" <?= $sort==='booked_at'?'selected':'' ?>>วันเวลาที่ทำการจอง</option>
+                <option value="service_time" <?= $sort==='service_time'?'selected':'' ?>>วันเวลาที่เข้าใช้บริการ</option>
               </select>
               <select class="form-select" name="dir">
-                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>ASC</option>
-                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>DESC</option>
+                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>เก่า → ใหม่</option>
+                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>ใหม่ → เก่า</option>
               </select>
             </div>
           </div>
@@ -306,40 +367,54 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           <table class="table table-striped table-hover align-middle" id="bookingTable">
             <thead class="table-light">
               <tr>
-                <th>Booking ID</th>
-                <th>Customer</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Services</th>
-                <th>Staff</th>
-                <th class="text-end">Final Price</th>
-                <th>Status</th>
-                <th>Action</th>
+                <th>ID</th>
+                <th>วันเวลาที่ทำการจอง</th>
+                <th>วันเวลาที่เข้าใช้บริการ</th>
+                <th>ลูกค้า</th>
+                <th>บริการ</th>
+                <th>พนักงาน</th>
+                <th class="text-end">ราคาก่อนหักส่วนลด</th>
+                <th class="text-end">ส่วนลด</th>
+                <th class="text-end">ราคาหลังหักส่วนลด</th>
+                <th>สถานะ</th>
               </tr>
             </thead>
             <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="9" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="10" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
               <?php else: foreach($rows as $bk): ?>
+                <?php
+                  $bookedAt = $bk['b_created_at'] ? date('Y-m-d H:i', strtotime($bk['b_created_at'])) : '-';
+                  $serviceDate = $bk['booking_date'] ? date('Y-m-d', strtotime($bk['booking_date'])) : '-';
+                  $serviceStart = $bk['time_start'] ? substr($bk['time_start'],0,5) : '';
+                  $serviceEnd = $bk['time_end'] ? substr($bk['time_end'],0,5) : '';
+                  if($serviceStart && $serviceEnd){
+                    $serviceRange = $serviceStart.' - '.$serviceEnd;
+                  }elseif($serviceStart){
+                    $serviceRange = $serviceStart;
+                  }elseif($serviceEnd){
+                    $serviceRange = $serviceEnd;
+                  }else{
+                    $serviceRange = '';
+                  }
+                  $serviceDateTime = trim($serviceDate . ' ' . $serviceRange);
+                ?>
                 <tr>
                   <td><?=esc($bk['booking_id'])?></td>
+                  <td><?=esc($bookedAt)?></td>
+                  <td><?=esc($serviceDateTime !== '' ? $serviceDateTime : '-')?></td>
                   <td>
                     <?=esc($bk['customer_name']?:'N/A')?><br>
                     <small class="text-muted"><?=esc($bk['gmail']?:'-')?></small>
                   </td>
-                  <td><?=esc($bk['booking_date'])?></td>
-                  <td><?=esc(substr($bk['time_start'],0,5))?>–<?=esc(substr($bk['time_end'],0,5))?></td>
                   <td><?=esc($bk['services']?:'N/A')?></td>
                   <td><?=esc($bk['staff_name']?:'N/A')?></td>
+                  <td class="text-end">฿<?=number_format((float)($bk['total_price'] ?? 0),2)?></td>
+                  <td class="text-end text-danger">฿<?=number_format((float)($bk['total_discount'] ?? 0),2)?></td>
                   <td class="text-end text-success fw-bold">฿<?=number_format((float)$bk['final_price'],2)?></td>
                   <td>
                     <?php $stCode = booking_status_code($bk['status']); $badgeClass = booking_status_badge_class($stCode); $label = booking_status_label($stCode); ?>
                     <span class="badge <?=$badgeClass?>"><?=esc($label ?: 'N/A')?></span>
-                  </td>
-                  <td>
-                    <div class="btn-group">
-                      <a href="booking_detail.php?id=<?= (int)$bk['booking_id'] ?>" class="btn btn-sm btn-outline-primary" title="View Details"><i class="bi bi-eye"></i></a>
-                    </div>
                   </td>
                 </tr>
               <?php endforeach; endif; ?>
@@ -483,6 +558,17 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const periodSelect=document.getElementById('periodSelect');
+function updatePeriodFilters(){
+  if(!periodSelect) return;
+  const v=periodSelect.value;
+  document.getElementById('period-date')?.classList.toggle('d-none',v!=='date');
+  document.getElementById('period-month')?.classList.toggle('d-none',v!=='month');
+  document.getElementById('period-year')?.classList.toggle('d-none',v!=='year');
+}
+periodSelect?.addEventListener('change',updatePeriodFilters);
+updatePeriodFilters();
+
 function updateCtl(){
   const p=document.querySelector('input[name=period]:checked')?.value||'month';
   document.getElementById('ctl-month').classList.toggle('d-none',p!=='month');

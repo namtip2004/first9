@@ -4,6 +4,7 @@ $confirmedStatus = BOOKING_STATUS_CONFIRMED;
 $completedStatus = BOOKING_STATUS_COMPLATE;
 
 $hotServices = [];
+$teamMembers = [];
 
 if (isset($conn) && $conn instanceof mysqli) {
     $hotSql = "
@@ -60,6 +61,84 @@ if (isset($conn) && $conn instanceof mysqli) {
             }
             $fallbackResult->free();
         }
+    }
+
+    $teamSql = "
+        SELECT
+            staff_id,
+            staff_name,
+            COALESCE(st_level, '') AS st_level,
+            COALESCE(st_profile, '') AS st_profile,
+            COALESCE(start_job, '') AS start_job
+        FROM staff
+        WHERE LOWER(COALESCE(st_status, '')) IN ('active', '')
+        ORDER BY staff_name ASC
+        LIMIT 6
+    ";
+
+    if ($teamResult = $conn->query($teamSql)) {
+        while ($row = $teamResult->fetch_assoc()) {
+            $profile = trim($row['st_profile']);
+            $imagePath = '';
+
+            if ($profile !== '') {
+                if (preg_match('#^https?://#i', $profile) || strpos($profile, '/') === 0) {
+                    $imagePath = $profile;
+                } else {
+                    $imagePath = '../Admin/assets/img/' . basename($profile);
+                }
+            } else {
+                $imagePath = '../Admin/assets/img/profile-img.jpg';
+            }
+
+            $experienceYears = null;
+            $startJob = $row['start_job'];
+
+            if (!empty($startJob) && $startJob !== '0000-00-00') {
+                try {
+                    $startDate = new DateTime($startJob);
+                    $now = new DateTime();
+                    $diff = $startDate->diff($now);
+                    if ((int) $diff->invert === 0) {
+                        $experienceYears = max(0, (int) $diff->y);
+                    }
+                } catch (Exception $e) {
+                    $experienceYears = null;
+                }
+            }
+
+            $badge = trim($row['st_level']) !== '' ? ucwords($row['st_level']) : 'Therapist';
+            $descriptionParts = [];
+
+            if ($experienceYears !== null && $experienceYears > 0) {
+                $descriptionParts[] = 'ประสบการณ์กว่า ' . $experienceYears . ' ปี';
+            }
+
+            $descriptionParts[] = 'พร้อมดูแลคุณด้วยมาตรฐานระดับสปาชั้นนำ';
+
+            $expertiseTags = [];
+
+            if ($experienceYears !== null && $experienceYears > 0) {
+                $expertiseTags[] = $experienceYears . '+ yrs exp';
+            }
+
+            if (!empty($badge)) {
+                $expertiseTags[] = $badge;
+            }
+
+            $expertiseTags[] = 'Wellness Care';
+
+            $teamMembers[] = [
+                'staff_id' => (int) $row['staff_id'],
+                'name' => $row['staff_name'] ?? '',
+                'badge' => $badge,
+                'description' => implode(' • ', $descriptionParts),
+                'expertise_tags' => $expertiseTags,
+                'image_path' => $imagePath,
+            ];
+        }
+
+        $teamResult->free();
     }
 }
 ?>
@@ -172,7 +251,8 @@ in a tranquil and luxurious setting, for true relaxation.
                 <div class="row g-4">
                     <?php if (!empty($hotServices)): ?>
                         <?php foreach ($hotServices as $index => $service): ?>
-                            <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: <?= htmlspecialchars(number_format(0.1 + ($index * 0.1), 1)) ?>s;">
+                            <?php $animationDelay = number_format(0.1 + ($index * 0.1), 1, '.', ''); ?>
+                            <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: <?= htmlspecialchars($animationDelay) ?>s;">
                                 <div class="hot-service-card">
                                     <div class="hot-badge">
                                         <i class="fas fa-fire"></i>
@@ -326,70 +406,44 @@ in a tranquil and luxurious setting, for true relaxation.
                     </p>
                 </div>
                 
-                <div class="row g-4">
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.1s;">
-                        <div class="team-card">
-                            <div class="team-image">
-                                <i class="fas fa-hands-helping"></i>
-                            </div>
-                            <div class="team-content">
-                                <div class="team-badge">Head Therapist</div>
-                                <h3 class="font-display">คุณปรียา สุขสวัสดิ์</h3>
-                                <p class="team-description">
-                                    นักนวดมืออาชีพที่มีประสบการณ์กว่า 15 ปี เชี่ยวชาญด้านการนวดแก้อาการปวด 
-                                    และการนวดเพื่อสุขภาพ
-                                </p>
-                                <div class="team-expertise">
-                                    <span>Deep Tissue Massage</span>
-                                    <span>Reflexology</span>
-                                    <span>Hot Stone Therapy</span>
+                <?php if (!empty($teamMembers)): ?>
+                    <div class="team-scroll-container fade-in">
+                        <div class="team-scroll-track">
+                            <?php foreach ($teamMembers as $index => $member): ?>
+                                <?php $animationDelay = number_format(0.1 + ($index * 0.1), 1, '.', ''); ?>
+                                <div class="team-card-wrapper fade-in" style="animation-delay: <?= htmlspecialchars($animationDelay) ?>s;">
+                                    <div class="team-card">
+                                        <div class="team-image">
+                                            <?php if (!empty($member['image_path'])): ?>
+                                                <img src="<?= htmlspecialchars($member['image_path']) ?>" alt="<?= htmlspecialchars($member['name']) ?>">
+                                            <?php else: ?>
+                                                <i class="fas fa-user"></i>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="team-content">
+                                            <div class="team-badge"><?= htmlspecialchars($member['badge']) ?></div>
+                                            <h3 class="font-display"><?= htmlspecialchars($member['name']) ?></h3>
+                                            <p class="team-description">
+                                                <?= htmlspecialchars($member['description']) ?>
+                                            </p>
+                                            <?php if (!empty($member['expertise_tags'])): ?>
+                                                <div class="team-expertise">
+                                                    <?php foreach ($member['expertise_tags'] as $tag): ?>
+                                                        <span><?= htmlspecialchars($tag) ?></span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-                    
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.2s;">
-                        <div class="team-card">
-                            <div class="team-image">
-                                <i class="fas fa-leaf"></i>
-                            </div>
-                            <div class="team-content">
-                                <div class="team-badge">Aromatherapy Expert</div>
-                                <h3 class="font-display">คุณมาลี จันทร์เพ็ญ</h3>
-                                <p class="team-description">
-                                    ผู้เชี่ยวชาญด้านอโรมาเธอราปีและการนวดด้วยน้ำมันหอมระเหย 
-                                    มีประสบการณ์กว่า 12 ปี
-                                </p>
-                                <div class="team-expertise">
-                                    <span>Aromatherapy</span>
-                                    <span>Essential Oil Blend</span>
-                                    <span>Relaxation Massage</span>
-                                </div>
-                            </div>
-                        </div>
+                <?php else: ?>
+                    <div class="team-empty text-center">
+                        <p class="text-muted">ขณะนี้ยังไม่มีข้อมูลทีมงานสำหรับแสดง</p>
                     </div>
-                    
-                    <div class="col-lg-4 col-md-6 fade-in" style="animation-delay: 0.3s;">
-                        <div class="team-card">
-                            <div class="team-image">
-                                <i class="fas fa-spa"></i>
-                            </div>
-                            <div class="team-content">
-                                <div class="team-badge">Traditional Thai Massage</div>
-                                <h3 class="font-display">คุณสมชาย ใสสะอาด</h3>
-                                <p class="team-description">
-                                    ผู้เชี่ยวชาญการนวดไทยโบราณแบบราชการ ผ่านการฝึกอบรมจากวัดโพธิ์ 
-                                    มีประสบการณ์กว่า 18 ปี
-                                </p>
-                                <div class="team-expertise">
-                                    <span>Royal Thai Massage</span>
-                                    <span>Thai Herbal Compress</span>
-                                    <span>Foot Massage</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <?php endif; ?>
             </div>
         </section>
 

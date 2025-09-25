@@ -320,4 +320,30 @@ datatables.forEach(datatable => {
     }, 200);
   }
 
+  /**
+   * Align purely numeric table content to the right for better readability
+   */
+  const alignNumericTableCells = () => {
+    const numericPattern = /^[-+]?[\p{Sc}]?\s*(?:\d+(?:[.,]\d+)?|\d{1,3}(?:,\d{3})+(?:\.\d+)?)(?:\s*[\p{Sc}%])?$/u;
+
+    select('table', true).forEach(table => {
+      table.querySelectorAll('td, th').forEach(cell => {
+        const text = cell.textContent.trim();
+        if (!text) return;
+
+        // Normalise consecutive whitespaces to a single space for the regex test
+        const normalised = text.replace(/\s+/g, ' ');
+        if (numericPattern.test(normalised)) {
+          cell.classList.add('text-end');
+        }
+      });
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', alignNumericTableCells);
+  } else {
+    alignNumericTableCells();
+  }
+
 })();

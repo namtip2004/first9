@@ -9,6 +9,44 @@ $confirmedStatus = BOOKING_STATUS_CONFIRMED;
 $completedStatus = BOOKING_STATUS_COMPLATE;
 function esc($s){return htmlspecialchars($s??'',ENT_QUOTES,'UTF-8');}
 
+function getCardSums(mysqli $conn, string $whereSql, string $types = '', array $params = []): array {
+  $sql = "SELECT
+            COALESCE(SUM(b.final_price),0)       AS net,
+            COALESCE(SUM(b.total_price),0)       AS gross,
+            COALESCE(SUM(b.total_discount),0)    AS disc
+          FROM booking b
+          WHERE $whereSql";
+  $stmt = $conn->prepare($sql);
+  if($types !== ''){
+    $stmt->bind_param($types, ...$params);
+  }
+  $stmt->execute();
+  $row = $stmt->get_result()->fetch_assoc();
+  $stmt->close();
+  return [
+    'net' => (float)($row['net'] ?? 0),
+    'gross' => (float)($row['gross'] ?? 0),
+    'disc' => (float)($row['disc'] ?? 0)
+  ];
+}
+
+function getNetForMonth(mysqli $conn, string $whereSql, string $types, array $params, int $year, int $month): float {
+  $fullWhere = $whereSql . " AND YEAR(b.booking_date)=? AND MONTH(b.booking_date)=?";
+  $sql = "SELECT COALESCE(SUM(b.final_price),0) AS net FROM booking b WHERE $fullWhere";
+  $stmt = $conn->prepare($sql);
+  $fullTypes = $types . 'ii';
+  $fullParams = $params;
+  $fullParams[] = $year;
+  $fullParams[] = $month;
+  if($fullTypes !== ''){
+    $stmt->bind_param($fullTypes, ...$fullParams);
+  }
+  $stmt->execute();
+  $row = $stmt->get_result()->fetch_assoc();
+  $stmt->close();
+  return round((float)($row['net'] ?? 0), 2);
+}
+
 // ----------------------- Year range meta for chart pickers -----------------------
 $yr = $conn->query("SELECT MIN(YEAR(booking_date)) AS miny, MAX(YEAR(booking_date)) AS maxy FROM booking")->fetch_assoc();
 $minYear = (int)($yr['miny'] ?? date('Y'));
@@ -23,14 +61,6 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
   $view = in_array($view, ['years','months','month_table'], true) ? $view : 'years';
   $year = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
   $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
-
-  // KPI cards (confirmed + completed)
-  $cardWhere = sprintf('status IN (%d,%d)', $confirmedStatus, $completedStatus);
-  $k_net_total = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE $cardWhere")->fetch_assoc()['s'];
-  $k_gross_total = (float)$conn->query("SELECT COALESCE(SUM(total_price),0) s FROM booking WHERE $cardWhere")->fetch_assoc()['s'];
-  $k_disc_total = (float)$conn->query("SELECT COALESCE(SUM(total_discount),0) s FROM booking WHERE $cardWhere")->fetch_assoc()['s'];
-  $ym = date('Y-m');
-  $k_net_mtd = (float)$conn->query("SELECT COALESCE(SUM(final_price),0) s FROM booking WHERE $cardWhere AND DATE_FORMAT(booking_date,'%Y-%m')='$ym'")->fetch_assoc()['s'];
 
   if($view === 'years'){
     $sql = "
@@ -51,17 +81,28 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       $netSeries[]=round((float)$row['net'],2);
     }
 
+    $baseWhere = "b.status IN ($confirmedStatus,$completedStatus)";
+    $cardSums = getCardSums($conn, $baseWhere);
+    $cards = [
+      'net_total'   => round($cardSums['net'], 2),
+      'net_mtd'     => getNetForMonth($conn, $baseWhere, '', [], (int)date('Y'), (int)date('n')),
+      'gross_total' => round($cardSums['gross'], 2),
+      'disc_total'  => round($cardSums['disc'], 2)
+    ];
+    $cardLabels = [
+      'net_total'   => 'Net รวม (ทั้งหมด)',
+      'net_mtd'     => 'Net เดือนนี้',
+      'gross_total' => 'Gross รวม',
+      'disc_total'  => 'ส่วนลดรวม'
+    ];
+
     echo json_encode([
       'type'=>'years',
       'keys'=>$keys,
       'labels'=>$labels,
       'series'=>['net'=>$netSeries],
-      'cards'=>[
-        'net_total'=>$k_net_total,
-        'net_mtd'=>$k_net_mtd,
-        'gross_total'=>$k_gross_total,
-        'disc_total'=>$k_disc_total
-      ]
+      'cards'=>$cards,
+      'cardLabels'=>$cardLabels
     ]);
     exit;
   }
@@ -88,18 +129,34 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       $netSeries[] = $map[$m] ?? 0;
     }
 
+    $whereSql = "b.status IN ($confirmedStatus,$completedStatus) AND YEAR(b.booking_date)=?";
+    $cardSums = getCardSums($conn, $whereSql, 'i', [$year]);
+    $activeMonths = array_filter($map, function($v){ return $v > 0; });
+    $avgPerMonth = 0.0;
+    if(count($activeMonths) > 0){
+      $avgPerMonth = array_sum($activeMonths) / count($activeMonths);
+    }
+    $cards = [
+      'net_total'   => round($cardSums['net'], 2),
+      'net_mtd'     => round($avgPerMonth, 2),
+      'gross_total' => round($cardSums['gross'], 2),
+      'disc_total'  => round($cardSums['disc'], 2)
+    ];
+    $cardLabels = [
+      'net_total'   => "Net รวมปี $year",
+      'net_mtd'     => "Net เฉลี่ยต่อเดือน (ปี $year)",
+      'gross_total' => "Gross รวมปี $year",
+      'disc_total'  => "ส่วนลดรวมปี $year"
+    ];
+
     echo json_encode([
       'type'=>'months',
       'year'=>$year,
       'keys'=>$keys,
       'labels'=>$labels,
       'series'=>['net'=>$netSeries],
-      'cards'=>[
-        'net_total'=>$k_net_total,
-        'net_mtd'=>$k_net_mtd,
-        'gross_total'=>$k_gross_total,
-        'disc_total'=>$k_disc_total
-      ]
+      'cards'=>$cards,
+      'cardLabels'=>$cardLabels
     ]);
     exit;
   }
@@ -165,23 +222,34 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
     }
     $stmt->close();
 
+    $count = count($rows);
+    $label = date('F', mktime(0,0,0,$month,1,$year));
+    $cards = [
+      'net_total'   => round($net, 2),
+      'net_mtd'     => $count > 0 ? round($net / $count, 2) : 0,
+      'gross_total' => round($gross, 2),
+      'disc_total'  => round($disc, 2)
+    ];
+    $cardLabels = [
+      'net_total'   => "Net รวมเดือน $label $year",
+      'net_mtd'     => "Net เฉลี่ยต่อรายการ ($count รายการ)",
+      'gross_total' => "Gross รวมเดือน $label $year",
+      'disc_total'  => "ส่วนลดรวมเดือน $label $year"
+    ];
+
     echo json_encode([
       'type'=>'month_table',
       'year'=>$year,
       'month'=>$month,
-      'label'=>date('F', mktime(0,0,0,$month,1,$year)),
+      'label'=>$label,
       'rows'=>$rows,
       'totals'=>[
         'gross'=>round($gross,2),
         'discount'=>round($disc,2),
         'net'=>round($net,2)
       ],
-      'cards'=>[
-        'net_total'=>$k_net_total,
-        'net_mtd'=>$k_net_mtd,
-        'gross_total'=>$k_gross_total,
-        'disc_total'=>$k_disc_total
-      ]
+      'cards'=>$cards,
+      'cardLabels'=>$cardLabels
     ]);
     exit;
   }
@@ -509,28 +577,28 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <div class="row mt-3">
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-cash-coin card-icon text-success"></i>
-            <div><div class="kpi-value" id="k_net_total">0</div><div class="text-muted">Net รวม (ยืนยันแล้ว)</div></div>
+            <div><div class="kpi-value" id="k_net_total">0</div><div class="text-muted" id="k_net_total_label">Net รวม (ยืนยันแล้ว)</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-graph-up card-icon text-primary"></i>
-            <div><div class="kpi-value" id="k_net_mtd">0</div><div class="text-muted">Net เดือนนี้</div></div>
+            <div><div class="kpi-value" id="k_net_mtd">0</div><div class="text-muted" id="k_net_mtd_label">Net เดือนนี้</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-receipt card-icon text-secondary"></i>
-            <div><div class="kpi-value" id="k_gross_total">0</div><div class="text-muted">Gross รวม</div></div>
+            <div><div class="kpi-value" id="k_gross_total">0</div><div class="text-muted" id="k_gross_total_label">Gross รวม</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-tag card-icon text-danger"></i>
-            <div><div class="kpi-value" id="k_disc_total">0</div><div class="text-muted">ส่วนลดรวม</div></div>
+            <div><div class="kpi-value" id="k_disc_total">0</div><div class="text-muted" id="k_disc_total_label">ส่วนลดรวม</div></div>
           </div></div></div>
         </div>
-        <div class="text-muted">* การ์ดไม่ใช้ตัวกรอง</div>
+        <div class="text-muted">* การ์ดอัปเดตตามข้อมูลที่แสดงในกราฟ</div>
 
         <!-- CHART -->
-        <div class="mt-3" style="min-height:380px">
+        <div class="mt-3" id="chartWrapper" style="min-height:380px">
           <canvas id="incomeChart" height="120"></canvas>
         </div>
-        <div class="text-muted mt-2">คลิกแท่งปีเพื่อดูรายเดือน และคลิกแท่งเดือนเพื่อดูตารางของเดือนนั้น</div>
+        <div class="text-muted mt-2" id="chartHint">คลิกแท่งปีเพื่อดูรายเดือน และคลิกแท่งเดือนเพื่อดูตารางของเดือนนั้น</div>
 
         <div id="monthTable" class="mt-4"></div>
 
@@ -561,23 +629,49 @@ const chartCanvas=document.getElementById('incomeChart');
 const chartCtx=chartCanvas?chartCanvas.getContext('2d'):null;
 const chartTitleEl=document.getElementById('chartTitle');
 const chartBackBtn=document.getElementById('chartBack');
+const chartWrapper=document.getElementById('chartWrapper');
+const chartHint=document.getElementById('chartHint');
 const monthTableWrap=document.getElementById('monthTable');
 let chart;
 let currentYear=null;
 
 const nf=(v)=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
 
-function updateCards(cards){
-  if(!cards) return;
-  const mapping={
-    k_net_total:cards.net_total,
-    k_net_mtd:cards.net_mtd,
-    k_gross_total:cards.gross_total,
-    k_disc_total:cards.disc_total
-  };
-  Object.entries(mapping).forEach(([id,val])=>{
-    const el=document.getElementById(id);
-    if(el) el.textContent=nf(val);
+function updateCards(cards, labels){
+  if(cards){
+    const mapping={
+      k_net_total:cards.net_total,
+      k_net_mtd:cards.net_mtd,
+      k_gross_total:cards.gross_total,
+      k_disc_total:cards.disc_total
+    };
+    Object.entries(mapping).forEach(([id,val])=>{
+      const el=document.getElementById(id);
+      if(el) el.textContent=nf(val);
+    });
+  }
+  if(labels){
+    const labelMap={
+      k_net_total_label:labels.net_total,
+      k_net_mtd_label:labels.net_mtd,
+      k_gross_total_label:labels.gross_total,
+      k_disc_total_label:labels.disc_total
+    };
+    Object.entries(labelMap).forEach(([id,text])=>{
+      if(typeof text === 'undefined') return;
+      const el=document.getElementById(id);
+      if(el) el.textContent=text;
+    });
+  }
+}
+
+function attachMonthTableBack(){
+  const backBtn=document.getElementById('monthTableBack');
+  if(!backBtn) return;
+  backBtn.addEventListener('click',()=>{
+    if(monthTableWrap) monthTableWrap.innerHTML='';
+    chartWrapper?.classList.remove('d-none');
+    chartHint?.classList.remove('d-none');
   });
 }
 
@@ -597,11 +691,8 @@ async function loadChart(view='years', year=null){
     }
     const res=await fetch(url.toString(),{cache:'no-store'});
     const data=await res.json();
-    updateCards(data.cards || null);
+    updateCards(data.cards || null, data.cardLabels || null);
     renderChart(data);
-    if(view==='years' && monthTableWrap){
-      monthTableWrap.innerHTML='';
-    }
   }catch(err){
     console.error(err);
   }
@@ -609,6 +700,9 @@ async function loadChart(view='years', year=null){
 
 function renderChart(data){
   if(!chartCtx) return;
+  chartWrapper?.classList.remove('d-none');
+  chartHint?.classList.remove('d-none');
+  if(monthTableWrap) monthTableWrap.innerHTML='';
   const labels=data.labels || [];
   const netSeries=data.series?.net || [];
   const keys=data.keys || [];
@@ -666,6 +760,8 @@ function renderChart(data){
 
 async function loadMonthTable(year, month){
   if(!monthTableWrap) return;
+  chartWrapper?.classList.add('d-none');
+  chartHint?.classList.add('d-none');
   monthTableWrap.innerHTML='<div class="text-muted">กำลังโหลด...</div>';
   try{
     const url=new URL(location.href);
@@ -676,15 +772,27 @@ async function loadMonthTable(year, month){
     url.searchParams.set('month',month);
     const res=await fetch(url.toString(),{cache:'no-store'});
     const data=await res.json();
-    updateCards(data.cards || null);
+    updateCards(data.cards || null, data.cardLabels || null);
     const rows=Array.isArray(data.rows)?data.rows:[];
+    const label=data.label ?? month;
+    const header=`
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="card-title mb-0">รายการเดือน ${label} ${data.year}</h5>
+  <button type="button" class="btn btn-outline-secondary btn-sm" id="monthTableBack">
+    <i class="bi bi-bar-chart"></i> กลับไปที่กราฟ
+  </button>
+</div>
+`.trim();
     if(rows.length===0){
-      monthTableWrap.innerHTML='<div class="alert alert-info mb-0">ไม่พบข้อมูลในเดือนนี้</div>';
+      monthTableWrap.innerHTML=`<div class="card"><div class="card-body">${header}
+  <div class="alert alert-info mb-0">ไม่พบข้อมูลในเดือนนี้</div>
+</div></div>`;
+      attachMonthTableBack();
       return;
     }
     const fmt=new Intl.NumberFormat(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
     let html='<div class="card"><div class="card-body">';
-    html+=`<h5 class="card-title mb-3">รายการเดือน ${data.label ?? month} ${data.year}</h5>`;
+    html+=header;
     html+='<div class="table-responsive"><table class="table table-striped table-hover align-middle">';
     html+='<thead class="table-light"><tr><th>ID</th><th>วันเวลาที่ทำการจอง</th><th>วันเวลาที่เข้าใช้บริการ</th><th>Customer</th><th>Service</th><th>Staff</th><th class="text-end">ราคาก่อนหักส่วนลด</th><th class="text-end">ส่วนลด</th><th class="text-end">ราคาหลังหักส่วนลด</th><th>Status</th></tr></thead><tbody>';
     rows.forEach(row=>{
@@ -695,14 +803,26 @@ async function loadMonthTable(year, month){
     html+=`<th class="text-end">${fmt.format(totals.gross || 0)}</th><th class="text-end text-danger">-${fmt.format(totals.discount || 0)}</th><th class="text-end text-success">${fmt.format(totals.net || 0)}</th><th></th></tr></tfoot>`;
     html+='</table></div></div></div>';
     monthTableWrap.innerHTML=html;
+    attachMonthTableBack();
   }catch(err){
     console.error(err);
-    monthTableWrap.innerHTML='<div class="alert alert-danger mb-0">ไม่สามารถโหลดข้อมูลได้</div>';
+    monthTableWrap.innerHTML=`<div class="card"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="card-title mb-0">ไม่สามารถโหลดข้อมูลได้</h5>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="monthTableBack">
+      <i class="bi bi-bar-chart"></i> กลับไปที่กราฟ
+    </button>
+  </div>
+  <div class="alert alert-danger mb-0">ไม่สามารถโหลดข้อมูลได้</div>
+</div></div>`;
+    attachMonthTableBack();
   }
 }
 
 chartBackBtn?.addEventListener('click',()=>{
   if(monthTableWrap) monthTableWrap.innerHTML='';
+  chartWrapper?.classList.remove('d-none');
+  chartHint?.classList.remove('d-none');
   loadChart('years');
 });
 

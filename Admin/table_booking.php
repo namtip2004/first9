@@ -45,7 +45,7 @@ include("slidebar.php");
       <th>Customer</th>
       <th>Staff</th>
       <th>Service(s)</th>
-      <th>Final Price (€)</th>
+      <th class="text-end">Final Price (€)</th>
       <th>Status</th>
       <th>Detail</th>
       <th>Edit</th>
@@ -100,7 +100,7 @@ $sql = "
             <td>{$row['customer_name']}</td>
             <td>{$row['staff_name']}</td>
             <td>" . implode("<br>", $services) . "</td>
-            <td>€" . number_format($row['final_price'], 2) . "</td>
+            <td class='text-end'>€" . number_format($row['final_price'], 2) . "</td>
             <td>{$row['status']}</td>
             <td><a class='btn btn-outline-primary btn-sm' href='booking_detail.php?id={$row['booking_id']}'>Detail</a></td>
             <td><a class='btn btn-outline-warning btn-sm' href='booking_update_form.php?id={$row['booking_id']}'>Edit</a></td>

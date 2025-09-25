@@ -1,5 +1,24 @@
 <?php
 session_start();
+require_once("connect_db.php");
+
+$serviceSql    = "SELECT * FROM service";
+$serviceResult = mysqli_query($conn, $serviceSql);
+
+if (!$serviceResult) {
+    die("Query Error: " . mysqli_error($conn));
+}
+
+$staffMembers     = [];
+$staffQuery       = "SELECT * FROM staff WHERE st_level != 'admin' ORDER BY staff_name";
+$staffQueryResult = mysqli_query($conn, $staffQuery);
+
+if ($staffQueryResult) {
+    while ($row = mysqli_fetch_assoc($staffQueryResult)) {
+        $staffMembers[] = $row;
+    }
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -7,7 +26,7 @@ session_start();
 <body>
   <?php include("header.php"); ?>
   <?php include("slidebar.php"); ?>
-  
+
   <main id="main" class="main">
 
     <div class="pagetitle">
@@ -25,65 +44,82 @@ session_start();
           <div class="card">
             <div class="card-body">
               <!-- <h5 class="card-title">couse</h5> -->
-              
-
 
               <!-- Table with stripped rows -->
-             <?php
-require_once("connect_db.php");
+              <div class="text-end mb-2">
+                <a href="form_service.php" class="btn btn-success">+ add service</a>
+              </div>
 
-$sql = "SELECT * FROM service";
-$result = mysqli_query($conn, $sql);
-
-// ตรวจสอบว่าดึงข้อมูลได้ไหม
-if (!$result) {
-    die("Query Error: " . mysqli_error($conn));  // แสดง error ชัด ๆ แล้วหยุด
-}
-?>
-
-<div class="text-end mb-2">
-  <a href="form_service.php" class="btn btn-success">+ add service</a>
-</div>
-
-
-<table class="table table-bordered">
-  <thead>
-    <tr>
-      <th>NO.</th>
-      <th>service Name</th>
-      <th>description</th>
-      <th>status</th>
-      <th>Detail</th>
-      <th>Edit</th>
-      <th>Delete</th>
-    </tr>
-  </thead>
-  <tbody>
-    <?php 
-    $i = 1;
-    while ($row = mysqli_fetch_assoc($result)) { ?>
-      <tr>
-        <td><?= $i++ ?></td>
-        <td><?= htmlspecialchars($row['service_name']) ?></td>
-        <td><?= htmlspecialchars($row['description']) ?></td>
-        <td><?= number_format($row['is_active']) ?></td>
-                <td>
-            <a class="btn btn-outline-primary btn-sm" href="service_detail.php?id=<?= $row['service_id'] ?>">Detail</a>
-        </td>
-        <td>
-            <a class="btn btn-outline-primary btn-sm" href="service_update_form.php?id=<?= $row['service_id'] ?>">Edit</a>
-        </td>
-        <td>
-            <a class="btn btn-outline-danger btn-sm" href="service_delete.php?id=<?= $row['service_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this service\'s data?');">Delete</a>
-        </td>
-      </tr>
-    <?php } ?>
-  </tbody>
-</table>
-
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>NO.</th>
+                    <th>service Name</th>
+                    <th>description</th>
+                    <th>status</th>
+                    <th>Detail</th>
+                    <th>Edit</th>
+                    <th>Delete</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php
+                  $i = 1;
+                  while ($row = mysqli_fetch_assoc($serviceResult)) { ?>
+                    <tr>
+                      <td><?= $i++ ?></td>
+                      <td><?= htmlspecialchars($row['service_name']) ?></td>
+                      <td><?= htmlspecialchars($row['description']) ?></td>
+                      <td><?= number_format($row['is_active']) ?></td>
+                      <td>
+                        <a class="btn btn-outline-primary btn-sm" href="service_detail.php?id=<?= $row['service_id'] ?>">Detail</a>
+                      </td>
+                      <td>
+                        <a class="btn btn-outline-primary btn-sm" href="service_update_form.php?id=<?= $row['service_id'] ?>">Edit</a>
+                      </td>
+                      <td>
+                        <a class="btn btn-outline-danger btn-sm" href="service_delete.php?id=<?= $row['service_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this service\'s data?');">Delete</a>
+                      </td>
+                    </tr>
+                  <?php } ?>
+                </tbody>
+              </table>
 
               <!-- End Table with stripped rows -->
 
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
+                <div>
+                  <h5 class="card-title mb-1">Staff Schedules</h5>
+                  <p class="text-muted mb-0">Select a staff member to open their schedule overview.</p>
+                </div>
+              </div>
+
+              <?php if (empty($staffMembers)): ?>
+                <div class="alert alert-warning mb-0" role="alert">
+                  No staff members available to display schedules.
+                </div>
+              <?php else: ?>
+                <form class="row g-3 align-items-center" action="staff_schedule.php" method="get">
+                  <div class="col-md-6 col-lg-4">
+                    <label for="service-staff-select" class="form-label">Staff</label>
+                    <select id="service-staff-select" class="form-select" name="staff_id">
+                      <?php foreach ($staffMembers as $staff): ?>
+                        <option value="<?= (int) $staff['staff_id']; ?>">
+                          <?= htmlspecialchars($staff['staff_name']); ?>
+                        </option>
+                      <?php endforeach; ?>
+                    </select>
+                  </div>
+                  <div class="col-md-6 col-lg-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary w-100">Open Schedule</button>
+                  </div>
+                </form>
+              <?php endif; ?>
             </div>
           </div>
 
@@ -94,6 +130,7 @@ if (!$result) {
   </main><!-- End #main -->
 
   <?php include("footer.php"); ?>
+
 
 </body>
 </html>

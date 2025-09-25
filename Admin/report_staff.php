@@ -32,12 +32,18 @@ function lastDayOfMonth(int $year, int $month): int {
 
 function resolveTableDateRange(array $input): array {
   $type = $input['date_filter_type'] ?? 'range';
-  $type = in_array($type, ['range', 'month'], true) ? $type : 'range';
+  $type = in_array($type, ['range', 'month', 'year', 'all'], true) ? $type : 'range';
+
   $startDate = trim($input['start_date'] ?? '');
   $endDate   = trim($input['end_date'] ?? '');
   $monthVal  = trim($input['month_value'] ?? '');
+  $startYear = trim($input['start_year'] ?? '');
+  $endYear   = trim($input['end_year'] ?? '');
 
-  if ($type === 'month') {
+  if ($type === 'all') {
+    $startDate = '';
+    $endDate = '';
+  } elseif ($type === 'month') {
     if (preg_match('/^(\d{4})-(\d{2})$/', $monthVal, $m)) {
       $y = (int)$m[1];
       $mo = (int)$m[2];
@@ -47,6 +53,24 @@ function resolveTableDateRange(array $input): array {
       $startDate = '';
       $endDate = '';
     }
+  } elseif ($type === 'year') {
+    if (preg_match('/^\d{4}$/', $startYear)) {
+      $startYear = (int)$startYear;
+    } else {
+      $startYear = (int)date('Y');
+    }
+    if (preg_match('/^\d{4}$/', $endYear)) {
+      $endYear = (int)$endYear;
+    } else {
+      $endYear = $startYear;
+    }
+    if ($startYear > $endYear) {
+      $tmp = $startYear;
+      $startYear = $endYear;
+      $endYear = $tmp;
+    }
+    $startDate = sprintf('%04d-01-01', $startYear);
+    $endDate = sprintf('%04d-12-31', $endYear);
   } else {
     if ($startDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
       $startDate = '';
@@ -66,7 +90,9 @@ function resolveTableDateRange(array $input): array {
     'type' => $type,
     'start' => $startDate,
     'end' => $endDate,
-    'month_value' => $type === 'month' ? $monthVal : ''
+    'month_value' => $type === 'month' ? $monthVal : '',
+    'year_start' => $type === 'year' ? $startYear : '',
+    'year_end' => $type === 'year' ? $endYear : ''
   ];
 }
 
@@ -361,6 +387,8 @@ $filterType = $rangeTable['type'];
 $startDate  = $rangeTable['start'];
 $endDate    = $rangeTable['end'];
 $monthValue = $rangeTable['month_value'];
+$yearStart  = $rangeTable['year_start'];
+$yearEnd    = $rangeTable['year_end'];
 $sort       = $_GET['sort'] ?? 'revenue';
 $dirDefault = $sort === 'name' ? 'ASC' : 'DESC';
 $dirParam   = strtoupper($_GET['dir'] ?? $dirDefault);
@@ -527,6 +555,8 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <select class="form-select" id="date_filter_type" name="date_filter_type">
               <option value="range" <?= $filterType==='range'?'selected':'' ?>>ช่วงวันที่</option>
               <option value="month" <?= $filterType==='month'?'selected':'' ?>>เดือน</option>
+              <option value="year" <?= $filterType==='year'?'selected':'' ?>>ปี</option>
+              <option value="all" <?= $filterType==='all'?'selected':'' ?>>ทั้งหมด</option>
             </select>
           </div>
           <div class="col-md-auto <?= $filterType==='range'?'':'d-none' ?>" id="date_range_group">
@@ -539,6 +569,21 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           <div class="col-md-auto <?= $filterType==='month'?'':'d-none' ?>" id="month_group">
             <label class="form-label small-label" for="month_value">เดือน</label>
             <input type="month" class="form-control" id="month_value" name="month_value" value="<?=esc($filterType==='month'?$monthValue:'')?>">
+          </div>
+          <div class="col-md-auto <?= $filterType==='year'?'':'d-none' ?>" id="year_group">
+            <label class="form-label small-label">ปี</label>
+            <div class="d-flex gap-2">
+              <select class="form-select" name="start_year" id="start_year">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= ($filterType==='year' && (int)$yearStart===$y)?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
+              <select class="form-select" name="end_year" id="end_year">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= ($filterType==='year' && (int)$yearEnd===$y)?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
+            </div>
           </div>
           <div class="col-md-auto">
             <label class="form-label small-label" for="sort_field">เรียงตาม</label>
@@ -750,10 +795,11 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               <div class="mt-3">
                 <div class="d-flex align-items-center gap-2 mb-2">
                   <strong>เลือกพนักงาน</strong>
+                  <button class="btn btn-sm btn-outline-dark" id="toggleStaffList" type="button">เลือกบางคน</button>
                   <button class="btn btn-sm btn-outline-primary" id="selectAllStaff" type="button">เลือกทั้งหมด</button>
                   <button class="btn btn-sm btn-outline-secondary" id="clearAllStaff" type="button">ล้างทั้งหมด</button>
                 </div>
-                <div id="staffCheckboxes" class="d-flex flex-wrap gap-2"></div>
+                <div id="staffCheckboxes" class="d-flex flex-wrap gap-2 d-none"></div>
               </div>
             </div></div>
           </div>
@@ -780,6 +826,7 @@ const searchInput = document.getElementById('staffSearch');
 const dateTypeSelect = document.getElementById('date_filter_type');
 const dateRangeGroup = document.getElementById('date_range_group');
 const monthGroup = document.getElementById('month_group');
+const yearGroup = document.getElementById('year_group');
 const sortField = document.getElementById('sort_field');
 const sortDir = document.getElementById('sort_dir');
 
@@ -787,6 +834,7 @@ function toggleDateInputs() {
   const type = dateTypeSelect?.value || 'range';
   if (dateRangeGroup) dateRangeGroup.classList.toggle('d-none', type !== 'range');
   if (monthGroup) monthGroup.classList.toggle('d-none', type !== 'month');
+  if (yearGroup) yearGroup.classList.toggle('d-none', type !== 'year');
 }
 toggleDateInputs();
 dateTypeSelect?.addEventListener('change', toggleDateInputs);
@@ -902,6 +950,7 @@ const chartBackBtn = document.getElementById('chartBack');
 const chartHintEl = document.getElementById('chartHint');
 const selectAllBtn = document.getElementById('selectAllStaff');
 const clearAllBtn = document.getElementById('clearAllStaff');
+const toggleStaffListBtn = document.getElementById('toggleStaffList');
 const staffCheckboxesEl = document.getElementById('staffCheckboxes');
 const topStaffListEl = document.getElementById('topStaffList');
 const chartCanvas = document.getElementById('staffMainChart');
@@ -910,6 +959,19 @@ let overviewData = [];
 let selectedStaffIds = new Set();
 let detailMode = false;
 let currentDetail = null;
+let staffListVisible = false;
+
+function setStaffListVisible(visible) {
+  staffListVisible = !!visible;
+  if (staffCheckboxesEl) {
+    staffCheckboxesEl.classList.toggle('d-none', !staffListVisible);
+  }
+  if (toggleStaffListBtn) {
+    toggleStaffListBtn.textContent = staffListVisible ? 'ซ่อนรายชื่อ' : 'เลือกบางคน';
+  }
+}
+
+setStaffListVisible(false);
 
 function updateChartPeriodControls() {
   const period = chartPeriodEl?.value || 'all';
@@ -919,6 +981,10 @@ function updateChartPeriodControls() {
 }
 updateChartPeriodControls();
 chartPeriodEl?.addEventListener('change', updateChartPeriodControls);
+
+toggleStaffListBtn?.addEventListener('click', () => {
+  setStaffListVisible(!staffListVisible);
+});
 
 function gatherChartFilters() {
   const period = chartPeriodEl?.value || 'all';
@@ -1072,6 +1138,7 @@ async function loadOverview() {
     chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
     if (!overviewData.length) {
       selectedStaffIds.clear();
+      setStaffListVisible(false);
       renderStaffCheckboxes();
       if (chartHintEl) chartHintEl.textContent = 'ไม่มีข้อมูลพนักงาน';
       if (staffChart) { staffChart.destroy(); staffChart = null; }
@@ -1079,6 +1146,7 @@ async function loadOverview() {
       return;
     }
     selectedStaffIds = new Set(overviewData.map((s) => s.id));
+    setStaffListVisible(false);
     renderStaffCheckboxes();
     renderOverviewChart();
     renderTopList(data.top || []);
@@ -1158,6 +1226,7 @@ selectAllBtn?.addEventListener('click', () => {
   currentDetail = null;
   chartBackBtn?.classList.add('d-none');
   chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  setStaffListVisible(false);
   renderStaffCheckboxes();
   renderOverviewChart();
 });
@@ -1168,6 +1237,7 @@ clearAllBtn?.addEventListener('click', () => {
   currentDetail = null;
   chartBackBtn?.classList.add('d-none');
   chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  setStaffListVisible(true);
   renderStaffCheckboxes();
   if (chartHintEl) chartHintEl.textContent = 'กรุณาเลือกพนักงานเพื่อแสดงข้อมูล';
   if (staffChart) {

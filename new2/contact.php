@@ -18,7 +18,7 @@
         <div class="container">
             <div class="section-header fade-in">
                 <!-- <div class="section-subtitle">Get In Touch</div> -->
-                <h2 class="section-title font-display">Contact Our Spa</h2>
+                <h2 class="section-title font-display">Contact First9 Thai Massage &amp; Spa</h2>
                 <!-- <p class="section-description">
                     ติดต่อเราเพื่อสอบถามข้อมูลเพิ่มเติม หรือปรึกษาการรักษาที่เหมาะสมกับคุณ
                 </p> -->
@@ -27,7 +27,7 @@
             <div class="row">
                 <div class="col-lg-8 mb-5 fade-in" style="animation-delay: 0.1s;">
                     <div class="contact-info-card">
-                        <h4 class="font-display mb-4" style="color: var(--charcoal);">Visit Our Sanctuary</h4>
+                        <h4 class="font-display mb-4" style="color: var(--charcoal);">Visit Our Spa</h4>
                         
                         <div class="contact-item">
                             <div class="contact-icon">
@@ -35,7 +35,15 @@
                             </div>
                             <div class="contact-details">
                                 <h6>Spa Location</h6>
-                                <p>123 Luxury Avenue, Sukhumvit Road<br>Watthana District, Bangkok 10110<br>Thailand</p>
+                                <p>
+                                    First9 Thai Massage &amp; Spa<br>
+                                    Marsstr. 13<br>
+                                    80335 Munich
+                                </p>
+                                <p class="mb-0">
+                                    (Directly at the city gate to the market square)<br>
+                                    The entrance is in the beauty salon.
+                                </p>
                             </div>
                         </div>
 
@@ -44,8 +52,9 @@
                                 <i class="fas fa-phone"></i>
                             </div>
                             <div class="contact-details">
-                                <h6>Phone & WhatsApp</h6>
-                                <p>+66 2 555 0123<br>+66 98 765 4321 (WhatsApp)</p>
+                                <h6>Phone</h6>
+                                <p class="mb-0">Tel : 017640770512</p>
+                                <p>(From 11:00 - 20:00)</p>
                             </div>
                         </div>
 
@@ -55,7 +64,7 @@
                             </div>
                             <div class="contact-details">
                                 <h6>Email Address</h6>
-                                <p>reservations@pureserenityspa.com<br>info@pureserenityspa.com</p>
+                                <p>boonmak.wi@gmail.com</p>
                             </div>
                         </div>
 
@@ -64,65 +73,22 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                             <div class="contact-details">
-                                <h6>Operating Hours</h6>
-                                <p>Monday - Sunday: 9:00 AM - 10:00 PM<br>Public Holidays: 10:00 AM - 9:00 PM<br>Last appointment: 8:30 PM</p>
+                                <h6>Appointment &amp; Contact Policy</h6>
+                                <p class="mb-0">Appointment cancellation: 6 hours.</p>
+                                <p class="mb-0">Call or text! (No voicemail!!)</p>
+                                <p>Email: 24 hours</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-lg-4 fade-in" style="animation-delay: 0.2s;">
-                    <div class="contact-info-card">
-                        <h4 class="font-display mb-4" style="color: var(--charcoal);">Quick Inquiry</h4>
-                        <form id="contactForm" onsubmit="submitContact(event)">
-                            <div class="form-group">
-                                <label for="contactName" class="form-label">Your Name *</label>
-                                <input type="text" class="form-control" id="contactName" required placeholder="ชื่อของคุณ">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="contactPhone" class="form-label">Phone Number *</label>
-                                <input type="tel" class="form-control" id="contactPhone" required placeholder="เบอร์โทรศัพท์">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="contactEmail" class="form-label">Email Address</label>
-                                <input type="email" class="form-control" id="contactEmail" placeholder="อีเมล (ไม่บังคับ)">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="inquiryType" class="form-label">Inquiry Type</label>
-                                <select class="form-control" id="inquiryType">
-                                    <option value="">เลือกประเภทการสอบถาม</option>
-                                    <option value="booking">Booking Inquiry</option>
-                                    <option value="treatments">Treatment Information</option>
-                                    <option value="membership">Membership</option>
-                                    <option value="gift">Gift Certificates</option>
-                                    <option value="other">Other</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="contactMessage" class="form-label">Your Message *</label>
-                                <textarea class="form-control" id="contactMessage" rows="4" required placeholder="ข้อความ คำถาม หรือข้อมูลเพิ่มเติม..."></textarea>
-                            </div>
-                            
-                            <button type="submit" class="btn-luxury w-100">
-                                <i class="fas fa-paper-plane me-2"></i>Send Message
-                            </button>
-                        </form>
-
-                        <!-- Contact Success Message -->
-                        <div id="contactSuccess" class="success-message">
-                            <div class="success-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <h5 class="success-title font-display">Message Sent!</h5>
-                            <p class="success-text">
-                                ขอบคุณสำหรับข้อความ<br>
-                                เราจะตอบกลับภายใน 4 ชั่วโมง
-                            </p>
-                        </div>
+                    <div class="contact-info-card text-center">
+                        <h4 class="font-display mb-4" style="color: var(--charcoal);">Find Us on Google Maps</h4>
+                        <p>Plan your visit or get directions via Google Maps.</p>
+                        <a class="btn-luxury" href="https://maps.app.goo.gl/Wj8sa4f3PKxrmZ5F6" target="_blank" rel="noopener">
+                            <i class="fas fa-map-marked-alt me-2"></i>Open in Google Maps
+                        </a>
                     </div>
                 </div>
             </div>

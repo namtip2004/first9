@@ -275,11 +275,11 @@ $staffScheduleJson = json_encode($staffScheduleData, JSON_UNESCAPED_UNICODE);
               </div>
             </div>
 
-            <div id="staff-calendar-view" class="mb-4">
+            <div id="staff-calendar-view" class="mb-4 d-none">
               <div id="staff-schedule-calendar"></div>
             </div>
 
-            <div id="staff-table-view" class="table-responsive d-none">
+            <div id="staff-table-view" class="table-responsive">
               <table class="table table-bordered">
                 <thead>
                   <tr>
@@ -319,6 +319,8 @@ $staffScheduleJson = json_encode($staffScheduleData, JSON_UNESCAPED_UNICODE);
       var tableView = document.getElementById('staff-table-view');
       var calendarButton = document.getElementById('btnScheduleCalendar');
       var tableButton = document.getElementById('btnScheduleTable');
+      tableButton.classList.add('btn-primary');
+      calendarButton.classList.add('btn-outline-primary');
       var detailBox = document.getElementById('staff-schedule-detail');
       var detailFields = {
         booking: document.getElementById('detail-booking-id'),
@@ -464,7 +466,7 @@ $staffScheduleJson = json_encode($staffScheduleData, JSON_UNESCAPED_UNICODE);
             calendar.gotoDate(new Date());
           }
 
-          showCalendarView();
+          showTableView();
           modal.show();
         });
       });

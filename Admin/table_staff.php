@@ -43,55 +43,61 @@ if (isset($_SESSION['staff_level']) && $_SESSION['staff_level'] !== 'admin') {
               ?>
 
               <!-- Table -->
-              <table class="table table-bordered table-striped">
-                <thead>
-                  <tr>
-                    <th>NO.</th>
-                    <th>Name</th>
-                    <th>Gender</th>
-                    <th>Age</th>
-                    <th>Birthday</th>
-                    <th>Gmail</th>
-                    <th>Phone Number</th>
-                    <th>Address</th>
-                    <th>Start Job</th>
-                    <th>End Job</th>
-                    <th>Status</th>
-                    <th>Detail</th>
-                    <th>Edit</th>
-                    <th>Delete</th>
-                  </tr>
-                </thead>
-                <tbody>
-                   
-                  <?php 
-                  $i = 1;
-                  while ($row = mysqli_fetch_assoc($result)) { ?>
+              <div class="table-responsive">
+                <table class="table table-bordered table-striped mb-0">
+                  <thead>
                     <tr>
-                      <td><?= $i++ ?></td>
-                      <td><?= htmlspecialchars($row['staff_name']) ?></td>
-                      <td><?= htmlspecialchars($row['st_gender']) ?></td>
-                      <td><?= htmlspecialchars($row['st_age']) ?></td>
-                      <td><?= htmlspecialchars($row['st_birthday']) ?></td>
-                      <td><?= htmlspecialchars($row['st_gmail']) ?></td>
-                      <td><?= htmlspecialchars($row['st_tel']) ?></td>
-                      <td><?= htmlspecialchars($row['st_address']) ?></td>
-                      <td><?= htmlspecialchars($row['start_job']) ?></td>
-                      <td><?= htmlspecialchars($row['end_job']) ?></td>
-                      <td><?= htmlspecialchars($row['st_status']) ?></td>
-                                 <td>
-            <a class="btn btn-outline-primary btn-sm" href="staff_detail.php?id=<?= $row['staff_id'] ?>">Detail</a>
-        </td>
-                      <td>
-                        <a class="btn btn-outline-primary btn-sm" href="staff_update_form.php?id=<?= $row['staff_id'] ?>">Edit</a>
-                      </td>
-                      <td>
-                        <a class="btn btn-outline-danger btn-sm" href="staff_delete.php?id=<?= $row['staff_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this staff\'s data?');">Delete</a>
-                      </td>
+                      <th>NO.</th>
+                      <th>Name</th>
+                      <th>Gender</th>
+                      <th>Age</th>
+                      <th>Birthday</th>
+                      <th>Gmail</th>
+                      <th>Phone Number</th>
+                      <th>Address</th>
+                      <th>Start Job</th>
+                      <th>End Job</th>
+                      <th>Status</th>
+                      <th>Detail</th>
+                      <th>Schedule</th>
+                      <th>Edit</th>
+                      <th>Delete</th>
                     </tr>
-                  <?php } ?>
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+
+                    <?php
+                    $i = 1;
+                    while ($row = mysqli_fetch_assoc($result)) { ?>
+                      <tr>
+                        <td><?= $i++ ?></td>
+                        <td><?= htmlspecialchars($row['staff_name']) ?></td>
+                        <td><?= htmlspecialchars($row['st_gender']) ?></td>
+                        <td><?= htmlspecialchars($row['st_age']) ?></td>
+                        <td><?= htmlspecialchars($row['st_birthday']) ?></td>
+                        <td><?= htmlspecialchars($row['st_gmail']) ?></td>
+                        <td><?= htmlspecialchars($row['st_tel']) ?></td>
+                        <td><?= htmlspecialchars($row['st_address']) ?></td>
+                        <td><?= htmlspecialchars($row['start_job']) ?></td>
+                        <td><?= htmlspecialchars($row['end_job']) ?></td>
+                        <td><?= htmlspecialchars($row['st_status']) ?></td>
+                        <td>
+                          <a class="btn btn-outline-primary btn-sm" href="staff_detail.php?id=<?= $row['staff_id'] ?>">Detail</a>
+                        </td>
+                        <td>
+                          <a class="btn btn-outline-info btn-sm" href="staff_schedule.php?id=<?= urlencode($row['staff_id']) ?>">Schedule</a>
+                        </td>
+                        <td>
+                          <a class="btn btn-outline-primary btn-sm" href="staff_update_form.php?id=<?= $row['staff_id'] ?>">Edit</a>
+                        </td>
+                        <td>
+                          <a class="btn btn-outline-danger btn-sm" href="staff_delete.php?id=<?= $row['staff_id'] ?>" onclick="return confirm('Are you sure you want to permanently delete this staff\'s data?');">Delete</a>
+                        </td>
+                      </tr>
+                    <?php } ?>
+                  </tbody>
+                </table>
+              </div>
               <!-- End Table -->
 
             </div>

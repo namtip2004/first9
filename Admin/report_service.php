@@ -530,12 +530,13 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
                 <th>Service</th>
                 <th>สถานะ</th>
                 <th style="min-width:220px">Option</th>
+                <th style="min-width:160px">Price</th>
                 <th class="text-end">Total Booking</th>
               </tr>
             </thead>
             <tbody>
-              <?php if(empty($rows)): ?>
-                <tr><td colspan="5" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <?php if(empty($rows)): ?>
+                  <tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
               <?php else: foreach($rows as $r): ?>
                 <tr>
                   <td><?=number_format((int)$r['service_id'])?></td>
@@ -552,14 +553,27 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
                       <ul class="list-unstyled mb-0 small">
                         <?php foreach($r['option_details'] as $opt): ?>
                           <li>
-                            <?php if(!empty($opt['option_id'])): ?>
-                              <span class="text-muted"><?=number_format($opt['option_id'])?></span>
-                            <?php endif; ?>
                             <?php if($opt['duration'] !== null): ?>
-                              <span class="ms-1"><?=number_format($opt['duration'])?> นาที</span>
+                              <span><?=number_format($opt['duration'])?> นาที</span>
+                            <?php else: ?>
+                              <span class="text-muted">-</span>
                             <?php endif; ?>
+                          </li>
+                        <?php endforeach; ?>
+                      </ul>
+                    <?php else: ?>
+                      <span class="text-muted">-</span>
+                    <?php endif; ?>
+                  </td>
+                  <td>
+                    <?php if(!empty($r['option_details'])): ?>
+                      <ul class="list-unstyled mb-0 small text-end">
+                        <?php foreach($r['option_details'] as $opt): ?>
+                          <li>
                             <?php if($opt['price'] !== null): ?>
-                              <span class="ms-1"><?=number_format($opt['price'],2)?></span>
+                              <span><?=number_format($opt['price'],2)?></span>
+                            <?php else: ?>
+                              <span class="text-muted">-</span>
                             <?php endif; ?>
                           </li>
                         <?php endforeach; ?>
@@ -574,7 +588,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             </tbody>
             <tfoot class="table-light">
               <tr>
-                <th colspan="4" class="text-end">รวมการจอง</th>
+                <th colspan="5" class="text-end">รวมการจอง</th>
                 <th class="text-end"><?=number_format($totalBookingSum)?></th>
               </tr>
             </tfoot>

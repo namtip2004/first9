@@ -170,9 +170,9 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       'labels'   => $labels,
       'keys'     => $keys,
       'series'   => ['net'=>$values],
-      'axis'     => 'เดือน',
-      'title'    => "รายได้รายเดือน (ปี $year)",
-      'subtitle' => 'คลิกแท่งเดือนเพื่อดูรายได้รายวัน',
+      'axis'     => 'Months',
+      'title'    => "Monthly revenue (Year $year)",
+      'subtitle' => 'Click a month bar to view daily revenue',
       'cards'    => $cardsPayload
     ]);
     exit;
@@ -210,9 +210,9 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       'labels'   => $labels,
       'keys'     => $keys,
       'series'   => ['net'=>$values],
-      'axis'     => 'วัน',
-      'title'    => "รายได้รายวัน (ปี $year เดือน $month)",
-      'subtitle' => 'คลิกแท่งวันเพื่อดูรายละเอียดการจอง',
+      'axis'     => 'Days',
+      'title'    => "Daily revenue (Year $year Month $month)",
+      'subtitle' => 'Click a day bar to view booking details',
       'cards'    => $cardsPayload
     ]);
     exit;
@@ -247,9 +247,9 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
     'labels'   => $labels,
     'keys'     => $keys,
     'series'   => ['net'=>$values],
-    'axis'     => 'ปี',
-    'title'    => 'รายได้รายปี',
-    'subtitle' => 'คลิกแท่งปีเพื่อดูรายได้รายเดือน',
+    'axis'     => 'Years',
+    'title'    => 'Annual revenue',
+    'subtitle' => 'Click a year bar to view monthly revenue',
     'cards'    => $cardsPayload
   ]);
   exit;
@@ -379,7 +379,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 };
 ?>
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Booking Report</title>
@@ -401,12 +401,12 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 <?php include("slidebar.php"); ?>
 <main id="main" class="main">
 
-  <div class="pagetitle"><h1>รายงานการจอง (Booking)</h1></div>
+  <div class="pagetitle"><h1>Booking Report</h1></div>
 
   <!-- Tabs -->
   <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button" role="tab">ตาราง</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" role="tab" id="chart-tab">กราฟ</button></li>
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button" role="tab">Table</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" role="tab" id="chart-tab">Chart</button></li>
   </ul>
 
   <div class="tab-content">
@@ -417,14 +417,14 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <form class="row g-2 align-items-end" method="get">
           <input type="hidden" name="tab" value="table">
           <div class="col-md-auto">
-            <label class="form-label small-label">ค้นหาจาก ID</label>
-            <input type="text" class="form-control" name="booking_id" value="<?=esc($searchId)?>" placeholder="เช่น 1001">
+            <label class="form-label small-label">Search by ID</label>
+            <input type="text" class="form-control" name="booking_id" value="<?=esc($searchId)?>" placeholder="e.g. 1001">
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">สถานะ</label>
+            <label class="form-label small-label">Status</label>
             <select class="form-select" name="status">
               <?php
-                $statusOptions = ['all' => 'ทั้งหมด'];
+                $statusOptions = ['all' => 'All'];
                 foreach (booking_status_options() as $code => $label) {
                   $statusOptions[(string)$code] = $label;
                 }
@@ -435,47 +435,47 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">บริการ</label>
+            <label class="form-label small-label">Service</label>
             <select class="form-select" name="service">
-              <option value="0">ทั้งหมด</option>
+              <option value="0">All</option>
               <?php while($sv=$serviceOps->fetch_assoc()): ?>
                 <option value="<?=$sv['service_id']?>" <?= $serviceF==$sv['service_id']?'selected':'' ?>><?=esc($sv['service_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">พนักงาน</label>
-            <select class="form-select select-search" name="staff" data-width="style" data-placeholder="เลือกพนักงาน" style="width:220px;">
-              <option value="0">ทั้งหมด</option>
+            <label class="form-label small-label">Staff</label>
+            <select class="form-select select-search" name="staff" data-width="style" data-placeholder="Select staff" style="width:220px;">
+              <option value="0">All</option>
               <?php while($s=$staffOps->fetch_assoc()): ?>
                 <option value="<?=$s['staff_id']?>" <?= $staffF==$s['staff_id']?'selected':'' ?>><?=esc($s['staff_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">ลูกค้า</label>
-            <select class="form-select select-search" name="customer" data-width="style" data-placeholder="เลือกลูกค้า" style="width:220px;">
-              <option value="0">ทั้งหมด</option>
+            <label class="form-label small-label">Customer</label>
+            <select class="form-select select-search" name="customer" data-width="style" data-placeholder="Select customer" style="width:220px;">
+              <option value="0">All</option>
               <?php while($cus=$customerOps->fetch_assoc()): ?>
                 <option value="<?=$cus['customer_id']?>" <?= $customerF==$cus['customer_id']?'selected':'' ?>><?=esc($cus['customer_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงเวลา</label>
+            <label class="form-label small-label">Period</label>
             <select class="form-select" name="period" id="periodSelect">
               <option value="all" <?= $period==='all'?'selected':'' ?>>All</option>
-              <option value="date" <?= $period==='date'?'selected':'' ?>>รายวัน</option>
-              <option value="month" <?= $period==='month'?'selected':'' ?>>รายเดือน</option>
-              <option value="year" <?= $period==='year'?'selected':'' ?>>รายปี</option>
+              <option value="date" <?= $period==='date'?'selected':'' ?>>By day</option>
+              <option value="month" <?= $period==='month'?'selected':'' ?>>By month</option>
+              <option value="year" <?= $period==='year'?'selected':'' ?>>By year</option>
             </select>
           </div>
           <div class="col-md-auto period-control <?= $period==='date'?'':'d-none' ?>" id="period-date">
-            <label class="form-label small-label">เลือกวันที่</label>
+            <label class="form-label small-label">Select date</label>
             <input type="date" class="form-control" name="period_date" value="<?=esc($periodDate)?>">
           </div>
           <div class="col-md-auto period-control <?= $period==='month'?'':'d-none' ?>" id="period-month">
-            <label class="form-label small-label">เดือน / ปี</label>
+            <label class="form-label small-label">Month / Year</label>
             <div class="d-flex gap-2">
               <select class="form-select" name="period_month">
                 <?php for($m=1;$m<=12;$m++): ?>
@@ -490,7 +490,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </div>
           </div>
           <div class="col-md-auto period-control <?= $period==='year'?'':'d-none' ?>" id="period-year">
-            <label class="form-label small-label">เลือกปี</label>
+            <label class="form-label small-label">Select year</label>
             <select class="form-select" name="period_year">
               <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
                 <option value="<?=$y?>" <?= $periodYear==$y?'selected':'' ?>><?=$y?></option>
@@ -501,20 +501,20 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <label class="form-label small-label">Sort by</label>
             <div class="input-group">
               <select class="form-select" name="sort">
-                <option value="booked_at" <?= $sort==='booked_at'?'selected':'' ?>>วันเวลาที่ทำการจอง</option>
-                <option value="service_time" <?= $sort==='service_time'?'selected':'' ?>>วันเวลาที่เข้าใช้บริการ</option>
+                <option value="booked_at" <?= $sort==='booked_at'?'selected':'' ?>>Booking created</option>
+                <option value="service_time" <?= $sort==='service_time'?'selected':'' ?>>Service time</option>
               </select>
               <select class="form-select" name="dir">
-                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>เก่า → ใหม่</option>
-                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>ใหม่ → เก่า</option>
+                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>Oldest → newest</option>
+                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>Newest → oldest</option>
               </select>
             </div>
           </div>
           <div class="col-md-auto">
-            <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
+            <button class="btn btn-primary"><i class="bi bi-search"></i> Apply filters</button>
           </div>
           <div class="ms-auto col-md-auto">
-            <span class="badge bg-primary">รวม: <?=number_format($total)?> รายการ</span>
+            <span class="badge bg-primary">Total: <?=number_format($total)?> records</span>
           </div>
         </form>
 
@@ -523,20 +523,20 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <thead class="table-light">
               <tr>
                 <th>ID</th>
-                <th>วันเวลาที่ทำการจอง</th>
-                <th>วันเวลาที่เข้าใช้บริการ</th>
-                <th>ลูกค้า</th>
-                <th>บริการ</th>
-                <th>พนักงาน</th>
-                <th class="text-end">ราคาก่อนหักส่วนลด</th>
-                <th class="text-end">ส่วนลด</th>
-                <th class="text-end">ราคาหลังหักส่วนลด</th>
-                <th>สถานะ</th>
+                <th>Booking created</th>
+                <th>Service time</th>
+                <th>Customer</th>
+                <th>Services</th>
+                <th>Staff</th>
+                <th class="text-end">Gross amount</th>
+                <th class="text-end">Discount</th>
+                <th class="text-end">Net amount</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="10" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="10" class="text-center text-muted">No data found</td></tr>
               <?php else: foreach($rows as $bk): ?>
                 <?php
                   $bookedAt = $bk['b_created_at'] ? date('Y-m-d H:i', strtotime($bk['b_created_at'])) : '-';
@@ -579,17 +579,17 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
         <?php if($pages > 1): ?>
         <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <span class="text-muted">Page <?=number_format($page)?> / <?=number_format($pages)?></span>
           <div class="btn-group">
             <?php if($page > 1): ?>
-              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> Previous</a>
             <?php else: ?>
-              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> Previous</span>
             <?php endif; ?>
             <?php if($page < $pages): ?>
-              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">Next <i class="bi bi-chevron-right"></i></a>
             <?php else: ?>
-              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+              <span class="btn btn-outline-primary disabled">Next <i class="bi bi-chevron-right"></i></span>
             <?php endif; ?>
           </div>
         </div>
@@ -605,37 +605,37 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <!-- Chart filters -->
         <div class="row g-3 align-items-end">
           <div class="col-md-auto">
-            <label class="form-label small-label">พนักงาน</label>
+            <label class="form-label small-label">Staff</label>
             <select id="chart_staff" class="form-select">
-              <option value="0">ทั้งหมด</option>
+              <option value="0">All</option>
               <?php $staffOps2 = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name"); while($s=$staffOps2->fetch_assoc()): ?>
                 <option value="<?=$s['staff_id']?>"><?=esc($s['staff_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">บริการ</label>
+            <label class="form-label small-label">Service</label>
             <select id="chart_service" class="form-select">
-              <option value="0">ทั้งหมด</option>
+              <option value="0">All</option>
               <?php $serviceOps2 = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name"); while($sv=$serviceOps2->fetch_assoc()): ?>
                 <option value="<?=$sv['service_id']?>"><?=esc($sv['service_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <button id="applyChart" class="btn btn-primary mt-4 mt-md-0"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+            <button id="applyChart" class="btn btn-primary mt-4 mt-md-0"><i class="bi bi-funnel"></i> Apply filters</button>
           </div>
         </div>
 
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mt-3 gap-3">
           <div>
-            <h5 class="mb-1" id="chartTitle">รายได้รายปี</h5>
-            <div class="text-muted" id="chartSubtitle">คลิกแท่งเพื่อดูรายละเอียดระดับถัดไป</div>
+            <h5 class="mb-1" id="chartTitle">Annual revenue</h5>
+            <div class="text-muted" id="chartSubtitle">Click a bar to drill down to the next level</div>
           </div>
           <div class="d-flex flex-wrap align-items-center gap-2">
-            <span class="badge bg-secondary-subtle text-dark" id="chartLevel">ระดับ: รายปีทั้งหมด</span>
-            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="backToYears"><i class="bi bi-arrow-counterclockwise"></i> ย้อนกลับระดับปี</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="backToMonths"><i class="bi bi-arrow-left-short"></i> ย้อนกลับระดับเดือน</button>
+            <span class="badge bg-secondary-subtle text-dark" id="chartLevel">Level: All years</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="backToYears"><i class="bi bi-arrow-counterclockwise"></i> Back to year level</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="backToMonths"><i class="bi bi-arrow-left-short"></i> Back to month level</button>
           </div>
         </div>
 
@@ -658,13 +658,13 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <div><div class="kpi-value" id="k_canc">0</div><div class="text-muted">Cancelled</div></div>
           </div></div></div>
         </div>
-        <div class="text-muted">* การ์ดไม่ใช้ตัวกรอง</div>
+        <div class="text-muted">* Cards ignore the filters above</div>
 
         <!-- CHART -->
         <div class="mt-3" style="min-height:360px">
           <canvas id="bkChart" height="120"></canvas>
         </div>
-        <div class="text-muted mt-2">* คลิกแท่งเพื่อดูรายละเอียดระดับถัดไป หรือคลิกปุ่มย้อนกลับเพื่อกลับไปยังระดับก่อนหน้า</div>
+        <div class="text-muted mt-2">* Click a bar to view the next level, or use the back buttons to return</div>
 
         <div class="mt-4 d-none" id="dayTableWrap">
           <h5 id="dayTableHeading" class="mb-3"></h5>
@@ -673,23 +673,23 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               <thead class="table-light">
                 <tr>
                   <th>ID</th>
-                  <th>เวลาบันทึก</th>
-                  <th>วัน/เวลาเข้าใช้บริการ</th>
-                  <th>ลูกค้า</th>
-                  <th>พนักงาน</th>
-                  <th>บริการ</th>
-                  <th class="text-end">ราคาก่อนส่วนลด</th>
-                  <th class="text-end">ส่วนลด</th>
-                  <th class="text-end">ยอดสุทธิ</th>
+                  <th>Booked at</th>
+                  <th>Service date/time</th>
+                  <th>Customer</th>
+                  <th>Staff</th>
+                  <th>Services</th>
+                  <th class="text-end">Gross</th>
+                  <th class="text-end">Discount</th>
+                  <th class="text-end">Net</th>
                 </tr>
               </thead>
               <tbody id="dayTableBody"></tbody>
             </table>
           </div>
           <div class="mt-3 text-end">
-            <div>ยอดรวมก่อนส่วนลด: <strong id="dayTotalsGross">฿0.00</strong></div>
-            <div>ส่วนลดรวม: <strong id="dayTotalsDiscount">฿0.00</strong></div>
-            <div>ยอดสุทธิรวม: <strong id="dayTotalsNet">฿0.00</strong></div>
+            <div>Total before discount: <strong id="dayTotalsGross">฿0.00</strong></div>
+            <div>Total discount: <strong id="dayTotalsDiscount">฿0.00</strong></div>
+            <div>Total net: <strong id="dayTotalsNet">฿0.00</strong></div>
           </div>
         </div>
 
@@ -714,8 +714,8 @@ function updatePeriodFilters(){
 periodSelect?.addEventListener('change',updatePeriodFilters);
 updatePeriodFilters();
 
-const currencyFmt = new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:2});
-const numberFmt = new Intl.NumberFormat('th-TH');
+const currencyFmt = new Intl.NumberFormat('en-US',{style:'currency',currency:'THB',maximumFractionDigits:2});
+const numberFmt = new Intl.NumberFormat('en-US');
 
 function formatCurrency(value){
   const num = typeof value === 'number' ? value : Number(value || 0);
@@ -726,7 +726,7 @@ function formatDateDisplay(iso){
   if(!iso) return '';
   const dt = new Date(iso + 'T00:00:00');
   if(Number.isNaN(dt.getTime())) return iso;
-  return dt.toLocaleDateString('th-TH',{dateStyle:'long'});
+  return dt.toLocaleDateString('en-US',{dateStyle:'long'});
 }
 
 let chart;
@@ -757,7 +757,7 @@ async function requestData(view, extra={}){
   if(extra.month !== undefined && extra.month !== null) params.set('month', extra.month);
   if(extra.day !== undefined && extra.day !== null) params.set('day', extra.day);
   const res = await fetch('report_booking.php?' + params.toString(), {cache:'no-store'});
-  if(!res.ok) throw new Error('ไม่สามารถดึงข้อมูลได้');
+  if(!res.ok) throw new Error('Unable to fetch data');
   return res.json();
 }
 
@@ -766,18 +766,18 @@ function updateBreadcrumb(){
   const backYears = document.getElementById('backToYears');
   const backMonths = document.getElementById('backToMonths');
   if(chartView==='years'){
-    levelEl.textContent = 'ระดับ: รายปีทั้งหมด';
+    levelEl.textContent = 'Level: All years';
     backYears?.classList.add('d-none');
     backMonths?.classList.add('d-none');
   }else if(chartView==='months'){
     const yearText = selectedYear ? selectedYear.toString() : '-';
-    levelEl.textContent = `ระดับ: ปี ${yearText}`;
+    levelEl.textContent = `Level: Year ${yearText}`;
     backYears?.classList.remove('d-none');
     backMonths?.classList.add('d-none');
   }else if(chartView==='days'){
     const yearText = selectedYear ? selectedYear.toString() : '-';
     const monthText = selectedMonth ? String(selectedMonth).padStart(2,'0') : '-';
-    levelEl.textContent = `ระดับ: ปี ${yearText} / เดือน ${monthText}`;
+    levelEl.textContent = `Level: Year ${yearText} / Month ${monthText}`;
     backYears?.classList.remove('d-none');
     backMonths?.classList.remove('d-none');
   }
@@ -786,7 +786,7 @@ function updateBreadcrumb(){
 function renderChart(data){
   const labels = data.labels ?? [];
   const values = data.series?.net ?? [];
-  document.getElementById('chartTitle').textContent = data.title || 'รายได้';
+  document.getElementById('chartTitle').textContent = data.title || 'Revenue';
   document.getElementById('chartSubtitle').textContent = data.subtitle || '';
 
   if(chart) chart.destroy();
@@ -796,7 +796,7 @@ function renderChart(data){
     data:{
       labels,
       datasets:[{
-        label:'รายได้ (บาท)',
+        label:'Revenue (THB)',
         data:values,
         backgroundColor:'#0d6efd',
         hoverBackgroundColor:'#0b5ed7',
@@ -813,7 +813,7 @@ function renderChart(data){
       },
       plugins:{
         legend:{display:false},
-        tooltip:{ callbacks:{ label:ctx=>`รายได้: ${formatCurrency(ctx.parsed.y)}` } }
+        tooltip:{ callbacks:{ label:ctx=>`Revenue: ${formatCurrency(ctx.parsed.y)}` } }
       },
       onClick:(evt,elements)=>{
         if(!elements?.length) return;
@@ -859,7 +859,7 @@ function renderDayTable(data){
     const td=document.createElement('td');
     td.colSpan=9;
     td.className='text-center text-muted';
-    td.textContent='ไม่มีข้อมูลสำหรับวันดังกล่าว';
+    td.textContent='No data for the selected day';
     tr.appendChild(td);
     body.appendChild(tr);
   }else{
@@ -888,7 +888,7 @@ function renderDayTable(data){
   const heading=document.getElementById('dayTableHeading');
   if(heading){
     const display=formatDateDisplay(data.date_iso);
-    heading.textContent=display ? `รายละเอียดรายได้วันที่ ${display}` : 'รายละเอียดรายได้รายวัน';
+    heading.textContent=display ? `Revenue details for ${display}` : 'Daily revenue details';
   }
   document.getElementById('dayTotalsGross').textContent = formatCurrency(data.totals?.gross ?? 0);
   document.getElementById('dayTotalsDiscount').textContent = formatCurrency(data.totals?.discount ?? 0);
@@ -973,7 +973,7 @@ $(function(){
       width:widthAttr,
       placeholder:placeholder,
       language:{
-        noResults:()=> 'ไม่พบข้อมูล'
+        noResults:()=> 'No results found'
       }
     });
   });

@@ -14,6 +14,50 @@ require_once("connect_db.php");
 $confirmedStatus = BOOKING_STATUS_CONFIRMED;
 function esc($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
+function normalize_date(string $value): ?string {
+  $value = trim($value);
+  if ($value === '') { return null; }
+  $dt = date_create($value);
+  return $dt ? $dt->format('Y-m-d') : null;
+}
+
+function month_range_to_dates(int $monthStart, int $yearStart, int $monthEnd, int $yearEnd): array {
+  $start = date_create(sprintf('%04d-%02d-01', $yearStart, $monthStart));
+  $end   = date_create(sprintf('%04d-%02d-01', $yearEnd, $monthEnd));
+  if (!$start || !$end) { return [null, null]; }
+  if ($start > $end) { [$start, $end] = [$end, $start]; }
+  $end->modify('last day of this month');
+  return [$start->format('Y-m-d'), $end->format('Y-m-d')];
+}
+
+function year_range_to_dates(int $yearStart, int $yearEnd): array {
+  if ($yearStart > $yearEnd) { [$yearStart, $yearEnd] = [$yearEnd, $yearStart]; }
+  return [sprintf('%04d-01-01', $yearStart), sprintf('%04d-12-31', $yearEnd)];
+}
+
+function resolve_period_range(string $period, array $input, int $minYear, int $maxYear): array {
+  $period = in_array($period, ['all','year','month','day'], true) ? $period : 'all';
+  $start = null; $end = null;
+  if ($period === 'day') {
+    $start = normalize_date($input['day_start'] ?? '');
+    $end   = normalize_date($input['day_end'] ?? '');
+    if ($start && !$end) { $end = $start; }
+    if ($end && !$start) { $start = $end; }
+    if ($start && $end && $start > $end) { [$start, $end] = [$end, $start]; }
+  } elseif ($period === 'month') {
+    $sm = (int)($input['month_start'] ?? date('n'));
+    $sy = max($minYear, min($maxYear, (int)($input['month_start_year'] ?? date('Y'))));
+    $em = (int)($input['month_end'] ?? $sm);
+    $ey = max($minYear, min($maxYear, (int)($input['month_end_year'] ?? $sy)));
+    [$start, $end] = month_range_to_dates(max(1,min(12,$sm)), $sy, max(1,min(12,$em)), $ey);
+  } elseif ($period === 'year') {
+    $sy = max($minYear, min($maxYear, (int)($input['year_start'] ?? date('Y'))));
+    $ey = max($minYear, min($maxYear, (int)($input['year_end'] ?? $sy)));
+    [$start, $end] = year_range_to_dates($sy, $ey);
+  }
+  return [$period, $start, $end];
+}
+
 // ----------------------- Year range meta for pickers -----------------------
 $yr = $conn->query("SELECT MIN(YEAR(booking_date)) AS miny, MAX(YEAR(booking_date)) AS maxy FROM booking")->fetch_assoc();
 $minYear = (int)($yr['miny'] ?? date('Y'));
@@ -21,261 +65,284 @@ $maxYear = (int)($yr['maxy'] ?? date('Y'));
 if ($minYear === 0) { $minYear = (int)date('Y'); $maxYear = (int)date('Y'); }
 
 // ======================= AJAX: KPIs + Chart =======================
-if (isset($_GET['action']) && $_GET['action'] === 'stats') {
+if (isset($_GET['action'])) {
   header('Content-Type: application/json; charset=utf-8');
 
-  $period = $_GET['period'] ?? 'month';       // all | year | month
-  $metric = $_GET['metric'] ?? 'net';         // net | bookings
-  $topN   = max(1, min(10, (int)($_GET['top'] ?? 5)));
-  $year   = isset($_GET['year'])  ? (int)$_GET['year']  : (int)date('Y');
-  $month  = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
-  $startY = isset($_GET['start_year']) ? (int)$_GET['start_year'] : $minYear;
-  $endY   = isset($_GET['end_year'])   ? (int)$_GET['end_year']   : $maxYear;
-  if ($startY > $endY) { $t=$startY; $startY=$endY; $endY=$t; }
+  if ($_GET['action'] === 'stats') {
+    [$period, $rangeStart, $rangeEnd] = resolve_period_range($_GET['chart_period'] ?? 'all', $_GET, $minYear, $maxYear);
+    $dateCond = '';
+    if ($rangeStart) { $dateCond .= " AND b.booking_date >= '".$conn->real_escape_string($rangeStart)."'"; }
+    if ($rangeEnd)   { $dateCond .= " AND b.booking_date <= '".$conn->real_escape_string($rangeEnd)."'"; }
 
-  $staffId   = isset($_GET['staff'])   ? (int)$_GET['staff']   : 0;
-  $serviceId = isset($_GET['service']) ? (int)$_GET['service'] : 0;
-
-  // ---------- KPI (GLOBAL; confirmed bookings only) ----------
-  $k = $conn->query("
-    SELECT
-      COALESCE(SUM(final_price),0)   AS net,
-      COUNT(*)                       AS tx,
-      COUNT(DISTINCT customer_id)    AS customers
-    FROM booking
-    WHERE status={$confirmedStatus}
-  ")->fetch_assoc();
-  $net_total = (float)$k['net'];
-  $tx_total = (int)$k['tx'];
-  $cust_total = (int)$k['customers'];
-  $svc_total = (int)$conn->query("
-    SELECT COUNT(DISTINCT so.service_id) c
-    FROM booking b
-    JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-    JOIN service_option so ON so.option_id=bs.option_id
-    WHERE b.status={$confirmedStatus}
-  ")->fetch_assoc()['c'];
-  // top service (by net, all time)
-  $top = $conn->query("
-    SELECT sv.service_name, COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net
-    FROM booking b
-    JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-    JOIN service_option so ON so.option_id=bs.option_id
-    JOIN service sv ON sv.service_id=so.service_id
-    WHERE b.status={$confirmedStatus}
-    GROUP BY sv.service_id
-    ORDER BY net DESC
-    LIMIT 1
-  ")->fetch_assoc();
-  $top_service = $top['service_name'] ?? '-';
-  $top_service_net = (float)($top['net'] ?? 0);
-
-  // ---------- Build buckets ----------
-  $labels=[]; $axis=''; $dateCond="1=1"; $rangeStart=""; $rangeEnd="";
-  if ($period === 'month') {
-    $days = cal_days_in_month(CAL_GREGORIAN,$month,$year);
-    for ($d=1;$d<=$days;$d++) $labels[] = str_pad((string)$d,2,'0',STR_PAD_LEFT);
-    $bucketExpr = "DATE_FORMAT(b.booking_date,'%d')";
-    $dateCond = "YEAR(b.booking_date)=$year AND MONTH(b.booking_date)=$month";
-    $axis='วัน';
-    $rangeStart=sprintf('%04d-%02d-01',$year,$month);
-    $rangeEnd  =sprintf('%04d-%02d-%02d',$year,$month,$days);
-  } elseif ($period === 'year') {
-    $labels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
-    $bucketExpr = "DATE_FORMAT(b.booking_date,'%m')";
-    $dateCond = "YEAR(b.booking_date)=$year";
-    $axis='เดือน';
-    $rangeStart=sprintf('%04d-01-01',$year);
-    $rangeEnd  =sprintf('%04d-12-31',$year);
-  } else {
-    for ($y=$startY;$y<=$endY;$y++) $labels[]=(string)$y;
-    $bucketExpr = "YEAR(b.booking_date)";
-    $dateCond = "YEAR(b.booking_date) BETWEEN $startY AND $endY";
-    $axis='ปี';
-    $rangeStart=sprintf('%04d-01-01',$startY);
-    $rangeEnd  =sprintf('%04d-12-31',$endY);
-  }
-
-  $extra = ["b.status={$confirmedStatus}"];
-  if ($staffId > 0)   $extra[] = "b.staff_id=".$staffId;
-  $whereBase = "$dateCond AND ".implode(" AND ",$extra);
-
-  // ---------- Determine service list to plot ----------
-  $svcList = [];
-  if ($serviceId > 0) {
-    $r = $conn->query("SELECT service_id, service_name FROM service WHERE service_id=$serviceId")->fetch_assoc();
-    if ($r) $svcList = [ ['id'=>$r['service_id'], 'name'=>$r['service_name']] ];
-  } else {
-    // top N by net within range (+optional staff filter)
-    $sqlTop = "
-      SELECT sv.service_id, sv.service_name,
-             COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net
+    // ---------- KPI (GLOBAL; confirmed bookings only) ----------
+    $k = $conn->query("
+      SELECT
+        COALESCE(SUM(final_price),0)   AS net,
+        COUNT(*)                       AS tx,
+        COUNT(DISTINCT customer_id)    AS customers
+      FROM booking
+      WHERE status={$confirmedStatus}
+    ")->fetch_assoc();
+    $net_total = (float)$k['net'];
+    $tx_total = (int)$k['tx'];
+    $cust_total = (int)$k['customers'];
+    $svc_total = (int)$conn->query("
+      SELECT COUNT(DISTINCT so.service_id) c
+      FROM booking b
+      JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+      JOIN service_option so ON so.option_id=bs.option_id
+      WHERE b.status={$confirmedStatus}
+    ")->fetch_assoc()['c'];
+    $top = $conn->query("
+      SELECT sv.service_name, COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net
       FROM booking b
       JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
       JOIN service_option so ON so.option_id=bs.option_id
       JOIN service sv ON sv.service_id=so.service_id
-      WHERE $whereBase
+      WHERE b.status={$confirmedStatus}
       GROUP BY sv.service_id
       ORDER BY net DESC
-      LIMIT $topN
+      LIMIT 1
+    ")->fetch_assoc();
+    $top_service = $top['service_name'] ?? '-';
+    $top_service_net = (float)($top['net'] ?? 0);
+
+    $sqlServices = "
+      SELECT
+        sv.service_id,
+        sv.service_name,
+        COUNT(DISTINCT CASE WHEN b.status={$confirmedStatus}{$dateCond} THEN b.booking_id END) AS total_booking
+      FROM service sv
+      LEFT JOIN service_option so ON so.service_id = sv.service_id
+      LEFT JOIN booking_seviceop bs ON bs.option_id = so.option_id
+      LEFT JOIN booking b ON b.booking_id = bs.booking_id
+      GROUP BY sv.service_id, sv.service_name
     ";
-    $rsTop = $conn->query($sqlTop);
-    while($row=$rsTop->fetch_assoc()){ $svcList[]=['id'=>$row['service_id'],'name'=>$row['service_name']]; }
-  }
-
-  // ---------- Build dataset for each service ----------
-  $datasets = [];
-  foreach($svcList as $svc){
-    if ($metric==='bookings') {
-      $sqlS = "
-        SELECT $bucketExpr AS bucket, COUNT(DISTINCT b.booking_id) AS val
-        FROM booking b
-        JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-        JOIN service_option so ON so.option_id=bs.option_id
-        WHERE $whereBase AND so.service_id={$svc['id']}
-        GROUP BY bucket ORDER BY bucket
-      ";
-    } else { // net
-      $sqlS = "
-        SELECT $bucketExpr AS bucket,
-               COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS val
-        FROM booking b
-        JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-        JOIN service_option so ON so.option_id=bs.option_id
-        WHERE $whereBase AND so.service_id={$svc['id']}
-        GROUP BY bucket ORDER BY bucket
-      ";
+    $services = [];
+    $rs = $conn->query($sqlServices);
+    while($row = $rs->fetch_assoc()){
+      $row['service_id'] = (int)$row['service_id'];
+      $row['total_booking'] = (int)($row['total_booking'] ?? 0);
+      $services[] = $row;
     }
-    $map=[]; $rs=$conn->query($sqlS);
-    while($row=$rs->fetch_assoc()){ $map[(string)$row['bucket']] = (float)$row['val']; }
-    $arr=[]; foreach($labels as $b){ $arr[] = round($map[$b] ?? 0, 2); }
-    $datasets[] = [ 'label'=>$svc['name'], 'data'=>$arr ];
+    $bars = $services;
+    usort($bars, function($a,$b){
+      return ($b['total_booking'] <=> $a['total_booking']) ?: strcasecmp($a['service_name'],$b['service_name']);
+    });
+    $allList = $services;
+    usort($allList, function($a,$b){ return strcasecmp($a['service_name'],$b['service_name']); });
+    $top10 = array_slice($bars, 0, 10);
+
+    echo json_encode([
+      'cards'=>[
+        'net_total'=>$net_total,
+        'tx_total'=>$tx_total,
+        'customers_total'=>$cust_total,
+        'services_sold'=>$svc_total,
+        'top_service'=>$top_service,
+        'top_service_net'=>$top_service_net
+      ],
+      'chart'=>[
+        'period'=>$period,
+        'range'=>['start'=>$rangeStart,'end'=>$rangeEnd],
+        'bars'=>$bars,
+        'services'=>$allList,
+        'top10'=>$top10
+      ]
+    ]);
+    exit;
   }
 
-  echo json_encode([
-    'cards'=>[
-      'net_total'=>$net_total,
-      'tx_total'=>$tx_total,
-      'customers_total'=>$cust_total,
-      'services_sold'=>$svc_total,
-      'top_service'=>$top_service,
-      'top_service_net'=>$top_service_net
-    ],
-    'chart'=>[
+  if ($_GET['action'] === 'timeline') {
+    $serviceId = (int)($_GET['service_id'] ?? 0);
+    if ($serviceId <= 0) {
+      echo json_encode(['error'=>'invalid service']);
+      exit;
+    }
+    [$period, $rangeStart, $rangeEnd] = resolve_period_range($_GET['chart_period'] ?? 'all', $_GET, $minYear, $maxYear);
+
+    $svcRow = $conn->query("SELECT service_name FROM service WHERE service_id={$serviceId} LIMIT 1")->fetch_assoc();
+    $serviceName = $svcRow['service_name'] ?? '';
+
+    if (!$rangeStart || !$rangeEnd) {
+      $rangeRow = $conn->query("
+        SELECT MIN(b.booking_date) AS min_d, MAX(b.booking_date) AS max_d
+        FROM booking b
+        JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+        JOIN service_option so ON so.option_id=bs.option_id
+        WHERE b.status={$confirmedStatus} AND so.service_id={$serviceId}
+      ")->fetch_assoc();
+      $rangeStart = $rangeRow['min_d'] ?? null;
+      $rangeEnd   = $rangeRow['max_d'] ?? null;
+    }
+    if (!$rangeStart || !$rangeEnd) {
+      echo json_encode([
+        'service'=>$serviceName,
+        'labels'=>[],
+        'data'=>[],
+        'axis'=>'',
+        'range'=>['start'=>$rangeStart,'end'=>$rangeEnd,'period'=>$period]
+      ]);
+      exit;
+    }
+
+    $labels=[]; $bucketExpr=''; $axis='';
+    if ($period === 'all') {
+      $startYear = (int)substr($rangeStart,0,4);
+      $endYear   = (int)substr($rangeEnd,0,4);
+      if ($startYear > $endYear) { [$startYear,$endYear] = [$endYear,$startYear]; }
+      for($y=$startYear;$y<=$endYear;$y++){ $labels[] = (string)$y; }
+      $bucketExpr = "YEAR(b.booking_date)";
+      $axis = 'ปี';
+    } elseif ($period === 'year') {
+      $start = date_create($rangeStart);
+      $start->modify('first day of this month');
+      $end = date_create($rangeEnd);
+      $end->modify('first day of next month');
+      while($start < $end){
+        $labels[] = $start->format('Y-m');
+        $start->modify('+1 month');
+      }
+      $bucketExpr = "DATE_FORMAT(b.booking_date,'%Y-%m')";
+      $axis = 'เดือน';
+    } else {
+      $start = date_create($rangeStart);
+      $end = date_create($rangeEnd);
+      $end->modify('+1 day');
+      while($start < $end){
+        $labels[] = $start->format('Y-m-d');
+        $start->modify('+1 day');
+      }
+      $bucketExpr = "DATE_FORMAT(b.booking_date,'%Y-%m-%d')";
+      $axis = 'วัน';
+    }
+
+    $dateCond = " AND b.booking_date >= '".$conn->real_escape_string($rangeStart)."' AND b.booking_date <= '".$conn->real_escape_string($rangeEnd)."'";
+    $sqlTimeline = "
+      SELECT {$bucketExpr} AS bucket, COUNT(DISTINCT b.booking_id) AS total
+      FROM booking b
+      JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+      JOIN service_option so ON so.option_id=bs.option_id
+      WHERE b.status={$confirmedStatus}{$dateCond} AND so.service_id={$serviceId}
+      GROUP BY bucket
+      ORDER BY bucket
+    ";
+    $map=[]; $rs=$conn->query($sqlTimeline);
+    while($row=$rs->fetch_assoc()){ $map[(string)$row['bucket']] = (int)$row['total']; }
+    $data=[]; foreach($labels as $label){ $data[] = (int)($map[$label] ?? 0); }
+
+    echo json_encode([
+      'service'=>$serviceName,
       'labels'=>$labels,
+      'data'=>$data,
       'axis'=>$axis,
-      'metric'=>$metric,
-      'datasets'=>$datasets
-    ],
-    'range'=>['start'=>$rangeStart,'end'=>$rangeEnd]
-  ]);
+      'range'=>['start'=>$rangeStart,'end'=>$rangeEnd,'period'=>$period]
+    ]);
+    exit;
+  }
+
+  echo json_encode(['error'=>'unsupported action']);
   exit;
 }
 
 // ======================= TABLE: filters + sort + pagination =======================
-$q         = trim($_GET['q'] ?? '');
-$status    = $_GET['status'] ?? 'confirmed';
-$staffF    = isset($_GET['staff']) ? (int)$_GET['staff'] : 0;
-$startDate = $_GET['start_date'] ?? '';
-$endDate   = $_GET['end_date']   ?? '';
-$sort      = $_GET['sort'] ?? 'net';
-$dir       = strtoupper($_GET['dir'] ?? 'DESC'); $dir = $dir==='ASC'?'ASC':'DESC';
+$tableSearch = trim($_GET['q'] ?? '');
+$tableStatus = $_GET['service_status'] ?? 'all';
+[$tablePeriod, $tableRangeStart, $tableRangeEnd] = resolve_period_range($_GET['table_period'] ?? 'all', $_GET, $minYear, $maxYear);
+$tableSortField = $_GET['sort_field'] ?? 'popularity';
+$rawDir = strtoupper($_GET['sort_dir'] ?? '');
+if ($rawDir !== 'ASC' && $rawDir !== 'DESC') {
+  $tableSortDir = $tableSortField === 'name' ? 'ASC' : 'DESC';
+} else {
+  $tableSortDir = $rawDir;
+}
+$tableSortDir = $tableSortDir === 'ASC' ? 'ASC' : 'DESC';
 
-$sortMap=[
-  'service'  => "sv.service_name $dir",
-  'tx'       => "tx $dir",
-  'customers'=> "customers $dir",
-  'gross'    => "gross $dir",
-  'discount' => "discount $dir",
-  'net'      => "net $dir",
-  'last'     => "last_booking $dir"
+$tableDateCond = '';
+if ($tableRangeStart) { $tableDateCond .= " AND b.booking_date >= '".$conn->real_escape_string($tableRangeStart)."'"; }
+if ($tableRangeEnd)   { $tableDateCond .= " AND b.booking_date <= '".$conn->real_escape_string($tableRangeEnd)."'"; }
+
+$whereParts = ['1=1'];
+$types = '';
+$params = [];
+if ($tableSearch !== '') {
+  $isNumeric = ctype_digit($tableSearch);
+  if ($isNumeric) {
+    $whereParts[] = '(sv.service_name LIKE ? OR sv.service_id = ?)';
+    $types .= 'si';
+    $params[] = '%' . $tableSearch . '%';
+    $params[] = (int)$tableSearch;
+  } else {
+    $whereParts[] = 'sv.service_name LIKE ?';
+    $types .= 's';
+    $params[] = '%' . $tableSearch . '%';
+  }
+}
+if ($tableStatus === 'active') {
+  $whereParts[] = 'sv.is_active = 1';
+} elseif ($tableStatus === 'inactive') {
+  $whereParts[] = 'sv.is_active = 0';
+}
+$whereSql = implode(' AND ', $whereParts);
+
+$sortMap = [
+  'name' => 'sv.service_name',
+  'popularity' => 'total_booking',
+  'price' => 'base_price',
+  'option' => 'option_count'
 ];
-$orderBy = $sortMap[$sort] ?? $sortMap['net'];
+$orderColumn = $sortMap[$tableSortField] ?? $sortMap['popularity'];
+$orderBy = $orderColumn . ' ' . $tableSortDir;
 
-// WHERE for aggregated query
-$where = ["b.status={$confirmedStatus}"]; $types=""; $params=[];
-if ($q!==''){ $where[]="sv.service_name LIKE ?"; $kw="%$q%"; $params[]=$kw; $types.="s"; }
-if ($staffF>0){ $where[]="b.staff_id=?"; $params[]=$staffF; $types.="i"; }
-if ($startDate!==''){ $where[]="b.booking_date>=?"; $params[]=$startDate; $types.="s"; }
-if ($endDate!==''){ $where[]="b.booking_date<=?"; $params[]=$endDate; $types.="s"; }
-$whereSql = implode(" AND ",$where);
-
-// Count distinct services for pagination
-$sqlCount="
-  SELECT COUNT(*) cnt FROM (
-    SELECT sv.service_id
-    FROM booking b
-    JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-    JOIN service_option so ON so.option_id=bs.option_id
-    JOIN service sv ON sv.service_id=so.service_id
-    WHERE $whereSql
-    GROUP BY sv.service_id
-  ) t
-";
-$stmt=$conn->prepare($sqlCount);
-if(!empty($params)) $stmt->bind_param($types,...$params);
-$stmt->execute(); $total=(int)$stmt->get_result()->fetch_assoc()['cnt']; $stmt->close();
+$sqlCount = "SELECT COUNT(*) AS cnt FROM service sv WHERE $whereSql";
+$stmt = $conn->prepare($sqlCount);
+if (!empty($params)) { $stmt->bind_param($types, ...$params); }
+$stmt->execute();
+$total = (int)($stmt->get_result()->fetch_assoc()['cnt'] ?? 0);
+$stmt->close();
 
 $per = 20;
 $pages = max(1, (int)ceil($total / $per));
 $page = (int)($_GET['page'] ?? 1);
 if ($page < 1) { $page = 1; }
 if ($page > $pages) { $page = $pages; }
-$off=($page-1)*$per;
+$off = ($page - 1) * $per;
 
-// Aggregated list per service
-$sqlSummary = "
+$sqlList = "
   SELECT
-    COUNT(DISTINCT b.booking_id) AS tx,
-    COUNT(DISTINCT b.customer_id) AS customers,
-    COALESCE(SUM(COALESCE(bs.price_booking, so.price)),0) AS gross,
-    COALESCE(SUM(COALESCE(bs.discount_booking,0)),0) AS discount,
-    COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net
-  FROM booking b
-  JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-  JOIN service_option so ON so.option_id=bs.option_id
-  JOIN service sv ON sv.service_id=so.service_id
+    sv.service_id,
+    sv.service_name,
+    sv.is_active,
+    COUNT(DISTINCT so.option_id) AS option_count,
+    MIN(so.price) AS base_price,
+    COUNT(DISTINCT CASE WHEN b.status={$confirmedStatus}{$tableDateCond} THEN b.booking_id END) AS total_booking
+  FROM service sv
+  LEFT JOIN service_option so ON so.service_id = sv.service_id
+  LEFT JOIN booking_seviceop bs ON bs.option_id = so.option_id
+  LEFT JOIN booking b ON b.booking_id = bs.booking_id
   WHERE $whereSql
-";
-$summarySvc = ['tx'=>0,'customers'=>0,'gross'=>0,'discount'=>0,'net'=>0];
-$stmt=$conn->prepare($sqlSummary);
-if(!empty($params)) $stmt->bind_param($types,...$params);
-$stmt->execute();
-$summarySvc = $stmt->get_result()->fetch_assoc() ?: $summarySvc;
-$stmt->close();
-$summarySvc['tx'] = (int)($summarySvc['tx'] ?? 0);
-$summarySvc['customers'] = (int)($summarySvc['customers'] ?? 0);
-$summarySvc['gross'] = (float)($summarySvc['gross'] ?? 0);
-$summarySvc['discount'] = (float)($summarySvc['discount'] ?? 0);
-$summarySvc['net'] = (float)($summarySvc['net'] ?? 0);
-
-$sqlList="
-  SELECT
-    sv.service_id, sv.service_name,
-    COUNT(DISTINCT b.booking_id) AS tx,
-    COUNT(DISTINCT b.customer_id) AS customers,
-    COALESCE(SUM(COALESCE(bs.price_booking, so.price)),0)                         AS gross,
-    COALESCE(SUM(COALESCE(bs.discount_booking,0)),0)                               AS discount,
-    COALESCE(SUM(COALESCE(bs.net_price, bs.price_booking-COALESCE(bs.discount_booking,0), so.price)),0) AS net,
-    MAX(b.booking_date) AS last_booking
-  FROM booking b
-  JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
-  JOIN service_option so ON so.option_id=bs.option_id
-  JOIN service sv ON sv.service_id=so.service_id
-  WHERE $whereSql
-  GROUP BY sv.service_id
+  GROUP BY sv.service_id, sv.service_name, sv.is_active
   ORDER BY $orderBy
   LIMIT ? OFFSET ?
 ";
-$params2=$params; $types2=$types."ii"; $params2[]=$per; $params2[]=$off;
-$stmt=$conn->prepare($sqlList);
-$stmt->bind_param($types2,...$params2);
-$stmt->execute(); $rs=$stmt->get_result();
-$rows=[]; while($r=$rs->fetch_assoc()) $rows[]=$r; $stmt->close();
-
-// Dropdowns
-$staffOps = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name");
-$serviceOps = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name");
+$paramsList = $params;
+$typesList = $types . 'ii';
+$paramsList[] = $per;
+$paramsList[] = $off;
+$stmt = $conn->prepare($sqlList);
+if (!empty($paramsList)) { $stmt->bind_param($typesList, ...$paramsList); }
+$stmt->execute();
+$rs = $stmt->get_result();
+$rows = [];
+$totalBookingSum = 0;
+while($r = $rs->fetch_assoc()){
+  $r['option_count'] = (int)($r['option_count'] ?? 0);
+  $r['total_booking'] = (int)($r['total_booking'] ?? 0);
+  $r['base_price'] = $r['base_price'] !== null ? (float)$r['base_price'] : null;
+  $rows[] = $r;
+  $totalBookingSum += $r['total_booking'];
+}
+$stmt->close();
 
 $baseQuery = $_GET;
 unset($baseQuery['page'], $baseQuery['tab'], $baseQuery['action']);
@@ -285,6 +352,29 @@ $pageUrl = function(int $target) use ($baseQuery): string {
   $query['page'] = $target;
   return '?' . http_build_query($query);
 };
+
+$tableDayStartVal = $tablePeriod === 'day' ? ($tableRangeStart ?? '') : '';
+$tableDayEndVal   = $tablePeriod === 'day' ? ($tableRangeEnd ?? '') : '';
+$tableMonthStartMonth = (int)date('n');
+$tableMonthStartYear  = (int)date('Y');
+$tableMonthEndMonth   = $tableMonthStartMonth;
+$tableMonthEndYear    = $tableMonthStartYear;
+if ($tablePeriod === 'month' && $tableRangeStart) {
+  $ds = date_create($tableRangeStart);
+  if ($ds) {
+    $tableMonthStartMonth = (int)$ds->format('n');
+    $tableMonthStartYear  = (int)$ds->format('Y');
+  }
+}
+if ($tablePeriod === 'month' && $tableRangeEnd) {
+  $de = date_create($tableRangeEnd);
+  if ($de) {
+    $tableMonthEndMonth = (int)$de->format('n');
+    $tableMonthEndYear  = (int)$de->format('Y');
+  }
+}
+$tableYearStartVal = $tablePeriod === 'year' && $tableRangeStart ? (int)substr($tableRangeStart,0,4) : $minYear;
+$tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($tableRangeEnd,0,4)   : $maxYear;
 ?>
 <!doctype html>
 <html lang="th">
@@ -321,49 +411,94 @@ $pageUrl = function(int $target) use ($baseQuery): string {
     <div class="tab-pane fade show active" id="t-table">
       <div class="card mt-3"><div class="card-body">
 
-        <form class="row g-2 align-items-end" method="get">
+        <form class="row g-3 align-items-end" method="get" id="tableFilters">
           <input type="hidden" name="tab" value="table">
-          <div class="col-md-auto">
-            <label class="form-label small-label">ค้นหาบริการ</label>
-            <input type="text" class="form-control" name="q" value="<?=esc($q)?>" placeholder="ชื่อบริการ">
+          <div class="col-lg-3 col-md-4">
+            <label class="form-label small-label">ค้นหา (ID หรือชื่อบริการ)</label>
+            <input type="text" class="form-control" name="q" value="<?=esc($tableSearch)?>" placeholder="ค้นหาบริการ" data-autosubmit>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">สถานะ</label>
-            <select class="form-select" name="status" disabled>
-              <option value="<?=BOOKING_STATUS_CONFIRMED?>" selected>Confirmed (ยึดสำหรับรายได้)</option>
+            <label class="form-label small-label">สถานะบริการ</label>
+            <select class="form-select" name="service_status">
+              <option value="all" <?= $tableStatus==='all'?'selected':'' ?>>ทั้งหมด</option>
+              <option value="active" <?= $tableStatus==='active'?'selected':'' ?>>เปิดใช้งาน</option>
+              <option value="inactive" <?= $tableStatus==='inactive'?'selected':'' ?>>ปิดใช้งาน</option>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">พนักงาน</label>
-            <select class="form-select" name="staff">
-              <option value="0">ทั้งหมด</option>
-              <?php while($s=$staffOps->fetch_assoc()): ?>
-                <option value="<?=$s['staff_id']?>" <?= $staffF==$s['staff_id']?'selected':'' ?>><?=esc($s['staff_name'])?></option>
-              <?php endwhile; ?>
+            <label class="form-label small-label">ช่วงข้อมูล</label>
+            <select class="form-select" name="table_period" id="tablePeriod">
+              <option value="all" <?= $tablePeriod==='all'?'selected':'' ?>>ทั้งหมด</option>
+              <option value="day" <?= $tablePeriod==='day'?'selected':'' ?>>ช่วงวัน</option>
+              <option value="month" <?= $tablePeriod==='month'?'selected':'' ?>>ช่วงเดือน</option>
+              <option value="year" <?= $tablePeriod==='year'?'selected':'' ?>>ช่วงปี</option>
             </select>
           </div>
-          <div class="col-md-auto">
-            <label class="form-label small-label">วันที่</label>
-            <div class="d-flex gap-2">
-              <input type="date" class="form-control" name="start_date" value="<?=esc($startDate)?>">
-              <input type="date" class="form-control" name="end_date"   value="<?=esc($endDate)?>">
+          <div class="col-lg-4 col-md-6 period-control <?= $tablePeriod==='day'?'':'d-none' ?>" id="tablePeriodDay">
+            <label class="form-label small-label">เลือกวัน</label>
+            <div class="d-flex flex-wrap gap-2">
+              <input type="date" class="form-control" name="day_start" value="<?=esc($tableDayStartVal)?>">
+              <span class="align-self-center small text-muted">ถึง</span>
+              <input type="date" class="form-control" name="day_end" value="<?=esc($tableDayEndVal)?>">
             </div>
           </div>
-          <div class="col-md-auto">
+          <div class="col-lg-5 col-md-6 period-control <?= $tablePeriod==='month'?'':'d-none' ?>" id="tablePeriodMonth">
+            <label class="form-label small-label">เลือกเดือน</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <div class="d-flex gap-2">
+                <select class="form-select" name="month_start">
+                  <?php for($m=1;$m<=12;$m++): ?>
+                    <option value="<?=$m?>" <?= $tableMonthStartMonth===$m?'selected':'' ?>><?=sprintf('%02d',$m)?></option>
+                  <?php endfor; ?>
+                </select>
+                <select class="form-select" name="month_start_year">
+                  <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                    <option value="<?=$y?>" <?= $tableMonthStartYear===$y?'selected':'' ?>><?=$y?></option>
+                  <?php endfor; ?>
+                </select>
+              </div>
+              <span class="small text-muted">ถึง</span>
+              <div class="d-flex gap-2">
+                <select class="form-select" name="month_end">
+                  <?php for($m=1;$m<=12;$m++): ?>
+                    <option value="<?=$m?>" <?= $tableMonthEndMonth===$m?'selected':'' ?>><?=sprintf('%02d',$m)?></option>
+                  <?php endfor; ?>
+                </select>
+                <select class="form-select" name="month_end_year">
+                  <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                    <option value="<?=$y?>" <?= $tableMonthEndYear===$y?'selected':'' ?>><?=$y?></option>
+                  <?php endfor; ?>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-auto period-control <?= $tablePeriod==='year'?'':'d-none' ?>" id="tablePeriodYear">
+            <label class="form-label small-label">ช่วงปี</label>
+            <div class="d-flex gap-2">
+              <select class="form-select" name="year_start">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= $tableYearStartVal===$y?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
+              <select class="form-select" name="year_end">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= $tableYearEndVal===$y?'selected':'' ?>><?=$y?></option>
+                <?php endfor; ?>
+              </select>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-6">
             <label class="form-label small-label">Sort by</label>
             <div class="input-group">
-              <select class="form-select" name="sort">
-                <option value="net"       <?= $sort==='net'?'selected':'' ?>>Net</option>
-                <option value="tx"        <?= $sort==='tx'?'selected':'' ?>>Transactions</option>
-                <option value="customers" <?= $sort==='customers'?'selected':'' ?>>Customers</option>
-                <option value="gross"     <?= $sort==='gross'?'selected':'' ?>>Gross</option>
-                <option value="discount"  <?= $sort==='discount'?'selected':'' ?>>Discount</option>
-                <option value="last"      <?= $sort==='last'?'selected':'' ?>>Last Booking</option>
-                <option value="service"   <?= $sort==='service'?'selected':'' ?>>Service Name</option>
+              <select class="form-select" name="sort_field" id="sortField">
+                <option value="name" <?= $tableSortField==='name'?'selected':'' ?>>ชื่อ</option>
+                <option value="popularity" <?= $tableSortField==='popularity'?'selected':'' ?>>ความนิยม (จำนวนจอง)</option>
+                <option value="price" <?= $tableSortField==='price'?'selected':'' ?>>ราคาเริ่มต้น</option>
+                <option value="option" <?= $tableSortField==='option'?'selected':'' ?>>จำนวนออปชัน</option>
               </select>
-              <select class="form-select" name="dir">
-                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>ASC</option>
-                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>DESC</option>
+              <select class="form-select" name="sort_dir" id="sortDir">
+                <option value="ASC" <?= $tableSortDir==='ASC'?'selected':'' ?>>ASC</option>
+                <option value="DESC" <?= $tableSortDir==='DESC'?'selected':'' ?>>DESC</option>
               </select>
             </div>
           </div>
@@ -379,39 +514,38 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           <table class="table table-striped table-hover align-middle">
             <thead class="table-light">
               <tr>
+                <th>ID</th>
                 <th>Service</th>
-                <th class="text-end">Tx</th>
-                <th class="text-end">Customers</th>
-                <th class="text-end">Gross</th>
-                <th class="text-end">Discount</th>
-                <th class="text-end">Net</th>
-                <th>Last Booking</th>
+                <th>สถานะ</th>
+                <th class="text-center">Option</th>
+                <th class="text-end">ราคาเริ่มต้น</th>
+                <th class="text-end">Total Booking</th>
               </tr>
             </thead>
             <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="7" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
               <?php else: foreach($rows as $r): ?>
                 <tr>
+                  <td><?=number_format((int)$r['service_id'])?></td>
                   <td><?=esc($r['service_name'])?></td>
-                  <td class="text-end"><?=number_format((int)$r['tx'])?></td>
-                  <td class="text-end"><?=number_format((int)$r['customers'])?></td>
-                  <td class="text-end"><?=number_format((float)$r['gross'],2)?></td>
-                  <td class="text-end text-danger">-<?=number_format((float)$r['discount'],2)?></td>
-                  <td class="text-end fw-bold text-success"><?=number_format((float)$r['net'],2)?></td>
-                  <td><small class="text-muted"><?=esc($r['last_booking'])?></small></td>
+                  <td>
+                    <?php if ((int)$r['is_active'] === 1): ?>
+                      <span class="badge bg-success-subtle text-success">เปิดใช้งาน</span>
+                    <?php else: ?>
+                      <span class="badge bg-secondary-subtle text-secondary">ปิดใช้งาน</span>
+                    <?php endif; ?>
+                  </td>
+                  <td class="text-center"><?=number_format($r['option_count'])?></td>
+                  <td class="text-end"><?= $r['base_price'] !== null ? number_format($r['base_price'],2) : '-' ?></td>
+                  <td class="text-end fw-semibold"><?=number_format($r['total_booking'])?></td>
                 </tr>
               <?php endforeach; endif; ?>
             </tbody>
-                        <tfoot class="table-light">
+            <tfoot class="table-light">
               <tr>
-                <th>รวม</th>
-                <th class="text-end fw-bold"><?=number_format($summarySvc['tx'])?></th>
-                <th class="text-end"><?=number_format($summarySvc['customers'])?></th>
-                <th class="text-end"><?=number_format($summarySvc['gross'],2)?></th>
-                <th class="text-end text-danger">-<?=number_format($summarySvc['discount'],2)?></th>
-                <th class="text-end fw-bold text-success"><?=number_format($summarySvc['net'],2)?></th>
-                <th class="text-muted">-</th>
+                <th colspan="5" class="text-end">รวมการจอง</th>
+                <th class="text-end"><?=number_format($totalBookingSum)?></th>
               </tr>
             </tfoot>
           </table>
@@ -467,99 +601,103 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <div class="text-muted mb-2">* การ์ดไม่ใช้ตัวกรอง</div>
 
         <!-- Chart Filters -->
-        <div class="row g-3 align-items-end">
+        <div class="row g-3 align-items-end" id="chartFilters">
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงเวลา</label>
-            <div class="btn-group" role="group">
-              <input type="radio" class="btn-check" name="period" id="p_all" value="all">
-              <label class="btn btn-outline-primary" for="p_all">All</label>
-              <input type="radio" class="btn-check" name="period" id="p_month" value="month" checked>
-              <label class="btn btn-outline-primary" for="p_month">Month</label>
-              <input type="radio" class="btn-check" name="period" id="p_year" value="year">
-              <label class="btn btn-outline-primary" for="p_year">Year</label>
+            <label class="form-label small-label">ช่วงข้อมูล</label>
+            <select class="form-select" id="chartPeriod">
+              <option value="all">ทั้งหมด</option>
+              <option value="year">ช่วงปี</option>
+              <option value="month">ช่วงเดือน</option>
+              <option value="day">ช่วงวัน</option>
+            </select>
+          </div>
+          <div class="col-lg-4 col-md-6 chart-period-control d-none" id="chartPeriodDay">
+            <label class="form-label small-label">เลือกวัน</label>
+            <div class="d-flex flex-wrap gap-2">
+              <input type="date" class="form-control" id="chartDayStart">
+              <span class="align-self-center small text-muted">ถึง</span>
+              <input type="date" class="form-control" id="chartDayEnd">
             </div>
           </div>
-          <div class="col-md-auto">
-            <label class="form-label small-label">Metric</label>
-            <select id="metric" class="form-select">
-              <option value="net" selected>Net Revenue</option>
-              <option value="bookings">Bookings Count</option>
-            </select>
+          <div class="col-lg-5 col-md-6 chart-period-control d-none" id="chartPeriodMonth">
+            <label class="form-label small-label">เลือกเดือน</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+              <div class="d-flex gap-2">
+                <select class="form-select" id="chartMonthStart">
+                  <?php for($m=1;$m<=12;$m++): ?>
+                    <option value="<?=$m?>" <?= $m==(int)date('n')?'selected':'' ?>><?=sprintf('%02d',$m)?></option>
+                  <?php endfor; ?>
+                </select>
+                <select class="form-select" id="chartMonthStartYear">
+                  <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                    <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
+                  <?php endfor; ?>
+                </select>
+              </div>
+              <span class="small text-muted">ถึง</span>
+              <div class="d-flex gap-2">
+                <select class="form-select" id="chartMonthEnd">
+                  <?php for($m=1;$m<=12;$m++): ?>
+                    <option value="<?=$m?>" <?= $m==(int)date('n')?'selected':'' ?>><?=sprintf('%02d',$m)?></option>
+                  <?php endfor; ?>
+                </select>
+                <select class="form-select" id="chartMonthEndYear">
+                  <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                    <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
+                  <?php endfor; ?>
+                </select>
+              </div>
+            </div>
           </div>
-          <div class="col-md-auto">
-            <label class="form-label small-label">พนักงาน</label>
-            <select id="chart_staff" class="form-select">
-              <option value="0">ทั้งหมด</option>
-              <?php $staffOps2 = $conn->query("SELECT staff_id, staff_name FROM staff ORDER BY staff_name"); while($s=$staffOps2->fetch_assoc()): ?>
-                <option value="<?=$s['staff_id']?>"><?=esc($s['staff_name'])?></option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <div class="col-md-auto">
-            <label class="form-label small-label">บริการ</label>
-            <select id="chart_service" class="form-select">
-              <option value="0">Top N</option>
-              <?php $serviceOps2 = $conn->query("SELECT service_id, service_name FROM service ORDER BY service_name"); while($sv=$serviceOps2->fetch_assoc()): ?>
-                <option value="<?=$sv['service_id']?>"><?=esc($sv['service_name'])?></option>
-              <?php endwhile; ?>
-            </select>
-          </div>
-          <div class="col-md-auto" id="ctl-topn">
-            <label class="form-label small-label">Top N</label>
-            <select id="topN" class="form-select">
-              <option>3</option><option selected>5</option><option>8</option><option>10</option>
-            </select>
-          </div>
-          <!-- Period-specific controls -->
-          <div class="col-md-auto" id="ctl-month">
-            <label class="form-label small-label">เดือน/ปี</label>
+          <div class="col-md-auto chart-period-control d-none" id="chartPeriodYear">
+            <label class="form-label small-label">ช่วงปี</label>
             <div class="d-flex gap-2">
-              <select id="month" class="form-select">
-                <?php for($m=1;$m<=12;$m++): ?>
-                  <option value="<?=$m?>" <?= $m==(int)date('n')?'selected':'' ?>><?=$m?></option>
+              <select class="form-select" id="chartYearStart">
+                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
+                  <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
                 <?php endfor; ?>
               </select>
-              <select id="year_m" class="form-select">
+              <select class="form-select" id="chartYearEnd">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
                   <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
                 <?php endfor; ?>
               </select>
             </div>
           </div>
-          <div class="col-md-auto d-none" id="ctl-year">
-            <label class="form-label small-label">ปี</label>
-            <select id="year_y" class="form-select">
-              <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
-              <?php endfor; ?>
-            </select>
-          </div>
-          <div class="col-md-auto d-none" id="ctl-all">
-            <label class="form-label small-label">ช่วงปี</label>
-            <div class="d-flex gap-2">
-              <select id="start_year" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==$minYear?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
-              <select id="end_year" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==$maxYear?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
-            </div>
-          </div>
-
           <div class="col-md-auto">
             <button id="applyChart" class="btn btn-primary"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
           </div>
         </div>
 
-        <!-- Chart -->
-        <div class="mt-3" style="min-height:380px">
-          <canvas id="svcChart" height="120"></canvas>
+        <div class="mt-4">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h6 class="mb-0">เลือกบริการที่ต้องการเปรียบเทียบ</h6>
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="chartSelectAll">เลือกทั้งหมด</button>
+          </div>
+          <div class="mt-2 d-flex flex-wrap gap-2" id="chartServiceCheckboxes"></div>
         </div>
-        <div class="text-muted mt-2">* เส้นหลายสี: บริการแต่ละตัว (Top N หรือบริการที่เลือก) — คลิก legend เพื่อเปิด–ปิดเส้น</div>
+
+        <!-- Chart -->
+        <div class="row mt-4 g-4">
+          <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="mb-0" id="chartDetailTitle">กราฟจำนวนการจองต่อบริการ</h5>
+              <button class="btn btn-sm btn-outline-secondary d-none" type="button" id="chartBackButton"><i class="bi bi-arrow-left"></i> ย้อนกลับ</button>
+            </div>
+            <div class="bg-light rounded p-2" style="min-height:420px">
+              <canvas id="svcChart" height="140"></canvas>
+            </div>
+            <div class="text-muted mt-2 small">* คลิกแท่งกราฟเพื่อดูรายละเอียดแบบกราฟเส้นของบริการนั้น ๆ</div>
+          </div>
+          <div class="col-lg-3">
+            <div class="card h-100">
+              <div class="card-body">
+                <h6 class="card-title">Top 10 Service</h6>
+                <ol class="list-group list-group-numbered" id="topServiceList"></ol>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div></div>
     </div>
@@ -569,39 +707,237 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-function updateCtl(){
-  const p=document.querySelector('input[name=period]:checked')?.value||'month';
-  document.getElementById('ctl-month').classList.toggle('d-none',p!=='month');
-  document.getElementById('ctl-year').classList.toggle('d-none',p!=='year');
-  document.getElementById('ctl-all').classList.toggle('d-none',p!=='all');
+const tablePeriodSelect = document.getElementById('tablePeriod');
+function updateTablePeriodControls(){
+  const period = tablePeriodSelect?.value || 'all';
+  document.getElementById('tablePeriodDay')?.classList.toggle('d-none', period !== 'day');
+  document.getElementById('tablePeriodMonth')?.classList.toggle('d-none', period !== 'month');
+  document.getElementById('tablePeriodYear')?.classList.toggle('d-none', period !== 'year');
 }
-['p_all','p_month','p_year'].forEach(id=>document.getElementById(id).addEventListener('change',updateCtl));
-updateCtl();
-document.getElementById('chart_service').addEventListener('change',()=>{
-  const v=document.getElementById('chart_service').value;
-  document.getElementById('ctl-topn').classList.toggle('d-none', v!=='0');
-});
+tablePeriodSelect?.addEventListener('change', updateTablePeriodControls);
+updateTablePeriodControls();
 
-let chart;
+const searchInput = document.querySelector('[data-autosubmit]');
+if (searchInput) {
+  let timer;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const form = document.getElementById('tableFilters');
+      if (form) form.submit();
+    }, 400);
+  });
+}
+
+const sortField = document.getElementById('sortField');
+const sortDir = document.getElementById('sortDir');
+function updateSortDirLabels(){
+  if (!sortDir) return;
+  const field = sortField?.value || 'name';
+  const ascOpt = sortDir.querySelector('option[value="ASC"]');
+  const descOpt = sortDir.querySelector('option[value="DESC"]');
+  if (!ascOpt || !descOpt) return;
+  if (field === 'name') {
+    ascOpt.textContent = 'A - Z';
+    descOpt.textContent = 'Z - A';
+  } else {
+    ascOpt.textContent = 'น้อยไปมาก';
+    descOpt.textContent = 'มากไปน้อย';
+  }
+}
+sortField?.addEventListener('change', updateSortDirLabels);
+updateSortDirLabels();
+
+const chartPeriodSelect = document.getElementById('chartPeriod');
+function updateChartPeriodControls(){
+  const period = chartPeriodSelect?.value || 'all';
+  document.getElementById('chartPeriodDay')?.classList.toggle('d-none', period !== 'day');
+  document.getElementById('chartPeriodMonth')?.classList.toggle('d-none', period !== 'month');
+  document.getElementById('chartPeriodYear')?.classList.toggle('d-none', period !== 'year');
+}
+chartPeriodSelect?.addEventListener('change', updateChartPeriodControls);
+updateChartPeriodControls();
+
+let svcChart;
+let currentBars = [];
+let currentServices = [];
+let chartSelectedIds = new Set();
 function fmtMoney(x){ return Number(x||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
-async function loadStats(){
-  const p=document.querySelector('input[name=period]:checked')?.value||'month';
-  const url=new URL(location.href); url.search=''; url.searchParams.set('action','stats'); url.searchParams.set('period',p);
-  url.searchParams.set('metric',document.getElementById('metric').value);
-  url.searchParams.set('staff',document.getElementById('chart_staff').value);
-  url.searchParams.set('service',document.getElementById('chart_service').value);
-  if(document.getElementById('chart_service').value==='0'){
-    url.searchParams.set('top',document.getElementById('topN').value);
+function buildChartUrl(action){
+  const url = new URL(location.href);
+  url.search = '';
+  url.searchParams.set('action', action);
+  const period = chartPeriodSelect?.value || 'all';
+  url.searchParams.set('chart_period', period);
+  const dayStart = document.getElementById('chartDayStart')?.value;
+  const dayEnd = document.getElementById('chartDayEnd')?.value;
+  const monthStart = document.getElementById('chartMonthStart')?.value;
+  const monthStartYear = document.getElementById('chartMonthStartYear')?.value;
+  const monthEnd = document.getElementById('chartMonthEnd')?.value;
+  const monthEndYear = document.getElementById('chartMonthEndYear')?.value;
+  const yearStart = document.getElementById('chartYearStart')?.value;
+  const yearEnd = document.getElementById('chartYearEnd')?.value;
+  if (dayStart) url.searchParams.set('day_start', dayStart);
+  if (dayEnd) url.searchParams.set('day_end', dayEnd);
+  if (monthStart) url.searchParams.set('month_start', monthStart);
+  if (monthStartYear) url.searchParams.set('month_start_year', monthStartYear);
+  if (monthEnd) url.searchParams.set('month_end', monthEnd);
+  if (monthEndYear) url.searchParams.set('month_end_year', monthEndYear);
+  if (yearStart) url.searchParams.set('year_start', yearStart);
+  if (yearEnd) url.searchParams.set('year_end', yearEnd);
+  return url;
+}
+
+function destroyChart(){ if (svcChart) { svcChart.destroy(); svcChart = null; } }
+
+function updateCheckboxUI(){
+  document.querySelectorAll('#chartServiceCheckboxes input[type="checkbox"]').forEach(input => {
+    input.checked = chartSelectedIds.has(String(input.value));
+  });
+}
+
+function buildCheckboxes(){
+  const container = document.getElementById('chartServiceCheckboxes');
+  container.innerHTML = '';
+  currentServices.forEach(svc => {
+    const wrap = document.createElement('div');
+    wrap.className = 'form-check form-check-inline';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'form-check-input';
+    input.id = `chart-svc-${svc.service_id}`;
+    input.value = String(svc.service_id);
+    input.checked = chartSelectedIds.has(String(svc.service_id));
+    input.addEventListener('change', () => {
+      if (input.checked) chartSelectedIds.add(input.value); else chartSelectedIds.delete(input.value);
+      renderBarChart();
+    });
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.setAttribute('for', input.id);
+    label.textContent = `${svc.service_name} (${(svc.total_booking||0).toLocaleString()})`;
+    wrap.appendChild(input);
+    wrap.appendChild(label);
+    container.appendChild(wrap);
+  });
+}
+
+function populateTopList(items){
+  const list = document.getElementById('topServiceList');
+  list.innerHTML = '';
+  if (!items || items.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'list-group-item text-muted';
+    li.textContent = 'ไม่มีข้อมูล';
+    list.appendChild(li);
+    return;
   }
-  if(p==='month'){ url.searchParams.set('year',document.getElementById('year_m').value); url.searchParams.set('month',document.getElementById('month').value); }
-  else if(p==='year'){ url.searchParams.set('year',document.getElementById('year_y').value); }
-  else { url.searchParams.set('start_year',document.getElementById('start_year').value); url.searchParams.set('end_year',document.getElementById('end_year').value); }
+  items.forEach(item => {
+    const li = document.createElement('li');
+    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+    const name = document.createElement('span');
+    name.textContent = item.service_name;
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-primary rounded-pill';
+    badge.textContent = (item.total_booking||0).toLocaleString();
+    li.appendChild(name);
+    li.appendChild(badge);
+    list.appendChild(li);
+  });
+}
 
-  const res=await fetch(url.toString(),{cache:'no-store'});
-  const data=await res.json();
+function renderBarChart(){
+  const titleEl = document.getElementById('chartDetailTitle');
+  document.getElementById('chartBackButton')?.classList.add('d-none');
+  const selected = chartSelectedIds.size ? chartSelectedIds : new Set(currentServices.map(s=>String(s.service_id)));
+  if (!chartSelectedIds.size) {
+    currentServices.forEach(s=>selected.add(String(s.service_id)));
+    chartSelectedIds = new Set(selected);
+    updateCheckboxUI();
+  }
+  const dataset = currentBars.filter(bar => selected.has(String(bar.service_id)));
+  destroyChart();
+  const ctx = document.getElementById('svcChart').getContext('2d');
+  svcChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dataset.map(d => d.service_name),
+      datasets: [{
+        label: 'จำนวนการจอง',
+        data: dataset.map(d => d.total_booking),
+        backgroundColor: 'rgba(13,110,253,0.6)',
+        borderColor: '#0d6efd'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `จำนวนการจอง: ${(ctx.parsed.y||0).toLocaleString()}`
+          }
+        }
+      },
+      onClick: (_evt, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const target = dataset[idx];
+        if (target) {
+          loadServiceTimeline(target.service_id, target.service_name);
+        }
+      }
+    }
+  });
+  titleEl.textContent = 'กราฟจำนวนการจองต่อบริการ';
+}
 
-  // KPIs
+async function loadServiceTimeline(serviceId, serviceName){
+  const url = buildChartUrl('timeline');
+  url.searchParams.set('service_id', serviceId);
+  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const data = await res.json();
+  destroyChart();
+  const ctx = document.getElementById('svcChart').getContext('2d');
+  svcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.labels || [],
+      datasets: [{
+        label: `จำนวนการจอง (${serviceName})`,
+        data: (data.data || []),
+        borderColor: '#0d6efd',
+        backgroundColor: 'rgba(13,110,253,0.15)',
+        tension: 0.25,
+        fill: true,
+        pointRadius: 3
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: data.axis || '' } },
+        y: { beginAtZero: true, ticks: { precision: 0 } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+  document.getElementById('chartBackButton')?.classList.remove('d-none');
+  document.getElementById('chartDetailTitle').textContent = `กราฟบริการ: ${serviceName}`;
+}
+
+async function loadChartData(){
+  const url = buildChartUrl('stats');
+  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const data = await res.json();
+  if (data.error) { console.error(data.error); return; }
+
   document.getElementById('k_net_total').textContent = fmtMoney(data.cards.net_total);
   document.getElementById('k_tx_total').textContent = (data.cards.tx_total||0).toLocaleString();
   document.getElementById('k_customers_total').textContent = (data.cards.customers_total||0).toLocaleString();
@@ -609,27 +945,39 @@ async function loadStats(){
   document.getElementById('k_top_service').textContent = data.cards.top_service || '-';
   document.getElementById('k_top_service_net').textContent = fmtMoney(data.cards.top_service_net||0);
 
-  // Chart
-  if(chart) chart.destroy();
-  const ctx=document.getElementById('svcChart').getContext('2d');
-  chart=new Chart(ctx,{
-    type:'line',
-    data:{
-      labels: data.chart.labels,
-      datasets: (data.chart.datasets||[]).map((d,idx)=> ({
-        label:d.label, data:d.data, tension:.3, pointRadius:2, borderWidth:2
-      }))
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ x:{ title:{display:true,text:data.chart.axis} }, y:{ beginAtZero:true } },
-      plugins:{ legend:{display:true}, tooltip:{mode:'index', intersect:false} }
+  currentBars = data.chart?.bars || [];
+  currentServices = data.chart?.services || [];
+  const prevSelection = new Set(chartSelectedIds);
+  chartSelectedIds = new Set();
+  currentServices.forEach(s => {
+    const id = String(s.service_id);
+    if (!prevSelection.size || prevSelection.has(id)) {
+      chartSelectedIds.add(id);
     }
   });
+  if (!chartSelectedIds.size) {
+    currentServices.forEach(s => chartSelectedIds.add(String(s.service_id)));
+  }
+  buildCheckboxes();
+  populateTopList(data.chart?.top10 || []);
+  renderBarChart();
 }
 
-document.getElementById('applyChart').addEventListener('click', loadStats);
-document.getElementById('chart-tab')?.addEventListener('shown.bs.tab', ()=> loadStats());
+document.getElementById('applyChart')?.addEventListener('click', (e)=>{
+  e.preventDefault();
+  loadChartData();
+});
+document.getElementById('chart-tab')?.addEventListener('shown.bs.tab', ()=> loadChartData());
+document.getElementById('chartBackButton')?.addEventListener('click', ()=> renderBarChart());
+document.getElementById('chartSelectAll')?.addEventListener('click', ()=>{
+  if (chartSelectedIds.size === currentServices.length) {
+    chartSelectedIds.clear();
+  } else {
+    chartSelectedIds = new Set(currentServices.map(s=>String(s.service_id)));
+  }
+  updateCheckboxUI();
+  renderBarChart();
+});
 </script>
 </body>
 </html>

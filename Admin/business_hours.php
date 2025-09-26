@@ -9,13 +9,13 @@ if (!isset($_SESSION['staff_id']) || ($_SESSION['staff_level'] ?? '') !== 'admin
 require_once 'connect_db.php';
 
 $daysOfWeek = [
-    'Monday'    => 'Monday (จันทร์)',
-    'Tuesday'   => 'Tuesday (อังคาร)',
-    'Wednesday' => 'Wednesday (พุธ)',
-    'Thursday'  => 'Thursday (พฤหัสบดี)',
-    'Friday'    => 'Friday (ศุกร์)',
-    'Saturday'  => 'Saturday (เสาร์)',
-    'Sunday'    => 'Sunday (อาทิตย์)',
+    'Monday'    => 'Monday (Mon)',
+    'Tuesday'   => 'Tuesday (Tue)',
+    'Wednesday' => 'Wednesday (Wed)',
+    'Thursday'  => 'Thursday (Thu)',
+    'Friday'    => 'Friday (Fri)',
+    'Saturday'  => 'Saturday (Sat)',
+    'Sunday'    => 'Sunday (Sun)',
 ];
 
 $errors = [];
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($openInput !== '') {
             $openDate = DateTime::createFromFormat('!H:i', $openInput);
             if (!$openDate || $openDate->format('H:i') !== $openInput) {
-                $errors[] = "รูปแบบเวลาเปิดของ {$label} ไม่ถูกต้อง";
+                $errors[] = "Invalid opening time format for {$label}";
                 continue;
             }
             $openTimeValue = $openDate;
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($closeInput !== '') {
             $closeDate = DateTime::createFromFormat('!H:i', $closeInput);
             if (!$closeDate || $closeDate->format('H:i') !== $closeInput) {
-                $errors[] = "รูปแบบเวลาปิดของ {$label} ไม่ถูกต้อง";
+                $errors[] = "Invalid closing time format for {$label}";
                 continue;
             }
             $closeTimeValue = $closeDate;
@@ -53,15 +53,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($isClosed === 0) {
             if ($openTimeValue === null) {
-                $errors[] = "กรุณากรอกเวลาเปิดสำหรับ {$label}";
+                $errors[] = "Please enter an opening time for {$label}";
                 continue;
             }
             if ($closeTimeValue === null) {
-                $errors[] = "กรุณากรอกเวลาปิดสำหรับ {$label}";
+                $errors[] = "Please enter a closing time for {$label}";
                 continue;
             }
             if ($openTimeValue >= $closeTimeValue) {
-                $errors[] = "เวลาเปิดต้องน้อยกว่าเวลาปิดสำหรับ {$label}";
+                $errors[] = "The opening time must be earlier than the closing time for {$label}";
                 continue;
             }
         }
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $successMessage = 'บันทึกเวลาเปิด-ปิดร้านเรียบร้อยแล้ว';
+        $successMessage = 'Business hours saved successfully';
         $submittedValues = [];
     }
 }
@@ -168,7 +168,7 @@ foreach ($submittedValues as $dayKey => $values) {
             <div class="col-lg-12">
                 <div class="card">
                     <div class="card-body">
-                        <h5 class="card-title">กำหนดเวลาเปิด-ปิดร้าน</h5>
+                        <h5 class="card-title">Set Business Hours</h5>
 
                         <?php if (!empty($errors)): ?>
                             <div class="alert alert-danger">
@@ -184,17 +184,17 @@ foreach ($submittedValues as $dayKey => $values) {
                             </div>
                         <?php endif; ?>
 
-                        <p class="text-muted">กำหนดเวลาเปิด-ปิดสำหรับแต่ละวัน และระบุวันหยุดประจำสัปดาห์ของร้าน ระบบจะใช้ข้อมูลนี้ในการคำนวณเวลาที่ลูกค้าสามารถจองได้</p>
+                        <p class="text-muted">Set the opening and closing times for each day and specify the weekly closing days. The system uses this information to calculate the available booking times for customers.</p>
 
                         <form method="post" novalidate>
                             <div class="table-responsive">
                                 <table class="table table-bordered align-middle">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 30%;">วัน</th>
-                                            <th style="width: 25%;">เวลาเปิด</th>
-                                            <th style="width: 25%;">เวลาปิด</th>
-                                            <th style="width: 20%;" class="text-center">สถานะ</th>
+                                            <th style="width: 30%;">Day</th>
+                                            <th style="width: 25%;">Opening Time</th>
+                                            <th style="width: 25%;">Closing Time</th>
+                                            <th style="width: 20%;" class="text-center">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -215,7 +215,7 @@ foreach ($submittedValues as $dayKey => $values) {
                                                 <td class="text-center">
                                                     <div class="form-check form-switch d-inline-flex align-items-center gap-2">
                                                         <input class="form-check-input toggle-closed" type="checkbox" role="switch" id="closed_<?= htmlspecialchars(strtolower($dayKey)) ?>" name="is_closed[<?= htmlspecialchars($dayKey) ?>]" value="1" <?= $isClosed ? 'checked' : '' ?>>
-                                                        <label class="form-check-label" for="closed_<?= htmlspecialchars(strtolower($dayKey)) ?>">ปิด</label>
+                                                        <label class="form-check-label" for="closed_<?= htmlspecialchars(strtolower($dayKey)) ?>">Closed</label>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -224,7 +224,7 @@ foreach ($submittedValues as $dayKey => $values) {
                                 </table>
                             </div>
                             <div class="text-end">
-                                <button type="submit" class="btn btn-primary">บันทึกการตั้งค่า</button>
+                                <button type="submit" class="btn btn-primary">Save Settings</button>
                             </div>
                         </form>
                     </div>

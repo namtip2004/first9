@@ -64,7 +64,7 @@ if (isset($conn) && $conn instanceof mysqli) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -115,7 +115,7 @@ in a tranquil and luxurious setting, for true relaxation.
                     <div class="section-subtitle">Most Popular</div>
                     <h2 class="section-title font-display">Hot Services</h2>
                     <p class="section-description">
-                        บริการยอดนิยมที่ลูกค้าให้ความไว้วางใจและกลับมาใช้บริการอย่างต่อเนื่อง
+                        The treatments guests trust the most and return for again and again.
                     </p>
                 </div>
                 
@@ -136,26 +136,26 @@ in a tranquil and luxurious setting, for true relaxation.
                                         <?php endif; ?>
                                     </div>
                                     <h4 class="font-display"><?= htmlspecialchars($service['service_name']) ?></h4>
-                                    <p><?= htmlspecialchars($service['description'] ?: 'บริการสปาคุณภาพสูงสำหรับการผ่อนคลายอย่างแท้จริง') ?></p>
+                                    <p><?= htmlspecialchars($service['description'] ?: 'Premium spa experiences designed for total relaxation') ?></p>
                                     <div class="rating">
                                         <i class="fas fa-calendar-check"></i>
                                         <span>
                                             <?= $service['total_bookings'] > 0
                                                 ? number_format($service['total_bookings']) . ' booking'
-                                                : 'พร้อมให้บริการ' ?>
+                                                : 'Ready to serve' ?>
                                         </span>
                                     </div>
                                     <div class="price-hot">
-                                        <?= $service['min_price'] !== null
-                                            ? 'Start price €' . number_format($service['min_price'], 2)
-                                            : 'ติดต่อเพื่อสอบถามราคา' ?>
+                                            <?= $service['min_price'] !== null
+                                            ? 'Starting at €' . number_format($service['min_price'], 2)
+                                            : 'Contact us for pricing' ?>
                                     </div>
                                 </div>
                             </div>
               <?php endforeach; ?>
                     <?php else: ?>
                         <div class="col-12 text-center">
-                            <p class="text-muted">ไม่พบข้อมูลบริการยอดนิยมในขณะนี้</p>
+                            <p class="text-muted">Popular service data is currently unavailable.</p>
                         </div>
   <?php endif; ?>
                 </div>
@@ -169,8 +169,8 @@ in a tranquil and luxurious setting, for true relaxation.
                     <div class="section-subtitle">Our Signature Services</div>
                     <h2 class="section-title font-display">Luxury Wellness Treatments</h2>
                     <p class="section-description">
-                        บริการสปาระดับพรีเมียม ด้วยเทคนิคการนวดโบราณผสมผสานกับนวัตกรรมสมัยใหม่ 
-                        เพื่อประสบการณ์การผ่อนคลายที่เหนือระดับ
+                        Premium spa rituals that fuse time-honoured Thai techniques with modern innovations
+                        for an elevated relaxation experience.
                     </p>
                 </div>
 
@@ -183,7 +183,7 @@ in a tranquil and luxurious setting, for true relaxation.
                                 <i class="fas fa-hands-helping"></i>
                             </div>
                             <h3 class="font-display">Royal Thai Massage</h3>
-                            <p>การนวดไทยโบราณแบบราชการ ด้วยเทคนิควิชาการระดับสูง ช่วยปรับสมดุลร่างกายและจิตใจ เพื่อความผ่อนคลายอย่างลึกซึ้ง</p>
+                            <p>Royal-style traditional Thai massage using master-level techniques to balance body and mind for profound relaxation.</p>
                         </div>
                     </div>
                     
@@ -193,7 +193,7 @@ in a tranquil and luxurious setting, for true relaxation.
                                 <i class="fas fa-seedling"></i>
                             </div>
                             <h3 class="font-display">Aromatherapy Bliss</h3>
-                            <p>การนวดด้วยน้ำมันหอมระเหยธรรมชาติจากทั่วโลก ผสมผสานกับเทคนิคพิเศษ เพื่อการบำรุงผิวและผ่อนคลายทั้งกายและใจ</p>
+                            <p>Aromatic massage with natural essential oils from around the world, paired with specialised methods to nourish skin and soothe the senses.</p>
                         </div>
                     </div>
                     
@@ -203,7 +203,7 @@ in a tranquil and luxurious setting, for true relaxation.
                                 <i class="fas fa-gem"></i>
                             </div>
                             <h3 class="font-display">Luxury Holistic Spa</h3>
-                            <p>การดูแลแบบองค์รวมด้วยสมุนไพรธรรมชาติและเทคนิคสมัยใหม่ เพื่อความงามและสุขภาพที่ดีอย่างยั่งยืน</p>
+                            <p>Holistic care combining natural botanicals and contemporary spa science for lasting beauty and wellness.</p>
                         </div>
                     </div>
                 </div>
@@ -220,12 +220,12 @@ in a tranquil and luxurious setting, for true relaxation.
                         <div class="section-subtitle">About Our Sanctuary</div>
                         <h2 class="section-title font-display">A Legacy of Luxury & Wellness</h2>
                         <p class="section-description" style="text-align: left; margin: 0;">
-                            Pure Serenity Spa ได้รับการยอมรับในฐานะสปาระดับพรีเมียม ที่ให้บริการการนวดและการดูแลสุขภาพแบบองค์รวม 
-                            ด้วยประสบการณ์กว่า 15 ปี และทีมผู้เชี่ยวชาญระดับโลก
+                            Pure Serenity Spa is recognised as a premium destination for holistic massage and wellness,
+                            with more than 15 years of experience and a world-class team of specialists.
                         </p>
                         <p style="color: var(--deep-brown); line-height: 1.8; margin-top: 20px;">
-                            เราเป็นผู้นำในการผสมผสานศิลปะการนวดไทยโบราณกับเทคนิคสปาสมัยใหม่ 
-                            เพื่อมอบประสบการณ์การผ่อนคลายที่ไม่เหมือนใคร
+                            We lead the way in blending the art of traditional Thai massage with contemporary spa innovations
+                            to deliver a relaxation experience unlike any other.
                         </p>
                     </div>
                     
@@ -253,7 +253,7 @@ in a tranquil and luxurious setting, for true relaxation.
             </div>
         </section> -->
 
-<!-- เพิ่มหลัง About Section และก่อน </div> ของ HOME PAGE -->
+<!-- Added after the About Section and before the closing </div> of the HOME PAGE -->
 
         <!-- Owner Introduction Section -->
         <section class="owner-introduction-section">
@@ -263,19 +263,18 @@ in a tranquil and luxurious setting, for true relaxation.
                         <div class="section-subtitle">Meet Our Founder</div>
                         <h2 class="section-title font-display">Vision Behind Pure Serenity</h2>
                         <p class="section-description" style="text-align: left; margin: 0;">
-                            <strong>คุณสุดารัตน์ วงศ์เสรี</strong> ผู้ก่อตั้งและเจ้าของ Pure Serenity Spa 
-                            ด้วยความหลงใหลในศิลปะการนวดไทยโบราณและการดูแลสุขภาพแบบองค์รวม 
-                            จึงได้ก่อตั้งสปาแห่งนี้ขึ้นเพื่อมอบประสบการณ์การผ่อนคลายที่แท้จริงให้กับทุกคน
+                            <strong>Khun Sudarat Wongseri</strong>, founder and owner of Pure Serenity Spa,
+                            channelled her passion for traditional Thai massage and holistic wellbeing into creating this sanctuary.
                         </p>
                         <p style="color: var(--deep-brown); line-height: 1.8; margin-top: 20px;">
-                            ด้วยประสบการณ์กว่า 20 ปีในวงการสปาและการแพทย์แผนไทย รวมถึงการศึกษาดูงานจากสปาชั้นนำทั่วโลก 
-                            ทำให้ Pure Serenity Spa เป็นสถานที่ที่ผสมผสานภูมิปัญญาไทยกับเทคนิคสมัยใหม่อย่างลงตัว
+                            With over 20 years in the spa and Thai traditional medicine industries, along with immersive study tours at world-renowned spas,
+                            she has shaped Pure Serenity Spa into a harmonious blend of Thai wisdom and modern innovation.
                         </p>
                         <div class="owner-mission">
-                            <h4 class="font-display" style="color: var(--luxury-gold); margin-bottom: 15px;">พันธกิจของเรา</h4>
+                            <h4 class="font-display" style="color: var(--luxury-gold); margin-bottom: 15px;">Our Mission</h4>
                             <p style="color: var(--deep-brown); line-height: 1.8; font-style: italic;">
-                                "เรามุ่งมั่นที่จะเป็นสถานที่ที่ทุกคนสามารถหลีกหนีจากความเร่งรีบของชีวิต 
-                                และค้นพบความสงบภายในใจผ่านศิลปะการนวดและการดูแลที่อบอุ่น"
+                                "We are devoted to providing a haven where everyone can pause from the rush of life
+                                and discover inner peace through the art of massage and heartfelt care."
                             </p>
                         </div>
                     </div>
@@ -287,8 +286,8 @@ in a tranquil and luxurious setting, for true relaxation.
                                     <i class="fas fa-award"></i>
                                 </div>
                                 <div class="achievement-content">
-                                    <h5>การรับรองระดับสากล</h5>
-                                    <p>ใบรับรองจากสถาบันนวดไทยและสมาคมสปาระดับโลก</p>
+                                    <h5>International Accreditation</h5>
+                                    <p>Certified by leading Thai massage institutes and global spa associations.</p>
                                 </div>
                             </div>
                             <div class="achievement-item">
@@ -296,8 +295,8 @@ in a tranquil and luxurious setting, for true relaxation.
                                     <i class="fas fa-graduation-cap"></i>
                                 </div>
                                 <div class="achievement-content">
-                                    <h5>การศึกษาเฉพาะทาง</h5>
-                                    <p>ปริญญาด้านการแพทย์แผนไทยและอาร์ยุรเวท</p>
+                                    <h5>Specialised Education</h5>
+                                    <p>Holds degrees in Thai traditional medicine and Ayurveda.</p>
                                 </div>
                             </div>
                             <div class="achievement-item">
@@ -305,8 +304,8 @@ in a tranquil and luxurious setting, for true relaxation.
                                     <i class="fas fa-globe"></i>
                                 </div>
                                 <div class="achievement-content">
-                                    <h5>ประสบการณ์สากล</h5>
-                                    <p>ศึกษาดูงานสปาชั้นนำในบาหลี, ญี่ปุ่น และสวิตเซอร์แลนด์</p>
+                                    <h5>Global Experience</h5>
+                                    <p>Completed immersive training with flagship spas in Bali, Japan, and Switzerland.</p>
                                 </div>
                             </div>
                         </div>
@@ -322,7 +321,7 @@ in a tranquil and luxurious setting, for true relaxation.
                     <div class="section-subtitle">Our Professional Team</div>
                     <h2 class="section-title font-display">Expert Therapists</h2>
                     <p class="section-description">
-                        ทีมนักบำบัดมืออาชีพที่ผ่านการคัดสรรและฝึกอบรมอย่างเข้มข้น เพื่อให้บริการในระดับมาตรฐานสูงสุด
+                        Our carefully selected therapists undergo extensive training to deliver service at the highest standard.
                     </p>
                 </div>
                 
@@ -334,10 +333,9 @@ in a tranquil and luxurious setting, for true relaxation.
                             </div>
                             <div class="team-content">
                                 <div class="team-badge">Head Therapist</div>
-                                <h3 class="font-display">คุณปรียา สุขสวัสดิ์</h3>
+                                <h3 class="font-display">Khun Preeya Suksawat</h3>
                                 <p class="team-description">
-                                    นักนวดมืออาชีพที่มีประสบการณ์กว่า 15 ปี เชี่ยวชาญด้านการนวดแก้อาการปวด 
-                                    และการนวดเพื่อสุขภาพ
+                                    A professional therapist with over 15 years of experience, specialising in therapeutic bodywork and wellness treatments.
                                 </p>
                                 <div class="team-expertise">
                                     <span>Deep Tissue Massage</span>
@@ -355,10 +353,9 @@ in a tranquil and luxurious setting, for true relaxation.
                             </div>
                             <div class="team-content">
                                 <div class="team-badge">Aromatherapy Expert</div>
-                                <h3 class="font-display">คุณมาลี จันทร์เพ็ญ</h3>
+                                <h3 class="font-display">Khun Malee Chanpen</h3>
                                 <p class="team-description">
-                                    ผู้เชี่ยวชาญด้านอโรมาเธอราปีและการนวดด้วยน้ำมันหอมระเหย 
-                                    มีประสบการณ์กว่า 12 ปี
+                                    Specialist in aromatherapy and essential oil massage techniques with more than 12 years of expertise.
                                 </p>
                                 <div class="team-expertise">
                                     <span>Aromatherapy</span>
@@ -376,10 +373,9 @@ in a tranquil and luxurious setting, for true relaxation.
                             </div>
                             <div class="team-content">
                                 <div class="team-badge">Traditional Thai Massage</div>
-                                <h3 class="font-display">คุณสมชาย ใสสะอาด</h3>
+                                <h3 class="font-display">Khun Somchai Saisa-ard</h3>
                                 <p class="team-description">
-                                    ผู้เชี่ยวชาญการนวดไทยโบราณแบบราชการ ผ่านการฝึกอบรมจากวัดโพธิ์ 
-                                    มีประสบการณ์กว่า 18 ปี
+                                    Master of royal traditional Thai massage, trained at Wat Pho with more than 18 years of practice.
                                 </p>
                                 <div class="team-expertise">
                                     <span>Royal Thai Massage</span>

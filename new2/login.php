@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -69,13 +69,13 @@
 
     <div class="form-group">
         <label class="form-label">Email</label>
-        <input type="email" class="form-control" name="username" placeholder="กรอกอีเมล" required>
+        <input type="email" class="form-control" name="username" placeholder="Enter your email" required>
 
     </div>
 
     <div class="form-group" style="position: relative;">
         <label class="form-label">Password</label>
-        <input type="password" class="form-control" name="password" placeholder="กรอกรหัสผ่าน" required>
+        <input type="password" class="form-control" name="password" placeholder="Enter your password" required>
         <span class="password-toggle" onclick="togglePassword(this.previousElementSibling.id)">
             <i class="fas fa-eye"></i>
         </span>
@@ -84,16 +84,16 @@
     <div class="form-check">
         <input type="checkbox" class="form-check-input" name="remember" id="rememberMe">
         <label class="form-check-label" for="rememberMe">
-            จดจำการเข้าสู่ระบบ
+            Remember me
         </label>
     </div>
 
     <button type="submit" class="btn-auth">
-        Sing In
+        Sign In
     </button>
 
     <!-- <div class="forgot-password">
-        <a href="#" onclick="showForgotPassword()">ลืมรหัสผ่าน?</a>
+        <a href="#" onclick="showForgotPassword()">Forgot your password?</a>
     </div> -->
 </form>
 
@@ -115,7 +115,7 @@
                                     <div class="col-md-12">
                                         <div class="form-group">
                                             <label for="form-label">Name</label>
-                                            <input type="text" class="form-control" id="floatingName" name="floatingName" placeholder="name">  
+                                            <input type="text" class="form-control" id="floatingName" name="floatingName" placeholder="Full name">
                                         </div>
                                     </div>
 
@@ -123,12 +123,12 @@
                                 
                                 <div class="form-group">
                                     <label class="form-label">Gmail</label>
-                                    <input type="email" class="form-control" id="floatingEmail" name="floatingEmail" placeholder="Your Email">
+                                    <input type="email" class="form-control" id="floatingEmail" name="floatingEmail" placeholder="Your email">
                                 </div>
                                 
                                 <div class="form-group">
                                     <label class="form-label">Phone number</label>
-                                    <input type="text" class="form-control" id="floatingPhone" name="floatingPhone" placeholder="phone number">
+                                    <input type="text" class="form-control" id="floatingPhone" name="floatingPhone" placeholder="Phone number">
                                 </div>
 
 <div class="form-group">
@@ -144,7 +144,7 @@
                                 
                                 <div class="form-group">
                                     <label class="form-label">Birthday</label>
-                                    <input type="date" class="form-control" id="floatingDate" name="floatingDate" placeholder="birthday">
+                                    <input type="date" class="form-control" id="floatingDate" name="floatingDate" placeholder="Birthday">
                                 </div>                                
                                 
                                 <div class="form-group" style="position: relative;">
@@ -166,18 +166,18 @@
                                 <!-- <div class="form-check">
                                     <input type="checkbox" class="form-check-input" id="agreeTerms" required>
                                     <label class="form-check-label" for="agreeTerms">
-                                        ฉันยอมรับ <a href="#" style="color: var(--luxury-gold);">ข้อกำหนดการใช้งาน</a> และ <a href="#" style="color: var(--luxury-gold);">นโยบายความเป็นส่วนตัว</a>
+                                        I agree to the <a href="#" style="color: var(--luxury-gold);">Terms of Service</a> and <a href="#" style="color: var(--luxury-gold);">Privacy Policy</a>.
                                     </label>
                                 </div> -->
                                 
                                 <button type="submit" class="btn-auth">
-                                    Sing Up
+                                    Sign Up
                                 </button>
                             </form>
 
                             <!-- Social Login -->
                             <!-- <div class="divider">
-                                <span>หรือเข้าสู่ระบบด้วย</span>
+                                <span>Or sign in with</span>
                             </div>
                              -->
                             <!-- <div class="social-login">
@@ -248,7 +248,7 @@ function handleLogin(event) {
     const submitBtn = event.target.querySelector('button[type="submit"]');
 
     if (!email || !password) {
-        showAlert(alertDiv, 'error', 'กรุณากรอกข้อมูลให้ครบถ้วน');
+        showAlert(alertDiv, 'error', 'Please complete all required fields.');
         return;
     }
 
@@ -272,7 +272,7 @@ function handleLogin(event) {
                 } else if (data.level == 9) {
                     window.location.href = 'index-admin.php';
                 } else {
-                    showAlert(alertDiv, 'error', 'ไม่มีสิทธิ์เข้าใช้งานระบบนี้');
+                    showAlert(alertDiv, 'error', 'You do not have permission to access this system.');
                 }
             }, 1000);
         } else {
@@ -281,7 +281,7 @@ function handleLogin(event) {
     })
     .catch(error => {
         submitBtn.classList.remove('btn-loading');
-        showAlert(alertDiv, 'error', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
+        showAlert(alertDiv, 'error', 'A server connection error occurred.');
         console.error(error);
     });
 }
@@ -303,28 +303,28 @@ function handleLogin(event) {
             
             // Validation
             if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
-                showAlert(alertDiv, 'error', 'กรุณากรอกข้อมูลให้ครบถ้วน');
+                showAlert(alertDiv, 'error', 'Please complete all required fields.');
                 return;
             }
             
             if (password !== confirmPassword) {
-                showAlert(alertDiv, 'error', 'รหัสผ่านไม่ตรงกัน');
+                showAlert(alertDiv, 'error', 'Passwords do not match.');
                 return;
             }
             
             if (password.length < 8) {
-                showAlert(alertDiv, 'error', 'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
+                showAlert(alertDiv, 'error', 'Password must be at least 8 characters long.');
                 return;
             }
             
             const phoneRegex = /^[0-9]{9,10}$/;
             if (!phoneRegex.test(phone)) {
-                showAlert(alertDiv, 'error', 'เบอร์โทรศัพท์ไม่ถูกต้อง');
+                showAlert(alertDiv, 'error', 'Invalid phone number.');
                 return;
             }
             
             if (!agreeTerms) {
-                showAlert(alertDiv, 'error', 'กรุณายอมรับข้อกำหนดการใช้งาน');
+                showAlert(alertDiv, 'error', 'Please accept the terms of service.');
                 return;
             }
             
@@ -333,7 +333,7 @@ function handleLogin(event) {
             
             // Simulate API call
             setTimeout(() => {
-                showAlert(alertDiv, 'success', 'สมัครสมาชิกสำเร็จ! กำลังพาคุณไปยังหน้าหลัก...');
+                showAlert(alertDiv, 'success', 'Registration successful! Redirecting you to the homepage...');
                 
                 // Store user session
                 const userData = {
@@ -355,7 +355,7 @@ function handleLogin(event) {
 
         // Social Login
         function socialLogin(provider) {
-            alert(`เข้าสู่ระบบด้วย ${provider.charAt(0).toUpperCase() + provider.slice(1)} (Demo Mode)`);
+            alert(`Sign in with ${provider.charAt(0).toUpperCase() + provider.slice(1)} (Demo Mode)`);
             
             // For demo purposes
             const userData = {
@@ -384,9 +384,9 @@ function handleLogin(event) {
 
         // Forgot Password
         function showForgotPassword() {
-            const email = prompt('กรุณากรอกอีเมลที่ใช้สมัครสมาชิก:');
+            const email = prompt('Please enter the email used to register:');
             if (email) {
-                alert('ลิงก์รีเซ็ตรหัสผ่านได้ถูกส่งไปยังอีเมลของคุณแล้ว');
+                alert('A password reset link has been sent to your email.');
             }
         }
 

@@ -151,9 +151,9 @@
         }
         .options-list {
             display: flex;
-            flex-direction: row; /* จัดเรียงในแนวนอน */
-            flex-wrap: wrap; /* ถ้ามีหลายตัวเลือกให้ขึ้นบรรทัดใหม่ */
-            gap: 10px; /* ระยะห่างระหว่างตัวเลือก */
+            flex-direction: row; /* Arrange options horizontally */
+            flex-wrap: wrap; /* Wrap onto a new line if there are many choices */
+            gap: 10px; /* Spacing between options */
         }
 
         .cart-item {
@@ -226,9 +226,9 @@
         <div class="container">
             <div class="section-header fade-in text-center mb-5">
                 <!-- <div class="section-subtitle">Make a Reservation</div> -->
-                <h2 class="section-title font-display">BooKing</h2>
+                <h2 class="section-title font-display">Booking</h2>
                 <!-- <p class="section-description">
-                    จองประสบการณ์สปาระดับพรีเมียม และเริ่มต้นการเดินทางสู่ความผ่อนคลาย
+                    Reserve a premium spa journey and begin your path to total relaxation.
                 </p> -->
             </div>
 
@@ -237,7 +237,7 @@
                 <div class="col-lg-7 mb-4">
                     <div class="services-section">
                         <h4 class="font-display mb-4" style="color: var(--charcoal);">
-                            <i class="fas fa-spa me-2"></i>เลือกบริการของคุณ
+                            <i class="fas fa-spa me-2"></i>Choose Your Services
                         </h4>
                         <div id="servicesContainer">
                             <!-- Services will be loaded here -->
@@ -248,29 +248,29 @@
                 <!-- Cart and Booking Details Section -->
                 <div class="col-lg-5">
                     <div class="cart-section">
-                         <div id="cartDisplaySection">
+                        <div id="cartDisplaySection">
                         <h4 class="font-display mb-4" style="color: var(--charcoal);">
-                            <i class="fas fa-shopping-cart me-2"></i>รายการที่เลือก
+                            <i class="fas fa-shopping-cart me-2"></i>Selected Items
                         </h4>
                         
                         <div id="cartItems" class="mb-4">
-                            <p class="text-center text-muted">ยังไม่ได้เลือกบริการ</p>
+                            <p class="text-center text-muted">No services selected yet.</p>
                         </div>
                         </div>
 
                         <!-- Customer Information -->
                         <!-- <div class="customer-info mb-4">
-                            <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">ข้อมูลลูกค้า</h5>
+                            <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">Customer Information</h5>
                             <?php if(isset($_SESSION['customer_id'])): ?>
                                 <div class="alert alert-info">
                                     <i class="fas fa-user-check me-2"></i>
-                                    เข้าสู่ระบบแล้ว: <?php echo $_SESSION['customer_name'] ?? 'Customer'; ?>
+                                    Logged in as: <?php echo $_SESSION['customer_name'] ?? 'Customer'; ?>
                                 </div> -->
                                 <input type="hidden" id="customerId" value="<?php echo $_SESSION['customer_id']; ?>">
                             <!-- <?php else: ?>
                                 <div class="alert alert-warning">
                                     <i class="fas fa-exclamation-triangle me-2"></i>
-                                    กรุณาเข้าสู่ระบบก่อนจอง
+                                    Please log in before booking.
                                 </div>
                             <?php endif; ?>
                         </div> -->
@@ -285,7 +285,7 @@
                           <!-- Date Selection -->
 <div class="form-group mb-3">
     <label class="form-label">
-        <i class="fas fa-calendar me-1"></i>เลือกวันที่
+        <i class="fas fa-calendar me-1"></i>Select Date
     </label>
     <div class="d-flex justify-content-center">
     <div id="bookingDate" class="calendar-container">
@@ -298,23 +298,23 @@
                             <!-- Time Selection -->
                             <div class="form-group mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-clock me-2"></i>เลือกเวลา
+                                    <i class="fas fa-clock me-2"></i>Select Time
                                 </label>
                                 <select class="form-control" id="startTime" name="start_time" required disabled>
-                                    <option value="">เลือกเวลา</option>
+                                    <option value="">Select a time</option>
                                 </select>
                                 <div id="timeSlotMessage" class="form-text text-muted mt-1">
-                                    กรุณาเลือกบริการและวันที่เพื่อดูเวลาที่ว่าง
+                                    Please choose services and a date to view available times.
                                 </div>
                             </div>
 
                             <!-- Staff Selection -->
                             <div class="form-group mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-user me-2"></i>เลือกผู้ให้บริการ
+                                    <i class="fas fa-user me-2"></i>Select a Service Provider
                                 </label>
                                 <button type="button" class="btn btn-outline-primary w-100" id="selectStaffBtn" data-bs-toggle="modal" data-bs-target="#staffModal">
-                                    <i class="fas fa-users me-2"></i>เลือกผู้ให้บริการ
+                                    <i class="fas fa-users me-2"></i>Choose a Service Provider
                                 </button>
                                 <input type="hidden" name="staff_id" id="selectedStaffId">
                             </div>
@@ -322,7 +322,7 @@
                             <!-- Duration Display -->
                             <div class="mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-hourglass-half me-2"></i>ระยะเวลารวม
+                                    <i class="fas fa-hourglass-half me-2"></i>Total Duration
                                 </label>
                                 <input type="text" class="form-control" id="totalDuration" readonly>
                             </div>
@@ -330,29 +330,29 @@
                             <!-- Special Requests -->
                             <div class="form-group mb-3">
                                 <label class="form-label">
-                                    <i class="fas fa-comment me-2"></i>ข้อมูลเพิ่มเติม
+                                    <i class="fas fa-comment me-2"></i>Additional Information
                                 </label>
-                                <textarea class="form-control" name="special_requests" rows="3" placeholder="ความต้องการพิเศษ หรือข้อมูลสุขภาพที่ควรทราบ"></textarea>
+                                <textarea class="form-control" name="special_requests" rows="3" placeholder="Special requests or health information we should know."></textarea>
                             </div>
 
                             <!-- Price Summary -->
                             <div class="summary-card">
                                 <h5 class="font-display mb-3">
-                                    <i class="fas fa-receipt me-2"></i>สรุปราคา
+                                    <i class="fas fa-receipt me-2"></i>Price Summary
                                 </h5>
                                 <div id="priceSummary">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span>ราคารวม:</span>
+                                        <span>Total price:</span>
                                         <span id="totalPrice">€0</span>
                                     </div>
                                     <div class="d-flex justify-content-between mb-2" id="discountRow" style="display: none;">
-                                        <span>ส่วนลด:</span>
+                                        <span>Discount:</span>
                                         <span id="totalDiscount" class="price-discount">-€0</span>
                                     </div>
 
                                     <hr style="border-color: rgba(255,255,255,0.3);">
                                     <div class="d-flex justify-content-between">
-                                        <strong>ราคาสุทธิ:</strong>
+                                        <strong>Final price:</strong>
                                         <strong id="finalPrice" style="color: var(--luxury-gold);">€0</strong>
                                     </div>
                                 </div>
@@ -360,7 +360,7 @@
 
                             <!-- Submit Button -->
 <button type="button" class="btn-luxury w-100 mt-4" id="proceedToPaymentBtn" disabled>
-    <i class="fas fa-credit-card me-2"></i>ชำระเงิน
+    <i class="fas fa-credit-card me-2"></i>Proceed to Payment
 </button>
                         </form>
                         </div>
@@ -368,38 +368,38 @@
                         <div id="paymentSection" class="payment-section" style="display: none;">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="font-display" style="color: var(--charcoal);">
-            <i class="fas fa-credit-card me-2"></i>ชำระเงิน
+            <i class="fas fa-credit-card me-2"></i>Payment
         </h4>
         <button type="button" class="btn btn-outline-secondary" id="backToBookingBtn">
-            <i class="fas fa-arrow-left me-2"></i>กลับ
+            <i class="fas fa-arrow-left me-2"></i>Back
         </button>
     </div>
 
-    <!-- สรุปการจอง -->
+    <!-- Booking Summary -->
     <div class="booking-summary-card mb-4">
         <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">
-            <i class="fas fa-file-invoice me-2"></i>สรุปการจอง
+            <i class="fas fa-file-invoice me-2"></i>Booking Summary
         </h5>
         <div id="paymentSummaryDetails">
-            <!-- จะแสดงรายละเอียดการจอง -->
+            <!-- Booking details will be rendered here -->
         </div>
     </div>
 
-    <!-- วิธีการชำระเงิน -->
+    <!-- Payment Methods -->
     <div class="payment-methods-card mb-4">
         <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">
-            <i class="fas fa-money-check-alt me-2"></i>วิธีการชำระเงิน
+            <i class="fas fa-money-check-alt me-2"></i>Payment Methods
         </h5>
         <div class="payment-methods">
             <div class="payment-method-item">
                 <div class="d-flex align-items-center mb-2">
                     <i class="fas fa-university me-3" style="color: var(--luxury-gold); font-size: 1.5rem;"></i>
-                    <strong>โอนผ่านธนาคาร</strong>
+                    <strong>Bank Transfer</strong>
                 </div>
                 <div class="bank-details">
-                    <p class="mb-1"><strong>ธนาคารกสิกรไทย</strong></p>
-                    <p class="mb-1">ชื่อบัญชี: Pure Serenity Spa</p>
-                    <p class="mb-1">เลขที่บัญชี: 123-4-56789-0</p>
+                    <p class="mb-1"><strong>Kasikorn Bank</strong></p>
+                    <p class="mb-1">Account Name: Pure Serenity Spa</p>
+                    <p class="mb-1">Account Number: 123-4-56789-0</p>
                 </div>
             </div>
             
@@ -409,35 +409,35 @@
                     <strong>PromptPay</strong>
                 </div>
                 <div class="promptpay-details">
-                    <p class="mb-1">เบอร์โทร: 0xx-xxx-xxxx</p>
-                    <p class="mb-1">หรือสแกน QR Code</p>
+                    <p class="mb-1">Phone: 0xx-xxx-xxxx</p>
+                    <p class="mb-1">or scan the QR code.</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- อัพโหลดหลักฐานการชำระเงิน -->
+    <!-- Payment Proof Upload -->
     <div class="evidence-upload-card mb-4">
         <h5 class="font-display mb-3" style="color: var(--deep-burgundy);">
-            <i class="fas fa-file-upload me-2"></i>แนบหลักฐานการชำระเงิน
+            <i class="fas fa-file-upload me-2"></i>Upload Payment Proof
         </h5>
         <div class="upload-box" id="evidenceUploadBox">
-            <div class="upload-text" id="evidenceUploadText">คลิกหรือลากไฟล์รูปภาพมาที่นี่</div>
+            <div class="upload-text" id="evidenceUploadText">Click or drag an image file here.</div>
             <input type="file" id="evidenceFile" name="evidence" accept="image/*" required />
             <img id="evidencePreviewImage" alt="Preview" style="display: none;" />
         </div>
     </div>
 
-    <!-- ปุ่มยืนยันการจอง -->
+    <!-- Booking Confirmation Button -->
     <button type="button" class="btn-luxury w-100 mt-4" id="confirmBookingBtn">
-        <i class="fas fa-check-circle me-2"></i>ยืนยันการจอง
+        <i class="fas fa-check-circle me-2"></i>Confirm Booking
     </button>
 </div>
 
                         <!-- Loading Spinner -->
                         <div id="loadingSpinner" class="loading-spinner">
                             <div class="spinner"></div>
-                            <p>กำลังประมวลผลการจอง...</p>
+                            <p>Processing your booking...</p>
                         </div>
 
                         <!-- Success Message -->
@@ -445,10 +445,10 @@
                             <div class="success-icon">
                                 <i class="fas fa-check-circle"></i>
                             </div>
-                            <h3 class="success-title font-display">จองสำเร็จ!</h3>
+                            <h3 class="success-title font-display">Booking Confirmed!</h3>
                             <p class="success-text">
-                                ขอบคุณสำหรับการจอง เราได้รับข้อมูลของคุณแล้ว<br>
-                                ทีมงานจะติดต่อกลับเพื่อยืนยันนัดหมายภายใน 2 ชั่วโมง
+                                Thank you for your reservation—your details have been received.<br>
+                                Our team will contact you within two hours to confirm the appointment.
                             </p>
                         </div>
                     </div>
@@ -463,7 +463,7 @@
             <div class="modal-content">
                 <div class="modal-header" style="background: var(--luxury-gold); color: var(--charcoal);">
                     <h5 class="modal-title font-display">
-                        <i class="fas fa-users me-2"></i>เลือกผู้ให้บริการ
+                        <i class="fas fa-users me-2"></i>Select a Service Provider
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -473,8 +473,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                    <button type="button" class="btn btn-luxury w-7" id="confirmStaffBtn" data-bs-dismiss="modal">ยืนยัน</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-luxury w-7" id="confirmStaffBtn" data-bs-dismiss="modal">Confirm</button>
                 </div>
             </div>
         </div>
@@ -582,11 +582,11 @@
         dateFormat: "Y-m-d",
         minDate: "today",
         maxDate: new Date().fp_incr(90), // 90 days from today
-        locale: "th",
-        inline: true, // แสดงปฏิทินทันที
+        locale: "en",
+        inline: true, // Display the calendar inline
         onChange: function(selectedDates, dateStr) {
             if (dateStr) {
-                document.getElementById('hiddenBookingDate').value = dateStr; // อัปเดต hidden input
+                document.getElementById('hiddenBookingDate').value = dateStr; // Update hidden input
                 loadAvailableTimes(dateStr);
             }
         }
@@ -609,8 +609,8 @@
                 })
                 .catch(error => {
                     console.error('Error loading services:', error);
-                    document.getElementById('servicesContainer').innerHTML = 
-                        '<p class="text-danger">เกิดข้อผิดพลาดในการโหลดบริการ</p>';
+                    document.getElementById('servicesContainer').innerHTML =
+                        '<p class="text-danger">An error occurred while loading services.</p>';
                 });
         }
 
@@ -632,10 +632,10 @@ function createServiceCard(service) {
             </div>
             <div class="flex-grow-1">
                 <h5 class="font-display mb-2" style="color: var(--charcoal); text-align: left;">${service.service_name}</h5>
-                <p class="mb-3" style="color: var(--deep-brown); text-align: left;">${service.description || 'บริการสปาคุณภาพสูง'}</p>
+                <p class="mb-3" style="color: var(--deep-brown); text-align: left;">${service.description || 'Premium spa experiences'}</p>
                 <div class="options-container">
                     <div id="options-${service.service_id}" class="options-list" style="display: flex; flex-direction: row; flex-wrap: wrap; gap: 10px;">
-                        <!-- ตัวเลือกจะโหลดตรงนี้ -->
+                        <!-- Options will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -644,7 +644,7 @@ function createServiceCard(service) {
 
     const optionsContainer = card.querySelector(`#options-${service.service_id}`);
     if (optionsContainer) {
-        optionsContainer.innerHTML = '<small style="color: var(--deep-brown);">กำลังโหลดตัวเลือก...</small>';
+        optionsContainer.innerHTML = '<small style="color: var(--deep-brown);">Loading options...</small>';
     }
 
     return card;
@@ -668,7 +668,7 @@ async function loadServiceOptions(serviceId, serviceName = '') {
         container.innerHTML = '';
 
         if (!Array.isArray(options) || options.length === 0) {
-            container.innerHTML = '<small style="color: var(--deep-brown);">ไม่มีตัวเลือก</small>';
+            container.innerHTML = '<small style="color: var(--deep-brown);">No options available</small>';
             return;
         }
 
@@ -778,7 +778,7 @@ async function loadServiceOptions(serviceId, serviceName = '') {
         });
     } catch (error) {
         console.error('Error loading options:', error);
-        container.innerHTML = '<small style="color: var(--deep-brown);">เกิดข้อผิดพลาดในการโหลดตัวเลือก</small>';
+        container.innerHTML = '<small style="color: var(--deep-brown);">An error occurred while loading options.</small>';
     }
 }
 
@@ -844,12 +844,12 @@ function addToCart(serviceId, option, serviceName = '') {
         }
 
         // Update cart display
-// แทนที่ฟังก์ชัน updateCartDisplay เดิม
+// Replaces the original updateCartDisplay function
 function updateCartDisplay() {
     const container = document.getElementById('cartItems');
 
     if (selectedItems.length === 0) {
-        container.innerHTML = '<p class="text-center text-muted">ยังไม่ได้เลือกบริการ</p>';
+        container.innerHTML = '<p class="text-center text-muted">No services selected yet.</p>';
         document.getElementById('proceedToPaymentBtn').disabled = true;
         return;
     }
@@ -897,18 +897,18 @@ function updateCartDisplay() {
         // Update total duration
         function updateTotalDuration() {
             totalDuration = selectedItems.reduce((sum, item) => sum + item.duration, 0);
-            document.getElementById('totalDuration').value = `${totalDuration} นาที`;
+            document.getElementById('totalDuration').value = `${totalDuration} minutes`;
 
             const timeSelect = document.getElementById('startTime');
             const timeMessage = document.getElementById('timeSlotMessage');
 
             if (totalDuration <= 0) {
                 if (timeSelect) {
-                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.innerHTML = '<option value="">Select a time</option>';
                     timeSelect.disabled = true;
                 }
                 if (timeMessage) {
-                    timeMessage.textContent = 'กรุณาเลือกบริการและวันที่เพื่อดูเวลาที่ว่าง';
+                    timeMessage.textContent = 'Please choose services and a date to view available times.';
                     timeMessage.classList.remove('text-danger');
                     timeMessage.classList.add('text-muted');
                 }
@@ -921,11 +921,11 @@ function updateCartDisplay() {
                 loadAvailableTimes(selectedDate);
             } else {
                 if (timeSelect) {
-                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.innerHTML = '<option value="">Select a time</option>';
                     timeSelect.disabled = true;
                 }
                 if (timeMessage) {
-                    timeMessage.textContent = 'กรุณาเลือกวันที่เพื่อดูเวลาที่ว่าง';
+                    timeMessage.textContent = 'Please choose a date to view available times.';
                     timeMessage.classList.remove('text-danger');
                     timeMessage.classList.add('text-muted');
                 }
@@ -939,11 +939,11 @@ function updateCartDisplay() {
 
             if (!totalDuration) {
                 if (timeSelect) {
-                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.innerHTML = '<option value="">Select a time</option>';
                     timeSelect.disabled = true;
                 }
                 if (timeMessage) {
-                    timeMessage.textContent = 'กรุณาเลือกบริการและวันที่เพื่อดูเวลาที่ว่าง';
+                    timeMessage.textContent = 'Please choose services and a date to view available times.';
                     timeMessage.classList.remove('text-danger');
                     timeMessage.classList.add('text-muted');
                 }
@@ -952,10 +952,10 @@ function updateCartDisplay() {
 
             if (timeSelect) {
                 timeSelect.disabled = true;
-                timeSelect.innerHTML = '<option value="">กำลังโหลด...</option>';
+                timeSelect.innerHTML = '<option value="">Loading...</option>';
             }
             if (timeMessage) {
-                timeMessage.textContent = 'กำลังค้นหาเวลาที่ว่าง...';
+                timeMessage.textContent = 'Searching for available times...';
                 timeMessage.classList.remove('text-danger');
                 timeMessage.classList.add('text-muted');
             }
@@ -971,7 +971,7 @@ function updateCartDisplay() {
                     timeSelect.innerHTML = '';
 
                     if (!Array.isArray(data) && data && data.error) {
-                        timeSelect.innerHTML = '<option value="">ไม่สามารถโหลดเวลาได้</option>';
+                        timeSelect.innerHTML = '<option value="">Unable to load times</option>';
                         timeSelect.disabled = true;
                         if (timeMessage) {
                             timeMessage.textContent = data.error;
@@ -982,17 +982,17 @@ function updateCartDisplay() {
                     }
 
                     if (times.length === 0) {
-                        timeSelect.innerHTML = '<option value="">ไม่มีเวลาที่ว่าง</option>';
+                        timeSelect.innerHTML = '<option value="">No times available</option>';
                         timeSelect.disabled = true;
                         if (timeMessage) {
-                            timeMessage.textContent = 'ไม่มีเวลาที่ว่างสำหรับวันที่เลือกหรือร้านปิดทำการ';
+                            timeMessage.textContent = 'No available times for the selected date or the spa is closed.';
                             timeMessage.classList.add('text-danger');
                             timeMessage.classList.remove('text-muted');
                         }
                         return;
                     }
 
-                    timeSelect.innerHTML = '<option value="">เลือกเวลา</option>';
+                    timeSelect.innerHTML = '<option value="">Select a time</option>';
                     times.forEach(time => {
                         const option = document.createElement('option');
                         option.value = time;
@@ -1004,7 +1004,7 @@ function updateCartDisplay() {
                     timeSelect.onchange = loadAvailableStaff;
 
                     if (timeMessage) {
-                        timeMessage.textContent = 'เลือกเวลาที่ต้องการ';
+                        timeMessage.textContent = 'Select your preferred time.';
                         timeMessage.classList.remove('text-danger');
                         timeMessage.classList.add('text-muted');
                     }
@@ -1012,11 +1012,11 @@ function updateCartDisplay() {
                 .catch(error => {
                     console.error('Error loading times:', error);
                     if (timeSelect) {
-                        timeSelect.innerHTML = '<option value="">ไม่สามารถโหลดเวลาได้</option>';
+                        timeSelect.innerHTML = '<option value="">Unable to load times</option>';
                         timeSelect.disabled = true;
                     }
                     if (timeMessage) {
-                        timeMessage.textContent = 'ไม่สามารถโหลดเวลาที่ว่างได้ กรุณาลองใหม่อีกครั้ง';
+                        timeMessage.textContent = 'Unable to load availability. Please try again.';
                         timeMessage.classList.add('text-danger');
                         timeMessage.classList.remove('text-muted');
                     }
@@ -1045,7 +1045,7 @@ function displayStaffOptions(staff) {
   container.innerHTML = '';
 
   if (!Array.isArray(staff) || staff.length === 0) {
-    container.innerHTML = '<div class="col-12 text-center text-muted">ไม่มีผู้ให้บริการว่างในเวลานี้</div>';
+    container.innerHTML = '<div class="col-12 text-center text-muted">No service providers are available at this time.</div>';
     return;
   }
 
@@ -1142,36 +1142,36 @@ function displayStaffOptions(staff) {
         }
 
         // Form submission
-// แทนที่ส่วน Form submission เดิม
+// Replaces the original form submission section
 // Proceed to Payment
 document.getElementById('proceedToPaymentBtn').addEventListener('click', function() {
     // Validate required fields
     if (selectedItems.length === 0) {
-        showToast('กรุณาเลือกบริการอย่างน้อย 1 รายการ', 'error');
+        showToast('Please select at least one service.', 'error');
         return;
     }
     
     if (!document.getElementById('hiddenBookingDate').value) {
-        showToast('กรุณาเลือกวันที่', 'error');
+        showToast('Please choose a date.', 'error');
         return;
     }
     
     if (!document.getElementById('startTime').value) {
-        showToast('กรุณาเลือกเวลา', 'error');
+        showToast('Please choose a time.', 'error');
         return;
     }
     
     if (!document.getElementById('selectedStaffId').value) {
-        showToast('กรุณาเลือกผู้ให้บริการ', 'error');
+        showToast('Please choose a service provider.', 'error');
         return;
     }
     
     if (!document.getElementById('customerId').value) {
-        showToast('กรุณาเข้าสู่ระบบก่อนจอง', 'error');
+        showToast('Please log in before booking.', 'error');
         return;
     }
     
-    // ซ่อนส่วนรายการที่เลือกและฟอร์มจอง
+    // Hide the selected items and booking form sections
     document.getElementById('cartDisplaySection').style.display = 'none';
     document.getElementById('bookingFormSection').style.display = 'none';
     document.getElementById('paymentSection').style.display = 'block';
@@ -1195,14 +1195,14 @@ function generatePaymentSummary() {
     const time = document.getElementById('startTime').value;
     const staffName = selectedStaff ? selectedStaff.name : 'Not specified';
 
-    // คำนวณเวลาสิ้นสุดจาก totalDuration (นาที)
+    // Calculate the end time from totalDuration (minutes)
     const startDate = time ? new Date(`2000-01-01T${time}:00`) : null;
     const endDate = startDate ? new Date(startDate.getTime() + (totalDuration || 0) * 60000) : null;
     const endTime = endDate
         ? `${String(endDate.getHours()).padStart(2,'0')}:${String(endDate.getMinutes()).padStart(2,'0')}`
         : '-';
 
-    // รวมราคา (รองรับกรณีมีหรือไม่มี getPriceTotals())
+    // Sum prices (supports scenarios with or without getPriceTotals())
     let totals;
     if (typeof getPriceTotals === 'function') {
         totals = getPriceTotals(); // { original, discount, final }
@@ -1240,7 +1240,7 @@ function generatePaymentSummary() {
                 <div class="summary-subitem">
     `;
 
-    // แสดงแต่ละบริการ: ชื่อ / เวลา / ราคา (มีราคาก่อนลด-หลังลดต่อบรรทัดถ้ามีส่วนลด)
+    // Display each service: name / time / price (showing both original and discounted prices when applicable)
     selectedItems.forEach(item => {
         const base  = Number(item.originalPrice ?? item.base_price ?? item.price) || 0;
         const final = Number(item.price ?? item.final_price ?? base) || 0;
@@ -1282,7 +1282,7 @@ function generatePaymentSummary() {
             </div>
         </div>
 
-        <!-- สรุปราคา -->
+        <!-- Summary totals -->
         <div class="summary-item">
             <div class="summary-service">
                 <div class="summary-service-name">Total</div>
@@ -1307,21 +1307,6 @@ function generatePaymentSummary() {
 
     container.innerHTML = summaryHTML;
 }
-// Format Thai date
-function formatThaiDate(dateString) {
-    const date = new Date(dateString);
-    const thaiMonths = [
-        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-    ];
-    
-    const day = date.getDate();
-    const month = thaiMonths[date.getMonth()];
-    const year = date.getFullYear() + 543;
-    
-    return `${day} ${month} ${year}`;
-}
-
 function formatEnglishDate(dateString) {
     const date = new Date(dateString);
     const englishMonths = [
@@ -1336,7 +1321,7 @@ function formatEnglishDate(dateString) {
     return `${day} ${month} ${year}`;
 }
 
-// เพิ่มโค้ดนี้หลังจาก evidenceFileInput.addEventListener('change', ...)
+// Additional evidence upload helpers
 
 // Evidence upload functionality - COMPLETE VERSION
 const evidenceUploadBox = document.getElementById('evidenceUploadBox');
@@ -1391,7 +1376,7 @@ function showEvidencePreview(file) {
 document.getElementById('confirmBookingBtn').addEventListener('click', function() {
     // Validate evidence upload
     if (!evidenceFileInput.files.length) {
-        showToast('กรุณาแนบหลักฐานการชำระเงิน', 'error');
+        showToast('Please attach proof of payment.', 'error');
         return;
     }
     
@@ -1428,13 +1413,13 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
             }, 5000);
         } else {
             document.getElementById('paymentSection').style.display = 'block';
-            showToast(data.message || 'เกิดข้อผิดพลาดในการจอง', 'error');
+            showToast(data.message || 'An error occurred while processing the booking.', 'error');
         }
     })
     .catch(error => {
         document.getElementById('loadingSpinner').style.display = 'none';
         document.getElementById('paymentSection').style.display = 'block';
-        showToast('เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        showToast('A connection error occurred.', 'error');
         console.error('Error:', error);
     });
 });
@@ -1594,7 +1579,7 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
             }
         }
 
-/* เพิ่มใน <style> ส่วนล่างสุดของไฟล์ */
+/* Additional styles appended at the end of the stylesheet */
 
 /* Evidence Upload Styles */
 .evidence-upload-card {
@@ -1639,7 +1624,7 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
     display: none;
 }
 
-/* Evidence Preview Image - ขนาดที่เหมาะสม */
+/* Evidence Preview Image - optimal sizing */
 #evidencePreviewImage {
     max-width: 200px;
     max-height: 200px;
@@ -1712,11 +1697,11 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
 .summary-subitem {
     display: flex;
     flex-direction: column;
-    gap: 8px; /* ระยะห่างแต่ละแถว */
+    gap: 8px; /* Spacing between each row */
     width: 100%;
 }
 
-/* 3 คอลัมน์: ชื่อ / เวลา / ราคา */
+/* Three columns: name / duration / price */
 .summary-subitem .service-row {
     display: grid;
     grid-template-columns: 1fr 80px 80px;
@@ -1730,15 +1715,15 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
     font-weight: 600;
 }
 
-/* คุมสีราคาให้เด่น (ถ้าอยากโทนส้มพาสเทลแบบตัวอย่าง) */
+/* Highlight price colour (example pastel accent) */
 /* .summary-price { color: #e58b73; font-weight: 600; } */
-/* ถ้าต้องการตามธีมเดิม ให้ใช้โทนทอง: */
+/* To match the existing theme, keep the gold tone: */
 .summary-price {
     color: var(--luxury-gold);
     font-weight: 600;
 }
 
-/* ราคาต่อบรรทัดเวลาแสดงทั้งก่อนลดและหลังลด */
+/* Price block showing both original and discounted values */
 .summary-price-block {
   display: flex;
   flex-direction: column;
@@ -1746,20 +1731,20 @@ document.getElementById('confirmBookingBtn').addEventListener('click', function(
   gap: 2px;
 }
 
-/* ราคาก่อนลด (ขีดฆ่า สีอ่อน) */
+/* Original price (strikethrough, muted) */
 .summary-price-original {
   text-decoration: line-through;
   opacity: 0.6;
   font-weight: 500;
 }
 
-/* ราคาใหม่หลังลด (เด่นสีทอง) */
+/* Discounted price (highlighted in gold) */
 .summary-price-final {
   color: var(--luxury-gold);
   font-weight: 700;
 }
 
-/* สีส่วนลดในสรุป */
+/* Discount colour within the summary */
 .summary-price-discount {
   color: #e58b73;
   font-weight: 700;

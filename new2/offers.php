@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,7 +15,7 @@
         <div class="container text-center">
             <h1 class="font-display mb-4">Promotions Unavailable</h1>
             <p class="lead">We are no longer offering promotions at this time. Please explore our services for the latest experiences.</p>
-            <a href="index.php" class="btn btn-luxury mt-3">กลับสู่หน้าหลัก</a>
+            <a href="index.php" class="btn btn-luxury mt-3">Back to Home</a>
         </div>
     </div>
 </section>

@@ -9,7 +9,7 @@ try {
         SELECT 
             service_id, 
             service_name, 
-            COALESCE(description, 'บริการสปาคุณภาพสูง') as description,
+            COALESCE(description, 'Premium spa experiences') as description,
             COALESCE(coverimg, '') as coverimg
         FROM service 
         WHERE is_active = 1 

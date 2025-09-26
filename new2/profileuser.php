@@ -181,11 +181,11 @@ function getStatusBadge($status) {
                      src="/first9/Admin/assets/img/<?= htmlspecialchars($row['profileimg'] ?? 'default.png') ?>?v=<?= time() ?>" 
                      alt="Profile" 
                      style="max-width: 200px; max-height: 200px; object-fit: cover; border-radius: 8px;">
-                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">คลิกเพื่อเปลี่ยนรูป</div>
+                <div style="font-size: 0.9em; color: #666; margin-top: 5px;">Click to change photo</div>
             </div>
         </label>
 
-        <!-- ซ่อน input file -->
+        <!-- Hidden file input -->
         <input type="file" id="profileimg" name="profileimg" accept="imag/*" style="display: none;" onchange="previewImage(event)">
     </div>
                                             </div>
@@ -204,7 +204,7 @@ function getStatusBadge($status) {
                             <div class="tab-pane fade" id="bookings" role="tabpanel">
                                 <div class="section-header mb-4">
                                     <h3 class="section-title font-display" style="font-size: 2rem; margin-bottom: 10px;">My Booking History</h3>
-                                    <!-- <p class="section-description">รายการจองบริการทั้งหมดของคุณ</p> -->
+                                    <!-- <p class="section-description">A complete list of your bookings</p> -->
                                 </div>
 
                                 <?php if (empty($result1)): ?>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,7 +20,7 @@
                 <!-- <div class="section-subtitle">Premium Treatments</div> -->
                 <h2 class="section-title font-display">Our Services</h2>
                 <!-- <p class="section-description">
-                    เลือกการนวดที่เหมาะสมกับความต้องการของคุณ จากคอลเลกชั่นการรักษาระดับพรีเมียม
+                    Choose the massage that best suits you from our curated collection of premium therapies.
                 </p> -->
             </div>
             
@@ -34,19 +34,19 @@
                         <div class="treatment-content">
                             <h3 class="treatment-title font-display">Royal Thai Massage</h3>
                             <p class="treatment-description">
-                                การนวดไทยโบราณแบบราชการ ที่ผสมผสานการกดจุดสำคัญ การยืดกล้ามเนื้อ 
-                                และการปรับสมดุลพลังงานในร่างกาย เพื่อความผ่อนคลายอย่างลึกซึ้ง
+                                A royal-inspired traditional Thai massage that blends acupressure, assisted stretching,
+                                and energy balancing for profound relaxation.
                             </p>
                             <!-- <div class="benefits-title">Treatment Benefits:</div>
                             <ul class="benefits-list">
-                                <li>เพิ่มความยืดหยุ่นและความแข็งแรงของร่างกาย</li>
-                                <li>กระตุ้นการไหลเวียนโลหิตและน้ำเหลือง</li>
-                                <li>ลดความเครียดและความตึงเครียดอย่างมีประสิทธิภาพ</li>
-                                <li>ปรับสมดุลพลังงานและจักระในร่างกาย</li>
+                                <li>Improves flexibility and muscular strength.</li>
+                                <li>Stimulates blood and lymphatic circulation.</li>
+                                <li>Relieves stress and muscle tension effectively.</li>
+                                <li>Rebalances the body’s energy pathways.</li>
                             </ul>
                             <div class="price-info">
                                 <span class="duration-badge">90 Minutes</span>
-                                <span class="price-badge">฿1,200</span>
+                                <span class="price-badge">€120</span>
                             </div> -->
                         </div>
                     </div>
@@ -61,19 +61,19 @@
                         <div class="treatment-content">
                             <h3 class="treatment-title font-display">Signature Aromatherapy</h3>
                             <p class="treatment-description">
-                                การนวดด้วยน้ำมันหอมระเหยธรรมชาติจากทั่วโลก ที่คัดสรรมาเป็นพิเศษ 
-                                ผสมผสานกับเทคนิคการนวดแบบสวีเดน เพื่อประสบการณ์ที่หรูหราและผ่อนคลาย
+                                A bespoke aromatherapy ritual using curated essential oils from around the world,
+                                combined with Swedish massage techniques for a luxurious, relaxing experience.
                             </p>
                             <!-- <div class="benefits-title">Treatment Benefits:</div>
                             <ul class="benefits-list">
-                                <li>ผ่อนคลายกล้ามเนื้อได้อย่างลึกซึ้งและนุ่มนวล</li>
-                                <li>บำรุงและฟื้นฟูผิวให้นุ่มลื่นเรียบเนียน</li>
-                                <li>ลดความเครียดผ่านประสาทสัมผัสกลิ่น</li>
-                                <li>ปรับปรุงคุณภาพการนอนและความรู้สึกโดยรวม</li>
+                                <li>Deep yet gentle muscle relaxation.</li>
+                                <li>Nourishes and revitalises the skin.</li>
+                                <li>Reduces stress through soothing aromatherapy.</li>
+                                <li>Enhances sleep quality and overall wellbeing.</li>
                             </ul>
                             <div class="price-info">
                                 <span class="duration-badge">120 Minutes</span>
-                                <span class="price-badge">฿1,800</span>
+                                <span class="price-badge">€180</span>
                             </div> -->
                         </div>
                     </div>
@@ -88,19 +88,19 @@
                         <div class="treatment-content">
                             <h3 class="treatment-title font-display">Volcanic Hot Stone Therapy</h3>
                             <p class="treatment-description">
-                                การนวดด้วยหินภูเขาไฟที่อุ่นจากธรรมชาติ ช่วยคลายความตึงเครียดของกล้ามเนื้อได้อย่างมีประสิทธิภาพ 
-                                พร้อมกับการนวดด้วยเทคนิคพิเศษ
+                                Warmed volcanic stones melt away muscular tension effectively,
+                                complemented by specialised massage techniques.
                             </p>
                             <!-- <div class="benefits-title">Treatment Benefits:</div>
                             <ul class="benefits-list">
-                                <li>คลายความตึงเครียดของกล้ามเนื้อได้อย่างลึก</li>
-                                <li>กระตุ้นการไหลเวียนโลหิตและระบบน้ำเหลือง</li>
-                                <li>ลดอาการปวดเมื่อยและอักเสบ</li>
-                                <li>เพิ่มความรู้สึกผ่อนคลายและสงบ</li>
+                                <li>Deep relief for tight, overworked muscles.</li>
+                                <li>Boosts circulation and lymphatic flow.</li>
+                                <li>Eases aches, pains, and inflammation.</li>
+                                <li>Encourages a calm, grounded state of mind.</li>
                             </ul>
                             <div class="price-info">
                                 <span class="duration-badge">105 Minutes</span>
-                                <span class="price-badge">฿1,500</span>
+                                <span class="price-badge">€150</span>
                             </div> -->
                         </div>
                     </div>
@@ -115,19 +115,19 @@
                         <div class="treatment-content">
                             <h3 class="treatment-title font-display">Royal Herbal Compress</h3>
                             <p class="treatment-description">
-                                การนวดด้วยลูกประคบสมุนไพรไทยโบราณ ที่ผสมผสานสมุนไพรคุณภาพสูงกว่า 12 ชนิด 
-                                เพื่อการบำบัดและฟื้นฟูตามหลักการแพทย์แผนไทย
+                                A traditional Thai herbal compress featuring over 12 premium herbs,
+                                delivering restorative benefits inspired by Thai medical wisdom.
                             </p>
                             <!-- <div class="benefits-title">Treatment Benefits:</div>
                             <ul class="benefits-list">
-                                <li>ใช้สมุนไพรไทยธรรมชาติ 100% คุณภาพพรีเมียม</li>
-                                <li>ลดการอักเสบและบวมของกล้ามเนื้อ</li>
-                                <li>ช่วยในการฟื้นฟูและการหายของการบาดเจ็บ</li>
-                                <li>เสริมสร้างภูมิคุ้มกันและสุขภาพโดยรวม</li>
+                                <li>Crafted with 100% natural premium Thai herbs.</li>
+                                <li>Reduces inflammation and swelling in muscles.</li>
+                                <li>Supports recovery from strains and injuries.</li>
+                                <li>Strengthens immunity and overall vitality.</li>
                             </ul>
                             <div class="price-info">
                                 <span class="duration-badge">120 Minutes</span>
-                                <span class="price-badge">฿2,200</span>
+                                <span class="price-badge">€220</span>
                             </div> -->
                         </div>
                     </div>

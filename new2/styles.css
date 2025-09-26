@@ -1958,18 +1958,18 @@ body {
 
 .profile-container {
     background: white;
-    border-radius: 0; /* เปลี่ยนจาก 20px เป็น 0 */
-    box-shadow: none; /* ลบเงา */
+    border-radius: 0; /* Reduced from 20px to 0 */
+    box-shadow: none; /* Removed drop shadow */
     overflow: hidden;
     position: relative;
-    min-height: 100vh; /* เพิ่มให้เต็มความสูง */
-    width: 100%; /* เต็มความกว้าง */
-    margin: 0; /* ลบ margin */
+    min-height: 100vh; /* Ensure full viewport height */
+    width: 100%; /* Full width */
+    margin: 0; /* Remove margin */
 }
 
 
 
-/* แก้ไข container ให้เต็มความกว้าง */
+/* Expand container to full width */
 .profile-section .container {
     max-width: 100%;
     padding: 0;
@@ -2043,15 +2043,15 @@ body {
             z-index: 2;
         }
         
-/* แก้ไขส่วน tabs และ content */
+/* Adjust tab and content spacing */
 .profile-tabs {
     border-bottom: 1px solid rgba(201, 169, 110, 0.2);
-    padding: 0 60px; /* เพิ่ม padding ข้าง */
+    padding: 0 60px; /* Add horizontal padding */
     background: var(--pearl-white);
 }
 
 .tab-content {
-    padding: 60px; /* เพิ่ม padding */
+    padding: 60px; /* Increase inner padding */
 }
         
         .nav-tabs {

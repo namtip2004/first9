@@ -3,7 +3,7 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 $profileImg = $_SESSION['profileimg'] ?? 'profile-img.jpg';
-// ตรวจสอบหน้าเพจปัจจุบัน
+// Determine the current page
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <nav class="navbar navbar-expand-lg fixed-top">

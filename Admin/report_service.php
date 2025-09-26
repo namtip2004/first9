@@ -315,7 +315,6 @@ $sqlList = "
     sv.is_active,
     COUNT(DISTINCT so.option_id) AS option_count,
     MIN(so.price) AS base_price,
-    GROUP_CONCAT(DISTINCT CONCAT_WS('::', so.option_id, so.duration, so.price) ORDER BY so.duration SEPARATOR '||') AS option_list,
     COUNT(DISTINCT CASE WHEN b.status={$confirmedStatus}{$tableDateCond} THEN b.booking_id END) AS total_booking
   FROM service sv
   LEFT JOIN service_option so ON so.service_id = sv.service_id
@@ -340,21 +339,6 @@ while($r = $rs->fetch_assoc()){
   $r['option_count'] = (int)($r['option_count'] ?? 0);
   $r['total_booking'] = (int)($r['total_booking'] ?? 0);
   $r['base_price'] = $r['base_price'] !== null ? (float)$r['base_price'] : null;
-  $r['option_details'] = [];
-  if (!empty($r['option_list'])) {
-    foreach (explode('||', $r['option_list']) as $opt) {
-      $parts = explode('::', $opt);
-      if (empty($parts[0])) { continue; }
-      $duration = $parts[1] ?? '';
-      $price = $parts[2] ?? '';
-      $r['option_details'][] = [
-        'option_id' => (int)$parts[0],
-        'duration' => $duration !== '' ? (int)$duration : null,
-        'price' => $price !== '' ? (float)$price : null,
-      ];
-    }
-  }
-  unset($r['option_list']);
   $rows[] = $r;
   $totalBookingSum += $r['total_booking'];
 }
@@ -533,7 +517,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
                 <th>ID</th>
                 <th>Service</th>
                 <th>สถานะ</th>
-                <th style="min-width:220px">Option</th>
+                <th class="text-center">Option</th>
                 <th class="text-end">ราคาเริ่มต้น</th>
                 <th class="text-end">Total Booking</th>
               </tr>
@@ -552,22 +536,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
                       <span class="badge bg-secondary-subtle text-secondary">ปิดใช้งาน</span>
                     <?php endif; ?>
                   </td>
-                  <td>
-                    <?php if(!empty($r['option_details'])): ?>
-                      <div class="small text-muted mb-1">ทั้งหมด <?=number_format($r['option_count'])?> ตัวเลือก</div>
-                      <ul class="list-unstyled mb-0 small">
-                        <?php foreach($r['option_details'] as $opt): ?>
-                          <li>
-                            <span class="text-muted">#<?=number_format($opt['option_id'])?>:</span>
-                            <?php if($opt['duration'] !== null): ?><?=number_format($opt['duration'])?> นาที<?php endif; ?>
-                            <?php if($opt['price'] !== null): ?> — <?=number_format($opt['price'],2)?><?php endif; ?>
-                          </li>
-                        <?php endforeach; ?>
-                      </ul>
-                    <?php else: ?>
-                      <span class="text-muted">-</span>
-                    <?php endif; ?>
-                  </td>
+                  <td class="text-center"><?=number_format($r['option_count'])?></td>
                   <td class="text-end"><?= $r['base_price'] !== null ? number_format($r['base_price'],2) : '-' ?></td>
                   <td class="text-end fw-semibold"><?=number_format($r['total_booking'])?></td>
                 </tr>

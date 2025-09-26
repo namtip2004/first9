@@ -13,7 +13,7 @@ $fileName = basename($_FILES["imgprofile"]["name"] ?? '');
 $targetFilePath = $targetDir . $fileName;
 $fileType = strtolower(pathinfo($targetFilePath, PATHINFO_EXTENSION));
 
-// อนุญาตนามสกุลไฟล์
+// Allowed file extensions
 $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
 
 if (isset($_FILES["imgprofile"]) && $_FILES["imgprofile"]["error"] === UPLOAD_ERR_OK) {
@@ -22,7 +22,7 @@ if (isset($_FILES["imgprofile"]) && $_FILES["imgprofile"]["error"] === UPLOAD_ER
     }
 
     if (move_uploaded_file($_FILES["imgprofile"]["tmp_name"], $targetFilePath)) {
-        // บันทึกข้อมูลลูกค้า พร้อมชื่อไฟล์รูปภาพ
+        // Save customer data along with the uploaded filename
         $stmt = $conn->prepare("INSERT INTO customer (customer_name, gender, birthday, gmail, tel, pass, profileimg, account_status) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')");
         $stmt->bind_param("sssssss", $name, $gender, $birthday, $email, $phone, $password, $fileName);
         $stmt->execute();

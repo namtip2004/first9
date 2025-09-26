@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,7 +20,7 @@
                 <!-- <div class="section-subtitle">Get In Touch</div> -->
                 <h2 class="section-title font-display">Contact First9 Thai Massage &amp; Spa</h2>
                 <!-- <p class="section-description">
-                    ติดต่อเราเพื่อสอบถามข้อมูลเพิ่มเติม หรือปรึกษาการรักษาที่เหมาะสมกับคุณ
+                    Contact us for tailored treatment advice or any additional information.
                 </p> -->
             </div>
             
@@ -112,7 +112,7 @@
                             <i class="fas fa-car"></i>
                         </div>
                         <h5 class="font-display mb-3">Valet Parking</h5>
-                        <p style="color: var(--deep-brown);">บริการรับ-ส่งรถฟรี และที่จอดรถสำหรับลูกค้า VIP</p>
+                        <p style="color: var(--deep-brown);">Complimentary valet service with VIP parking.</p>
                     </div>
                 </div> -->
 
@@ -122,7 +122,7 @@
                             <i class="fas fa-gift"></i>
                         </div>
                         <h5 class="font-display mb-3">Gift Certificates</h5>
-                        <p style="color: var(--deep-brown);">ซื้อของขวัญสปาสำหรับคนพิเศษ พร้อมบรรจุภัณฑ์หรูหรา</p>
+                        <p style="color: var(--deep-brown);">Gift a luxurious spa experience with elegant packaging.</p>
                     </div>
                 </div> -->
 
@@ -132,7 +132,7 @@
                             <i class="fas fa-concierge-bell"></i>
                         </div>
                         <h5 class="font-display mb-3">Concierge Service</h5>
-                        <p style="color: var(--deep-brown);">บริการคอนเซียร์จ 24/7 สำหรับข้อมูลและการจองทุกความต้องการ</p>
+                        <p style="color: var(--deep-brown);">24/7 concierge support for bookings and information.</p>
                     </div>
                 </div> -->
             </div>

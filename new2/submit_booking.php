@@ -14,27 +14,27 @@ try {
 
     // Validate inputs
     if (!isset($_SESSION['customer_id'])) {
-        throw new Exception('กรุณาเข้าสู่ระบบก่อนจอง');
+        throw new Exception('Please log in before making a booking.');
     }
     $customer_id = (int)$_SESSION['customer_id'];
 
     if (!isset($_POST['staff_id']) || !is_numeric($_POST['staff_id'])) {
-        throw new Exception('กรุณาเลือกผู้ให้บริการ');
+        throw new Exception('Please select a service provider.');
     }
     $staff_id = (int)$_POST['staff_id'];
 
     if (!isset($_POST['booking_date']) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $_POST['booking_date'])) {
-        throw new Exception('วันที่ไม่ถูกต้อง');
+        throw new Exception('Invalid booking date.');
     }
     $booking_date = $_POST['booking_date'];
 
     if (!isset($_POST['start_time']) || !preg_match('/^\d{2}:\d{2}$/', $_POST['start_time'])) {
-        throw new Exception('เวลาเริ่มต้นไม่ถูกต้อง');
+        throw new Exception('Invalid start time.');
     }
     $start_time = $_POST['start_time'];
 
     if (!isset($_POST['services']) || !isset($_POST['options'])) {
-        throw new Exception('กรุณาเลือกบริการและตัวเลือก');
+        throw new Exception('Please select services and options.');
     }
 
     // Handle evidence file upload
@@ -47,7 +47,7 @@ try {
             mkdir($uploadDir, 0777, true);
         }
         
-        // ใช้ชื่อไฟล์เดิม
+        // Use original file name
         $originalFileName = $_FILES['evidence']['name'];
         $fileInfo = pathinfo($originalFileName);
         $extension = strtolower($fileInfo['extension']);
@@ -55,15 +55,15 @@ try {
         // Validate file type
         $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
         if (!in_array($extension, $allowedExtensions)) {
-            throw new Exception('ประเภทไฟล์ไม่ถูกต้อง กรุณาอัพโหลดไฟล์ภาพ (jpg, png, gif)');
+            throw new Exception('Invalid file type. Please upload an image (jpg, png, gif).');
         }
         
         // Validate file size (max 5MB)
         if ($_FILES['evidence']['size'] > 5 * 1024 * 1024) {
-            throw new Exception('ไฟล์ขนาดใหญ่เกินไป (สูงสุด 5MB)');
+            throw new Exception('File size exceeds the 5MB limit.');
         }
         
-        // ตรวจสอบว่าไฟล์มีชื่อซ้ำหรือไม่ ถ้าซ้ำให้เพิ่มเลขต่อท้าย
+        // Check for duplicate file names; append a counter if necessary
         $evidenceFileName = $originalFileName;
         $uploadPath = $uploadDir . $evidenceFileName;
         $counter = 1;
@@ -76,10 +76,10 @@ try {
         }
         
         if (!move_uploaded_file($_FILES['evidence']['tmp_name'], $uploadPath)) {
-            throw new Exception('เกิดข้อผิดพลาดในการอัพโหลดไฟล์');
+            throw new Exception('An error occurred while uploading the file.');
         }
     } else {
-        throw new Exception('กรุณาแนบหลักฐานการชำระเงิน');
+        throw new Exception('Please attach proof of payment.');
     }
 
     // Convert comma-separated strings to arrays
@@ -87,7 +87,7 @@ try {
     $options = array_filter(explode(',', $_POST['options']));
 
     if (count($services) !== count($options)) {
-        throw new Exception('ข้อมูลบริการและตัวเลือกไม่สอดคล้องกัน');
+        throw new Exception('Selected services and options do not match.');
     }
 
     $services = array_values(array_map('intval', $services));
@@ -101,7 +101,7 @@ try {
     try {
         $promotionConn = new mysqli('127.0.0.1', 'root', '', 'first9');
         if ($promotionConn->connect_error) {
-            throw new Exception('ไม่สามารถเชื่อมต่อข้อมูลโปรโมชั่นได้');
+            throw new Exception('Unable to retrieve promotion information.');
         }
 
         ensurePromotionSupport($promotionConn);
@@ -131,7 +131,7 @@ try {
         $stmt->execute([$option_id]);
         $option = $stmt->fetch();
         if (!$option || (int)$option['service_id'] !== $services[$index]) {
-            throw new Exception('ตัวเลือกหรือบริการไม่ถูกต้อง');
+            throw new Exception('Invalid option or service selection.');
         }
 
         $duration = (int)$option['duration'];
@@ -191,12 +191,12 @@ try {
     }
 
     if ($total_duration <= 0) {
-        throw new Exception('กรุณาเลือกบริการอย่างน้อยหนึ่งรายการ');
+        throw new Exception('Please select at least one service.');
     }
 
     $startTimestamp = strtotime($booking_date . ' ' . $start_time);
     if ($startTimestamp === false) {
-        throw new Exception('เวลาเริ่มต้นไม่ถูกต้อง');
+        throw new Exception('Invalid start time.');
     }
 
     $endTimestamp = strtotime("+$total_duration minutes", $startTimestamp);
@@ -208,26 +208,26 @@ try {
     $businessHours = $stmt->fetch();
 
     if (!$businessHours) {
-        throw new Exception('ยังไม่ได้ตั้งค่าเวลาเปิด-ปิดสำหรับวันที่เลือก');
+        throw new Exception('Business hours have not been configured for the selected date.');
     }
 
     if ((int)$businessHours['is_closed'] === 1) {
-        throw new Exception('ร้านปิดทำการในวันที่เลือก');
+        throw new Exception('The spa is closed on the selected date.');
     }
 
     $openTimestamp = strtotime($booking_date . ' ' . $businessHours['open_time']);
     $closeTimestamp = strtotime($booking_date . ' ' . $businessHours['close_time']);
 
     if ($openTimestamp === false || $closeTimestamp === false || $closeTimestamp <= $openTimestamp) {
-        throw new Exception('การตั้งค่าเวลาเปิด-ปิดไม่ถูกต้อง');
+        throw new Exception('Business hours configuration is invalid.');
     }
 
     if ($startTimestamp < $openTimestamp || $endTimestamp > $closeTimestamp) {
-        throw new Exception('เวลาจองอยู่นอกเวลาทำการ');
+        throw new Exception('The selected time is outside our operating hours.');
     }
 
     if ((int)date('i', $startTimestamp) % 15 !== 0) {
-        throw new Exception('กรุณาเลือกเวลาเป็นช่วง 15 นาที (เช่น 09:00, 09:15, 09:30)');
+        throw new Exception('Please choose a time in 15-minute increments (e.g., 09:00, 09:15, 09:30).');
     }
 
     // Check staff availability
@@ -242,7 +242,7 @@ try {
     ");
     $stmt->execute([$staff_id, $booking_date, $start_time, $start_time, $end_time, $end_time, $start_time, $end_time]);
     if ($stmt->fetchColumn() > 0) {
-        throw new Exception('ผู้ให้บริการไม่ว่างในช่วงเวลานี้');
+        throw new Exception('The selected service provider is unavailable at this time.');
     }
 
     // Insert into booking with evidence
@@ -275,7 +275,7 @@ try {
             $stmt->execute([$optionId]);
             $optionRow = $stmt->fetch();
             if (!$optionRow) {
-                throw new Exception('ไม่พบข้อมูลบริการที่เลือก');
+                throw new Exception('The selected service could not be found.');
             }
             $price = (float)$optionRow['price'];
             $discount = 0.0;
@@ -291,7 +291,7 @@ try {
     }
 
     $pdo->commit();
-    echo json_encode(['success' => true, 'message' => 'จองสำเร็จ รอการตรวจสอบการชำระเงิน']);
+    echo json_encode(['success' => true, 'message' => 'Booking successful. Awaiting payment verification.']);
 
 } catch (Exception $e) {
     if (isset($pdo)) {

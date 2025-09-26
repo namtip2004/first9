@@ -9,9 +9,9 @@ $email = $_POST['gmail'];
 $tel = $_POST['tel'];
 
 $targetDir = "../Admin/assets/img/";
-$updateProfileImg = ""; // สำหรับ SQL update
+$updateProfileImg = ""; // For SQL update
 
-// เช็คว่ามีการอัปโหลดไฟล์ใหม่ไหม
+// Check whether a new file was uploaded
 if (isset($_FILES["profileimg"]) && $_FILES["profileimg"]["error"] === UPLOAD_ERR_OK) {
     $fileName = basename($_FILES["profileimg"]["name"]);
     $targetFilePath = $targetDir . $fileName;
@@ -23,7 +23,7 @@ if (isset($_FILES["profileimg"]) && $_FILES["profileimg"]["error"] === UPLOAD_ER
     }
 }
 
-// อัปเดตข้อมูลลูกค้า
+// Update customer details
 $sql = "UPDATE customer SET 
           customer_name = '$name',
           gender = '$gender',

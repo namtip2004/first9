@@ -26,7 +26,7 @@ function updateBookingPrice() {
             </div>
             <div style="text-align: center; color: var(--deep-brown); font-size: 0.9rem;">
                 <i class="fas fa-info-circle me-2"></i>
-                รวมเครื่องดื่มต้อนรับ และผลิตภัณฑ์บำรุงผิวระดับพรีเมียม
+                Includes a welcome refreshment and premium skincare amenities.
             </div>
         `;
     } else {
@@ -50,14 +50,14 @@ function submitBooking(event) {
     const treatment = document.getElementById('treatmentType').value;
     
     if (!name || !phone || !date || !time || !treatment) {
-        alert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
+        alert('Please complete all required fields.');
         return;
     }
     
     // Phone number validation (9-10 digits for Thai numbers)
     const phoneRegex = /^[0-9]{9,10}$/;
     if (!phoneRegex.test(phone)) {
-        alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง (9-10 ตัวเลข)');
+        alert('Please enter a valid phone number (9-10 digits).');
         return;
     }
 
@@ -93,14 +93,14 @@ function submitContact(event) {
     const message = document.getElementById('contactMessage').value.trim();
     
     if (!name || !phone || !message) {
-        alert('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน');
+        alert('Please complete all required fields.');
         return;
     }
     
     // Phone number validation (9-10 digits for Thai numbers)
     const phoneRegex = /^[0-9]{9,10}$/;
     if (!phoneRegex.test(phone)) {
-        alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้อง (9-10 ตัวเลข)');
+        alert('Please enter a valid phone number (9-10 digits).');
         return;
     }
 

@@ -5,8 +5,8 @@
             <div class="col-lg-4 col-md-6 mb-4 fade-in" style="animation-delay: 0.1s;">
                 <h5 class="font-display">Pure Serenity Spa</h5>
                 <p>
-                    สัมผัสประสบการณ์สปาระดับพรีเมียมที่ผสมผสานศิลปะการนวดไทยโบราณ 
-                    กับเทคนิคสมัยใหม่ เพื่อการผ่อนคลายและฟื้นฟูที่สมบูรณ์แบบ
+                    Discover premium spa experiences that blend the artistry of traditional Thai massage
+                    with modern techniques for complete relaxation and rejuvenation.
                 </p>
             </div>
 

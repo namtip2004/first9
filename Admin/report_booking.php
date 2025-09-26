@@ -13,94 +13,247 @@ if ($minYear === 0) { $minYear = (int)date('Y'); $maxYear = (int)date('Y'); }
 if(isset($_GET['action']) && $_GET['action']==='stats'){
   header('Content-Type: application/json; charset=utf-8');
 
-  $period = $_GET['period'] ?? 'month'; // all|month|year
-  $year   = isset($_GET['year'])  ? (int)$_GET['year']  : (int)date('Y');
-  $month  = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
-  $startY = isset($_GET['start_year']) ? (int)$_GET['start_year'] : $minYear;
-  $endY   = isset($_GET['end_year'])   ? (int)$_GET['end_year']   : $maxYear;
+  $view = $_GET['view'] ?? 'years';
+  $view = in_array($view, ['years','months','days','day_table'], true) ? $view : 'years';
+  $year  = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+  $month = isset($_GET['month']) ? (int)$_GET['month'] : (int)date('n');
+  $day   = isset($_GET['day']) ? (int)$_GET['day'] : (int)date('j');
 
-  $staff  = isset($_GET['staff'])  ? (int)$_GET['staff'] : 0;
-  $service= isset($_GET['service'])? (int)$_GET['service'] : 0;
+  $staff   = isset($_GET['staff'])   ? (int)$_GET['staff']   : 0;
+  $service = isset($_GET['service']) ? (int)$_GET['service'] : 0;
 
-  // KPI cards (GLOBAL; not affected by chart filters)
   $k_total = (int)$conn->query("SELECT COUNT(*) c FROM booking")->fetch_assoc()['c'];
   $k_conf  = (int)$conn->query(sprintf("SELECT COUNT(*) c FROM booking WHERE status=%d", BOOKING_STATUS_CONFIRMED))->fetch_assoc()['c'];
   $k_pend  = (int)$conn->query(sprintf("SELECT COUNT(*) c FROM booking WHERE status=%d", BOOKING_STATUS_PENDING))->fetch_assoc()['c'];
   $k_canc  = (int)$conn->query(sprintf("SELECT COUNT(*) c FROM booking WHERE status=%d", BOOKING_STATUS_CANCELLED))->fetch_assoc()['c'];
 
-  // Chart bucketing
-  $labels=[]; $groupExpr=""; $dateFilter="1=1"; $axis='';
-  if($period==='month'){
-    $days=cal_days_in_month(CAL_GREGORIAN,$month,$year);
-    for($d=1;$d<=$days;$d++) $labels[]=str_pad((string)$d,2,'0',STR_PAD_LEFT);
-    $groupExpr="DATE_FORMAT(b.booking_date,'%d')";
-    $dateFilter="YEAR(b.booking_date)=$year AND MONTH(b.booking_date)=$month";
-    $axis='วัน';
-  }elseif($period==='year'){
-    $labels=['01','02','03','04','05','06','07','08','09','10','11','12'];
-    $groupExpr="DATE_FORMAT(b.booking_date,'%m')";
-    $dateFilter="YEAR(b.booking_date)=$year";
-    $axis='เดือน';
-  }else{ // all
-    for($y=$startY;$y<=$endY;$y++) $labels[]=(string)$y;
-    $groupExpr="YEAR(b.booking_date)";
-    $dateFilter="YEAR(b.booking_date) BETWEEN $startY AND $endY";
-    $axis='ปี';
+  $cardsPayload = [
+    'total'     => $k_total,
+    'confirmed' => $k_conf,
+    'pending'   => $k_pend,
+    'cancelled' => $k_canc
+  ];
+
+  $confirmedStatus = BOOKING_STATUS_CONFIRMED;
+  $completedStatus = BOOKING_STATUS_COMPLATE;
+
+  $conditions = ["b.status IN ($confirmedStatus,$completedStatus)"];
+  $types = '';
+  $params = [];
+  if($staff>0){
+    $conditions[] = 'b.staff_id=?';
+    $types .= 'i';
+    $params[] = $staff;
+  }
+  if($service>0){
+    $conditions[] = 'EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=?)';
+    $types .= 'i';
+    $params[] = $service;
+  }
+  $where = implode(' AND ', $conditions);
+
+  if($view === 'day_table'){
+    if($month < 1 || $month > 12){ $month = (int)date('n'); }
+    $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+    if($day < 1 || $day > $daysInMonth){ $day = min($daysInMonth, max(1, (int)date('j'))); }
+
+    $sql = "SELECT
+        b.booking_id,
+        b.b_created_at,
+        b.booking_date,
+        b.time_start,
+        b.time_end,
+        b.total_price,
+        b.total_discount,
+        b.final_price,
+        c.customer_name,
+        s.staff_name,
+        COALESCE(GROUP_CONCAT(DISTINCT sv.service_name ORDER BY sv.service_name SEPARATOR ', '), '') AS services
+      FROM booking b
+      LEFT JOIN customer c ON b.customer_id=c.customer_id
+      LEFT JOIN staff s ON b.staff_id=s.staff_id
+      LEFT JOIN booking_seviceop bs ON bs.booking_id=b.booking_id
+      LEFT JOIN service_option so ON bs.option_id=so.option_id
+      LEFT JOIN service sv ON so.service_id=sv.service_id
+      WHERE $where AND YEAR(b.booking_date)=? AND MONTH(b.booking_date)=? AND DAY(b.booking_date)=?
+      GROUP BY b.booking_id
+      ORDER BY b.booking_date ASC, b.time_start ASC";
+
+    $stmt = $conn->prepare($sql);
+    $bindTypes = $types . 'iii';
+    $bindParams = $params;
+    $bindParams[] = $year;
+    $bindParams[] = $month;
+    $bindParams[] = $day;
+    if($bindTypes !== ''){
+      $stmt->bind_param($bindTypes, ...$bindParams);
+    }
+    $stmt->execute();
+    $rs = $stmt->get_result();
+
+    $rows=[]; $gross=0.0; $disc=0.0; $net=0.0;
+    while($row=$rs->fetch_assoc()){
+      $bookedAt = $row['b_created_at'] ? date('Y-m-d H:i', strtotime($row['b_created_at'])) : '-';
+      $serviceAt = $row['booking_date'] ? $row['booking_date'] : '';
+      $start = $row['time_start'] ? substr($row['time_start'],0,5) : '';
+      $end = $row['time_end'] ? substr($row['time_end'],0,5) : '';
+      $timeRange = '';
+      if($start !== '' && $end !== ''){
+        $timeRange = $start.'-'.$end;
+      }elseif($start !== ''){
+        $timeRange = $start;
+      }elseif($end !== ''){
+        $timeRange = $end;
+      }
+      if($serviceAt !== ''){
+        $serviceAt = trim($serviceAt.' '.trim($timeRange));
+      }
+      $gross += (float)($row['total_price'] ?? 0);
+      $disc  += (float)($row['total_discount'] ?? 0);
+      $net   += (float)($row['final_price'] ?? 0);
+      $rows[] = [
+        'booking_id'   => (int)$row['booking_id'],
+        'booked_at'    => $bookedAt,
+        'service_time' => $serviceAt,
+        'customer'     => $row['customer_name'] ?? '',
+        'staff'        => $row['staff_name'] ?? '',
+        'services'     => $row['services'] ?? '',
+        'gross'        => round((float)($row['total_price'] ?? 0), 2),
+        'discount'     => round((float)($row['total_discount'] ?? 0), 2),
+        'net'          => round((float)($row['final_price'] ?? 0), 2)
+      ];
+    }
+    $stmt->close();
+
+    $dateIso = sprintf('%04d-%02d-%02d', $year, $month, $day);
+
+    echo json_encode([
+      'type'     => 'day_table',
+      'date_iso' => $dateIso,
+      'rows'     => $rows,
+      'totals'   => [
+        'gross'    => round($gross, 2),
+        'discount' => round($disc, 2),
+        'net'      => round($net, 2)
+      ],
+      'cards' => $cardsPayload
+    ]);
+    exit;
   }
 
-  // Optional filters (staff, service)
-  $w=[]; $w[]=$dateFilter;
-  if($staff>0)   $w[]="b.staff_id=".$staff;
-  if($service>0) $w[]="EXISTS (SELECT 1 FROM booking_seviceop bs JOIN service_option so ON bs.option_id=so.option_id WHERE bs.booking_id=b.booking_id AND so.service_id=".$service.")";
-  $where=implode(" AND ",$w);
+  if($view === 'months'){
+    if($year < $minYear || $year > $maxYear){ $year = (int)date('Y'); }
+    $sql = "SELECT MONTH(b.booking_date) AS m, COALESCE(SUM(b.final_price),0) AS net FROM booking b WHERE $where AND YEAR(b.booking_date)=? GROUP BY MONTH(b.booking_date) ORDER BY MONTH(b.booking_date)";
+    $stmt = $conn->prepare($sql);
+    $bindTypes = $types . 'i';
+    $bindParams = $params;
+    $bindParams[] = $year;
+    if($bindTypes !== ''){
+      $stmt->bind_param($bindTypes, ...$bindParams);
+    }
+    $stmt->execute();
+    $rs = $stmt->get_result();
+    $map=[];
+    while($row=$rs->fetch_assoc()){
+      $map[(int)$row['m']] = round((float)($row['net'] ?? 0),2);
+    }
+    $stmt->close();
+    $labels=[]; $keys=[]; $values=[];
+    for($m=1;$m<=12;$m++){
+      $keys[] = $m;
+      $labels[] = str_pad((string)$m,2,'0',STR_PAD_LEFT);
+      $values[] = $map[$m] ?? 0;
+    }
+    echo json_encode([
+      'type'     => 'months',
+      'year'     => $year,
+      'labels'   => $labels,
+      'keys'     => $keys,
+      'series'   => ['net'=>$values],
+      'axis'     => 'เดือน',
+      'title'    => "รายได้รายเดือน (ปี $year)",
+      'subtitle' => 'คลิกแท่งเดือนเพื่อดูรายได้รายวัน',
+      'cards'    => $cardsPayload
+    ]);
+    exit;
+  }
 
-  $confStatus = BOOKING_STATUS_CONFIRMED;
-  $pendStatus = BOOKING_STATUS_PENDING;
-  $cancStatus = BOOKING_STATUS_CANCELLED;
+  if($view === 'days'){
+    if($month < 1 || $month > 12){ $month = (int)date('n'); }
+    $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+    $sql = "SELECT DAY(b.booking_date) AS d, COALESCE(SUM(b.final_price),0) AS net FROM booking b WHERE $where AND YEAR(b.booking_date)=? AND MONTH(b.booking_date)=? GROUP BY DAY(b.booking_date) ORDER BY DAY(b.booking_date)";
+    $stmt = $conn->prepare($sql);
+    $bindTypes = $types . 'ii';
+    $bindParams = $params;
+    $bindParams[] = $year;
+    $bindParams[] = $month;
+    if($bindTypes !== ''){
+      $stmt->bind_param($bindTypes, ...$bindParams);
+    }
+    $stmt->execute();
+    $rs = $stmt->get_result();
+    $map=[];
+    while($row=$rs->fetch_assoc()){
+      $map[(int)$row['d']] = round((float)($row['net'] ?? 0),2);
+    }
+    $stmt->close();
+    $labels=[]; $keys=[]; $values=[];
+    for($d=1;$d<=$daysInMonth;$d++){
+      $keys[] = $d;
+      $labels[] = str_pad((string)$d,2,'0',STR_PAD_LEFT);
+      $values[] = $map[$d] ?? 0;
+    }
+    echo json_encode([
+      'type'     => 'days',
+      'year'     => $year,
+      'month'    => $month,
+      'labels'   => $labels,
+      'keys'     => $keys,
+      'series'   => ['net'=>$values],
+      'axis'     => 'วัน',
+      'title'    => "รายได้รายวัน (ปี $year เดือน $month)",
+      'subtitle' => 'คลิกแท่งวันเพื่อดูรายละเอียดการจอง',
+      'cards'    => $cardsPayload
+    ]);
+    exit;
+  }
 
-  $sql="
-    SELECT $groupExpr AS b,
-           SUM(CASE WHEN b.status=$confStatus THEN 1 ELSE 0 END) AS conf,
-           SUM(CASE WHEN b.status=$pendStatus THEN 1 ELSE 0 END) AS pend,
-           SUM(CASE WHEN b.status=$cancStatus THEN 1 ELSE 0 END) AS canc,
-           COUNT(*) AS total
-    FROM booking b
-    WHERE $where
-    GROUP BY b
-    ORDER BY b
-  ";
-  $rs=$conn->query($sql);
-  $mapT=[]; $mapC=[]; $mapP=[]; $mapX=[];
+  $sql = "SELECT YEAR(b.booking_date) AS y, COALESCE(SUM(b.final_price),0) AS net FROM booking b WHERE $where GROUP BY YEAR(b.booking_date) ORDER BY YEAR(b.booking_date)";
+  $stmt = $conn->prepare($sql);
+  if($types !== ''){
+    $stmt->bind_param($types, ...$params);
+  }
+  $stmt->execute();
+  $rs = $stmt->get_result();
+  $labels=[]; $keys=[]; $values=[];
   while($row=$rs->fetch_assoc()){
-    $k=(string)$row['b'];
-    $mapT[$k]=(int)$row['total'];
-    $mapC[$k]=(int)$row['conf'];
-    $mapP[$k]=(int)$row['pend'];
-    $mapX[$k]=(int)$row['canc'];
+    $y = (int)$row['y'];
+    if($y===0){ continue; }
+    $keys[] = $y;
+    $labels[] = (string)$y;
+    $values[] = round((float)($row['net'] ?? 0),2);
   }
-  $dataT=[]; $dataC=[]; $dataP=[]; $dataX=[];
-  foreach($labels as $b){
-    $dataT[]=$mapT[$b]??0;
-    $dataC[]=$mapC[$b]??0;
-    $dataP[]=$mapP[$b]??0;
-    $dataX[]=$mapX[$b]??0;
+  $stmt->close();
+
+  if(empty($labels)){
+    $yearNow = (int)date('Y');
+    $keys[] = $yearNow;
+    $labels[] = (string)$yearNow;
+    $values[] = 0;
   }
 
   echo json_encode([
-    'cards'=>[
-      'total'=>$k_total,'confirmed'=>$k_conf,'pending'=>$k_pend,'cancelled'=>$k_canc
-    ],
-    'chart'=>[
-      'labels'=>$labels,
-      'axis'=>$axis,
-      'series'=>[
-        'total'=>$dataT,'confirmed'=>$dataC,'pending'=>$dataP,'cancelled'=>$dataX
-      ]
-    ]
+    'type'     => 'years',
+    'labels'   => $labels,
+    'keys'     => $keys,
+    'series'   => ['net'=>$values],
+    'axis'     => 'ปี',
+    'title'    => 'รายได้รายปี',
+    'subtitle' => 'คลิกแท่งปีเพื่อดูรายได้รายเดือน',
+    'cards'    => $cardsPayload
   ]);
   exit;
 }
-
 // ----------------------- TABLE: filters + sort + pagination -----------------------
 $searchId = trim($_GET['booking_id'] ?? '');
 $statusParam = $_GET['status'] ?? 'all';
@@ -452,17 +605,6 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <!-- Chart filters -->
         <div class="row g-3 align-items-end">
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงเวลา</label>
-            <div class="btn-group" role="group">
-              <input type="radio" class="btn-check" name="period" id="p_all" value="all">
-              <label class="btn btn-outline-primary" for="p_all">All</label>
-              <input type="radio" class="btn-check" name="period" id="p_month" value="month" checked>
-              <label class="btn btn-outline-primary" for="p_month">Month</label>
-              <input type="radio" class="btn-check" name="period" id="p_year" value="year">
-              <label class="btn btn-outline-primary" for="p_year">Year</label>
-            </div>
-          </div>
-          <div class="col-md-auto">
             <label class="form-label small-label">พนักงาน</label>
             <select id="chart_staff" class="form-select">
               <option value="0">ทั้งหมด</option>
@@ -480,48 +622,20 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               <?php endwhile; ?>
             </select>
           </div>
-
-          <!-- Period-specific controls -->
-          <div class="col-md-auto" id="ctl-month">
-            <label class="form-label small-label">เดือน/ปี</label>
-            <div class="d-flex gap-2">
-              <select id="month" class="form-select">
-                <?php for($m=1;$m<=12;$m++): ?>
-                  <option value="<?=$m?>" <?= $m==(int)date('n')?'selected':'' ?>><?=$m?></option>
-                <?php endfor; ?>
-              </select>
-              <select id="year_m" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
-            </div>
-          </div>
-          <div class="col-md-auto d-none" id="ctl-year">
-            <label class="form-label small-label">ปี</label>
-            <select id="year_y" class="form-select">
-              <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                <option value="<?=$y?>" <?= $y==(int)date('Y')?'selected':'' ?>><?=$y?></option>
-              <?php endfor; ?>
-            </select>
-          </div>
-          <div class="col-md-auto d-none" id="ctl-all">
-            <label class="form-label small-label">ช่วงปี</label>
-            <div class="d-flex gap-2">
-              <select id="start_year" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==$minYear?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
-              <select id="end_year" class="form-select">
-                <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
-                  <option value="<?=$y?>" <?= $y==$maxYear?'selected':'' ?>><?=$y?></option>
-                <?php endfor; ?>
-              </select>
-            </div>
-          </div>
           <div class="col-md-auto">
-            <button id="applyChart" class="btn btn-primary"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+            <button id="applyChart" class="btn btn-primary mt-4 mt-md-0"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+          </div>
+        </div>
+
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mt-3 gap-3">
+          <div>
+            <h5 class="mb-1" id="chartTitle">รายได้รายปี</h5>
+            <div class="text-muted" id="chartSubtitle">คลิกแท่งเพื่อดูรายละเอียดระดับถัดไป</div>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="badge bg-secondary-subtle text-dark" id="chartLevel">ระดับ: รายปีทั้งหมด</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="backToYears"><i class="bi bi-arrow-counterclockwise"></i> ย้อนกลับระดับปี</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="backToMonths"><i class="bi bi-arrow-left-short"></i> ย้อนกลับระดับเดือน</button>
           </div>
         </div>
 
@@ -550,7 +664,34 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <div class="mt-3" style="min-height:360px">
           <canvas id="bkChart" height="120"></canvas>
         </div>
-        <div class="text-muted mt-2">* กราฟเส้น: Total / Confirmed / Pending / Cancelled — เปิด–ปิดเส้นได้จาก Legend</div>
+        <div class="text-muted mt-2">* คลิกแท่งเพื่อดูรายละเอียดระดับถัดไป หรือคลิกปุ่มย้อนกลับเพื่อกลับไปยังระดับก่อนหน้า</div>
+
+        <div class="mt-4 d-none" id="dayTableWrap">
+          <h5 id="dayTableHeading" class="mb-3"></h5>
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>ID</th>
+                  <th>เวลาบันทึก</th>
+                  <th>วัน/เวลาเข้าใช้บริการ</th>
+                  <th>ลูกค้า</th>
+                  <th>พนักงาน</th>
+                  <th>บริการ</th>
+                  <th class="text-end">ราคาก่อนส่วนลด</th>
+                  <th class="text-end">ส่วนลด</th>
+                  <th class="text-end">ยอดสุทธิ</th>
+                </tr>
+              </thead>
+              <tbody id="dayTableBody"></tbody>
+            </table>
+          </div>
+          <div class="mt-3 text-end">
+            <div>ยอดรวมก่อนส่วนลด: <strong id="dayTotalsGross">฿0.00</strong></div>
+            <div>ส่วนลดรวม: <strong id="dayTotalsDiscount">฿0.00</strong></div>
+            <div>ยอดสุทธิรวม: <strong id="dayTotalsNet">฿0.00</strong></div>
+          </div>
+        </div>
 
       </div></div>
     </div>
@@ -573,60 +714,254 @@ function updatePeriodFilters(){
 periodSelect?.addEventListener('change',updatePeriodFilters);
 updatePeriodFilters();
 
-function updateCtl(){
-  const p=document.querySelector('input[name=period]:checked')?.value||'month';
-  document.getElementById('ctl-month').classList.toggle('d-none',p!=='month');
-  document.getElementById('ctl-year').classList.toggle('d-none',p!=='year');
-  document.getElementById('ctl-all').classList.toggle('d-none',p!=='all');
+const currencyFmt = new Intl.NumberFormat('th-TH',{style:'currency',currency:'THB',maximumFractionDigits:2});
+const numberFmt = new Intl.NumberFormat('th-TH');
+
+function formatCurrency(value){
+  const num = typeof value === 'number' ? value : Number(value || 0);
+  return currencyFmt.format(Number.isFinite(num) ? num : 0);
 }
-['p_all','p_month','p_year'].forEach(id=>document.getElementById(id).addEventListener('change',updateCtl));
-updateCtl();
+
+function formatDateDisplay(iso){
+  if(!iso) return '';
+  const dt = new Date(iso + 'T00:00:00');
+  if(Number.isNaN(dt.getTime())) return iso;
+  return dt.toLocaleDateString('th-TH',{dateStyle:'long'});
+}
 
 let chart;
-async function loadStats(){
-  const p=document.querySelector('input[name=period]:checked')?.value||'month';
-  const url=new URL(location.href); url.search=''; url.searchParams.set('action','stats'); url.searchParams.set('period',p);
-  url.searchParams.set('staff',document.getElementById('chart_staff').value);
-  url.searchParams.set('service',document.getElementById('chart_service').value);
-  if(p==='month'){ url.searchParams.set('year',document.getElementById('year_m').value); url.searchParams.set('month',document.getElementById('month').value); }
-  else if(p==='year'){ url.searchParams.set('year',document.getElementById('year_y').value); }
-  else { url.searchParams.set('start_year',document.getElementById('start_year').value); url.searchParams.set('end_year',document.getElementById('end_year').value); }
+let chartView='years';
+let chartKeys=[];
+let selectedYear=null;
+let selectedMonth=null;
+let latestChartRequestId=0;
+let latestDayRequestId=0;
 
-  const res=await fetch(url.toString(),{cache:'no-store'}); const data=await res.json();
-
-  // KPIs (global)
-  document.getElementById('k_total').textContent=(data.cards.total||0).toLocaleString();
-  document.getElementById('k_conf').textContent=(data.cards.confirmed||0).toLocaleString();
-  document.getElementById('k_pend').textContent=(data.cards.pending||0).toLocaleString();
-  document.getElementById('k_canc').textContent=(data.cards.cancelled||0).toLocaleString();
-
-  // Chart
-  const labels=data.chart.labels, axis=data.chart.axis;
-  const sT=data.chart.series.total, sC=data.chart.series.confirmed, sP=data.chart.series.pending, sX=data.chart.series.cancelled;
-
-  if(chart) chart.destroy();
-  const ctx=document.getElementById('bkChart').getContext('2d');
-  chart=new Chart(ctx,{
-    type:'line',
-    data:{
-      labels,
-      datasets:[
-        {label:'Total',     data:sT, tension:.3, pointRadius:3, borderWidth:2},
-        {label:'Confirmed', data:sC, tension:.3, pointRadius:3, borderWidth:2},
-        {label:'Pending',   data:sP, tension:.3, pointRadius:3, borderWidth:2},
-        {label:'Cancelled', data:sX, tension:.3, pointRadius:3, borderWidth:2}
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ x:{ title:{display:true,text:axis} }, y:{ beginAtZero:true, ticks:{ precision:0 } } },
-      plugins:{ legend:{display:true}, tooltip:{mode:'index', intersect:false} }
-    }
-  });
+function updateCards(cards){
+  if(!cards) return;
+  document.getElementById('k_total').textContent = numberFmt.format(cards.total ?? 0);
+  document.getElementById('k_conf').textContent = numberFmt.format(cards.confirmed ?? 0);
+  document.getElementById('k_pend').textContent = numberFmt.format(cards.pending ?? 0);
+  document.getElementById('k_canc').textContent = numberFmt.format(cards.cancelled ?? 0);
 }
 
-document.getElementById('applyChart').addEventListener('click',loadStats);
-document.getElementById('chart-tab')?.addEventListener('shown.bs.tab',()=>loadStats());
+async function requestData(view, extra={}){
+  const params = new URLSearchParams();
+  params.set('action','stats');
+  params.set('view',view);
+  const staffEl = document.getElementById('chart_staff');
+  const serviceEl = document.getElementById('chart_service');
+  if(staffEl) params.set('staff', staffEl.value || '0');
+  if(serviceEl) params.set('service', serviceEl.value || '0');
+  if(extra.year !== undefined && extra.year !== null) params.set('year', extra.year);
+  if(extra.month !== undefined && extra.month !== null) params.set('month', extra.month);
+  if(extra.day !== undefined && extra.day !== null) params.set('day', extra.day);
+  const res = await fetch('report_booking.php?' + params.toString(), {cache:'no-store'});
+  if(!res.ok) throw new Error('ไม่สามารถดึงข้อมูลได้');
+  return res.json();
+}
+
+function updateBreadcrumb(){
+  const levelEl = document.getElementById('chartLevel');
+  const backYears = document.getElementById('backToYears');
+  const backMonths = document.getElementById('backToMonths');
+  if(chartView==='years'){
+    levelEl.textContent = 'ระดับ: รายปีทั้งหมด';
+    backYears?.classList.add('d-none');
+    backMonths?.classList.add('d-none');
+  }else if(chartView==='months'){
+    const yearText = selectedYear ? selectedYear.toString() : '-';
+    levelEl.textContent = `ระดับ: ปี ${yearText}`;
+    backYears?.classList.remove('d-none');
+    backMonths?.classList.add('d-none');
+  }else if(chartView==='days'){
+    const yearText = selectedYear ? selectedYear.toString() : '-';
+    const monthText = selectedMonth ? String(selectedMonth).padStart(2,'0') : '-';
+    levelEl.textContent = `ระดับ: ปี ${yearText} / เดือน ${monthText}`;
+    backYears?.classList.remove('d-none');
+    backMonths?.classList.remove('d-none');
+  }
+}
+
+function renderChart(data){
+  const labels = data.labels ?? [];
+  const values = data.series?.net ?? [];
+  document.getElementById('chartTitle').textContent = data.title || 'รายได้';
+  document.getElementById('chartSubtitle').textContent = data.subtitle || '';
+
+  if(chart) chart.destroy();
+  const ctx = document.getElementById('bkChart').getContext('2d');
+  chart = new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label:'รายได้ (บาท)',
+        data:values,
+        backgroundColor:'#0d6efd',
+        hoverBackgroundColor:'#0b5ed7',
+        borderRadius:6,
+        maxBarThickness:48
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      scales:{
+        x:{ title:{display:true,text:data.axis||''} },
+        y:{ beginAtZero:true, ticks:{ callback:value=>formatCurrency(value) } }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label:ctx=>`รายได้: ${formatCurrency(ctx.parsed.y)}` } }
+      },
+      onClick:(evt,elements)=>{
+        if(!elements?.length) return;
+        const idx = elements[0].index;
+        const key = chartKeys[idx];
+        if(chartView==='years'){
+          selectedYear = Number(key);
+          selectedMonth = null;
+          if(Number.isFinite(selectedYear)){
+            loadChart('months',{year:selectedYear});
+          }
+        }else if(chartView==='months'){
+          selectedMonth = Number(key);
+          if(Number.isFinite(selectedMonth)){
+            loadChart('days',{year:selectedYear,month:selectedMonth});
+          }
+        }else if(chartView==='days'){
+          const day = Number(key);
+          if(Number.isFinite(day)){
+            showDayTable(day);
+          }
+        }
+      }
+    }
+  });
+  updateBreadcrumb();
+}
+
+function renderDayTable(data){
+  const wrap = document.getElementById('dayTableWrap');
+  const body = document.getElementById('dayTableBody');
+  if(!wrap || !body){ return; }
+  if(!data || data.type !== 'day_table'){
+    wrap.classList.add('d-none');
+    body.innerHTML='';
+    return;
+  }
+  wrap.classList.remove('d-none');
+  body.innerHTML='';
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+  if(rows.length===0){
+    const tr=document.createElement('tr');
+    const td=document.createElement('td');
+    td.colSpan=9;
+    td.className='text-center text-muted';
+    td.textContent='ไม่มีข้อมูลสำหรับวันดังกล่าว';
+    tr.appendChild(td);
+    body.appendChild(tr);
+  }else{
+    rows.forEach(row=>{
+      const tr=document.createElement('tr');
+      const cells=[
+        row.booking_id ?? '',
+        row.booked_at ?? '',
+        row.service_time ?? '',
+        row.customer || '-',
+        row.staff || '-',
+        row.services || '-',
+        formatCurrency(row.gross ?? 0),
+        formatCurrency(row.discount ?? 0),
+        formatCurrency(row.net ?? 0)
+      ];
+      cells.forEach((value,idx)=>{
+        const td=document.createElement('td');
+        if(idx>=6) td.classList.add('text-end');
+        td.textContent=value;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+  const heading=document.getElementById('dayTableHeading');
+  if(heading){
+    const display=formatDateDisplay(data.date_iso);
+    heading.textContent=display ? `รายละเอียดรายได้วันที่ ${display}` : 'รายละเอียดรายได้รายวัน';
+  }
+  document.getElementById('dayTotalsGross').textContent = formatCurrency(data.totals?.gross ?? 0);
+  document.getElementById('dayTotalsDiscount').textContent = formatCurrency(data.totals?.discount ?? 0);
+  document.getElementById('dayTotalsNet').textContent = formatCurrency(data.totals?.net ?? 0);
+}
+
+async function loadChart(view='years', extra={}){
+  const requestId = ++latestChartRequestId;
+  try{
+    const data = await requestData(view, extra);
+    if(requestId !== latestChartRequestId) return;
+    updateCards(data.cards);
+    if(data.type==='years'){
+      selectedYear=null;
+      selectedMonth=null;
+    }else{
+      if('year' in data) selectedYear = data.year;
+      if('month' in data) selectedMonth = data.month;
+    }
+    if(data.type==='day_table'){
+      renderDayTable(data);
+      return;
+    }
+    chartView = data.type;
+    chartKeys = data.keys || [];
+    renderChart(data);
+    renderDayTable(null);
+  }catch(err){
+    console.error(err);
+  }
+}
+
+async function showDayTable(day){
+  if(!selectedYear || !selectedMonth) return;
+  const requestId = ++latestDayRequestId;
+  try{
+    const data = await requestData('day_table',{year:selectedYear,month:selectedMonth,day});
+    if(requestId !== latestDayRequestId) return;
+    updateCards(data.cards);
+    renderDayTable(data);
+  }catch(err){
+    console.error(err);
+  }
+}
+
+function reloadChartForFilters(){
+  if(chartView==='months' && selectedYear){
+    loadChart('months',{year:selectedYear});
+  }else if(chartView==='days' && selectedYear && selectedMonth){
+    loadChart('days',{year:selectedYear,month:selectedMonth});
+  }else{
+    selectedYear=null;
+    selectedMonth=null;
+    loadChart('years');
+  }
+}
+
+document.getElementById('applyChart')?.addEventListener('click', reloadChartForFilters);
+document.getElementById('backToYears')?.addEventListener('click', ()=>{ selectedYear=null; selectedMonth=null; loadChart('years'); });
+document.getElementById('backToMonths')?.addEventListener('click', ()=>{ if(selectedYear){ selectedMonth=null; loadChart('months',{year:selectedYear}); } });
+
+let chartLoaded=false;
+const chartTab=document.getElementById('chart-tab');
+chartTab?.addEventListener('shown.bs.tab',()=>{
+  if(!chartLoaded){
+    chartLoaded=true;
+    loadChart('years');
+  }
+});
+if(document.getElementById('t-chart')?.classList.contains('show')){
+  chartLoaded=true;
+  loadChart('years');
+}
 
 $(function(){
   $('.select-search').each(function(){

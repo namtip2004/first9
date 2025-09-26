@@ -18,11 +18,12 @@ function promotion_status_badge_class(string $status): string
 }
 
 $now = date('Y-m-d H:i:s');
+$action = $_GET['action'] ?? null;
 
 // ---------------------------------------------------------------
 // AJAX handler for chart + KPI data
 // ---------------------------------------------------------------
-if (isset($_GET['action']) && $_GET['action'] === 'stats') {
+if ($action === 'stats') {
     header('Content-Type: application/json; charset=utf-8');
 
     $period       = $_GET['period'] ?? 'month'; // month|year|all
@@ -271,27 +272,209 @@ if (isset($_GET['action']) && $_GET['action'] === 'stats') {
     ]);
     exit;
 }
+
+if ($action === 'promotion_services') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $promotionId = isset($_GET['promotion_id']) ? (int)$_GET['promotion_id'] : 0;
+    if ($promotionId <= 0) {
+        echo json_encode(['error' => 'invalid_promotion']);
+        exit;
+    }
+
+    $promoStmt = $conn->prepare('SELECT pm_name FROM promotion WHERE promotion_id = ?');
+    if ($promoStmt === false) {
+        echo json_encode(['error' => 'cannot_prepare']);
+        exit;
+    }
+    $promoStmt->bind_param('i', $promotionId);
+    $promoStmt->execute();
+    $promoRes = $promoStmt->get_result();
+    $promotion = $promoRes->fetch_assoc();
+    $promoStmt->close();
+
+    if (!$promotion) {
+        echo json_encode(['error' => 'not_found']);
+        exit;
+    }
+
+    $services = fetchPromotionServicesWithOptions($conn, $promotionId);
+    foreach ($services as &$service) {
+        if (isset($service['options'])) {
+            $service['options'] = array_values(array_filter(
+                $service['options'],
+                static fn(array $opt): bool => !empty($opt['included'])
+            ));
+        }
+    }
+    unset($service);
+
+    echo json_encode([
+        'promotion' => [
+            'id' => $promotionId,
+            'name' => $promotion['pm_name'] ?? 'N/A',
+        ],
+        'services' => array_values(array_filter($services, static fn(array $svc): bool => !empty($svc['options']))),
+    ]);
+    exit;
+}
+
+if ($action === 'promotion_usage') {
+    header('Content-Type: application/json; charset=utf-8');
+
+    $promotionId = isset($_GET['promotion_id']) ? (int)$_GET['promotion_id'] : 0;
+    if ($promotionId <= 0) {
+        echo json_encode(['error' => 'invalid_promotion']);
+        exit;
+    }
+
+    $promoStmt = $conn->prepare('SELECT promotion_id, pm_name, pm_start_date, pm_end_date FROM promotion WHERE promotion_id = ?');
+    if ($promoStmt === false) {
+        echo json_encode(['error' => 'cannot_prepare']);
+        exit;
+    }
+    $promoStmt->bind_param('i', $promotionId);
+    $promoStmt->execute();
+    $promoRes = $promoStmt->get_result();
+    $promotion = $promoRes->fetch_assoc();
+    $promoStmt->close();
+
+    if (!$promotion) {
+        echo json_encode(['error' => 'not_found']);
+        exit;
+    }
+
+    $startDate = $promotion['pm_start_date'] ? substr((string)$promotion['pm_start_date'], 0, 10) : '';
+    $endDate = $promotion['pm_end_date'] ? substr((string)$promotion['pm_end_date'], 0, 10) : '';
+
+    $rangeStmt = $conn->prepare(
+        "SELECT MIN(b.booking_date) AS min_date, MAX(b.booking_date) AS max_date
+         FROM booking_seviceop bs
+         INNER JOIN booking b ON b.booking_id = bs.booking_id
+         INNER JOIN promotion_service_option pso ON pso.option_id = bs.option_id
+         WHERE pso.promotion_id = ? AND bs.discount_booking > 0"
+    );
+    if ($rangeStmt) {
+        $rangeStmt->bind_param('i', $promotionId);
+        $rangeStmt->execute();
+        $rangeRes = $rangeStmt->get_result();
+        $rangeRow = $rangeRes->fetch_assoc();
+        $rangeStmt->close();
+        if ($startDate === '' && !empty($rangeRow['min_date'])) {
+            $startDate = $rangeRow['min_date'];
+        }
+        if ($endDate === '' && !empty($rangeRow['max_date'])) {
+            $endDate = $rangeRow['max_date'];
+        }
+    }
+
+    if ($startDate === '' && $endDate !== '') {
+        $startDate = $endDate;
+    } elseif ($endDate === '' && $startDate !== '') {
+        $endDate = $startDate;
+    }
+
+    if ($startDate === '' && $endDate === '') {
+        $startDate = $endDate = date('Y-m-d');
+    }
+
+    if ($startDate > $endDate) {
+        [$startDate, $endDate] = [$endDate, $startDate];
+    }
+
+    $usageSql = "
+        SELECT b.booking_date,
+               COUNT(DISTINCT b.booking_id)           AS booking_count,
+               COALESCE(SUM(bs.discount_booking), 0)  AS discount_sum
+        FROM booking_seviceop bs
+        INNER JOIN booking b ON b.booking_id = bs.booking_id
+        INNER JOIN promotion_service_option pso ON pso.option_id = bs.option_id
+        WHERE pso.promotion_id = ?
+          AND bs.discount_booking > 0
+          AND b.booking_date BETWEEN ? AND ?
+        GROUP BY b.booking_date
+        ORDER BY b.booking_date
+    ";
+
+    $usageStmt = $conn->prepare($usageSql);
+    if ($usageStmt === false) {
+        echo json_encode(['error' => 'cannot_prepare']);
+        exit;
+    }
+    $usageStmt->bind_param('iss', $promotionId, $startDate, $endDate);
+    $usageStmt->execute();
+    $usageRes = $usageStmt->get_result();
+    $usageMap = [];
+    $totalUsage = 0;
+    $totalDiscount = 0.0;
+    while ($row = $usageRes->fetch_assoc()) {
+        $dateKey = (string)$row['booking_date'];
+        $usageMap[$dateKey] = [
+            'count' => (int)$row['booking_count'],
+            'discount' => (float)$row['discount_sum'],
+        ];
+        $totalUsage += (int)$row['booking_count'];
+        $totalDiscount += (float)$row['discount_sum'];
+    }
+    $usageStmt->close();
+
+    $labels = [];
+    $counts = [];
+    $discounts = [];
+    $period = new DatePeriod(new DateTimeImmutable($startDate), new DateInterval('P1D'), (new DateTimeImmutable($endDate))->modify('+1 day'));
+    foreach ($period as $day) {
+        $key = $day->format('Y-m-d');
+        $labels[] = $key;
+        $counts[] = $usageMap[$key]['count'] ?? 0;
+        $discounts[] = round($usageMap[$key]['discount'] ?? 0, 2);
+    }
+
+    echo json_encode([
+        'promotion' => [
+            'id' => (int)$promotion['promotion_id'],
+            'name' => $promotion['pm_name'] ?? 'N/A',
+            'start' => $startDate,
+            'end' => $endDate,
+        ],
+        'chart' => [
+            'labels' => $labels,
+            'usage' => $counts,
+            'discount' => $discounts,
+        ],
+        'summary' => [
+            'total_usage' => $totalUsage,
+            'total_discount' => round($totalDiscount, 2),
+        ],
+    ]);
+    exit;
+}
 // ---------------------------------------------------------------
 // TABLE view preparation
 // ---------------------------------------------------------------
 $search = trim($_GET['q'] ?? '');
 $promoStatus = $_GET['promo_status'] ?? 'all'; // all|running|upcoming|ended
-$serviceFilter = isset($_GET['service']) ? (int)$_GET['service'] : 0;
-$bookingStatusParam = $_GET['booking_status'] ?? (string)BOOKING_STATUS_CONFIRMED;
-$bookingStatusCode = $bookingStatusParam === 'all' ? null : booking_status_code($bookingStatusParam);
-$usageStart = $_GET['usage_start'] ?? '';
-$usageEnd = $_GET['usage_end'] ?? '';
-$sort = $_GET['sort'] ?? 'start';
-$dir = strtoupper($_GET['dir'] ?? 'DESC');
-$dir = $dir === 'ASC' ? 'ASC' : 'DESC';
+$periodType = $_GET['period_type'] ?? 'all';
+$periodDate = $_GET['period_date'] ?? '';
+$periodMonth = $_GET['period_month'] ?? '';
+$periodYear = $_GET['period_year'] ?? '';
+$sort = $_GET['sort'] ?? 'name';
+$dir = strtoupper($_GET['dir'] ?? 'ASC');
+$dir = $dir === 'DESC' ? 'DESC' : 'ASC';
 
 $promoWhere = ['1=1'];
 $promoTypes = '';
 $promoParams = [];
 if ($search !== '') {
-    $promoWhere[] = 'p.pm_name LIKE ?';
-    $promoTypes .= 's';
-    $promoParams[] = "%{$search}%";
+    if (ctype_digit($search)) {
+        $promoWhere[] = '(p.promotion_id = ? OR p.pm_name LIKE ?)';
+        $promoTypes .= 'is';
+        $promoParams[] = (int)$search;
+        $promoParams[] = "%{$search}%";
+    } else {
+        $promoWhere[] = 'p.pm_name LIKE ?';
+        $promoTypes .= 's';
+        $promoParams[] = "%{$search}%";
+    }
 }
 if ($promoStatus === 'running') {
     $promoWhere[] = 'p.pm_start_date <= ? AND p.pm_end_date >= ?';
@@ -307,11 +490,6 @@ if ($promoStatus === 'running') {
     $promoTypes .= 's';
     $promoParams[] = $now;
 }
-if ($serviceFilter > 0) {
-    $promoWhere[] = 'EXISTS (SELECT 1 FROM promotion_service ps WHERE ps.promotion_id = p.promotion_id AND ps.service_id = ?)';
-    $promoTypes .= 'i';
-    $promoParams[] = $serviceFilter;
-}
 $promoWhereSql = implode(' AND ', $promoWhere);
 
 $usageWhere = ['bs.discount_booking > 0'];
@@ -319,26 +497,56 @@ $usageTypes = '';
 $usageParams = [];
 $usageWhere[] = '(p2.pm_start_date IS NULL OR CONCAT(b.booking_date, " ", b.time_start) >= p2.pm_start_date)';
 $usageWhere[] = '(p2.pm_end_date   IS NULL OR CONCAT(b.booking_date, " ", b.time_start) <= p2.pm_end_date)';
-if ($bookingStatusCode !== null) {
-    $usageWhere[] = 'b.status = ?';
-    $usageTypes .= 'i';
-    $usageParams[] = $bookingStatusCode;
+
+$rangeStartDateTime = null;
+$rangeEndDateTime = null;
+$periodType = in_array($periodType, ['all', 'date', 'month', 'year'], true) ? $periodType : 'all';
+
+if ($periodType === 'date') {
+    $dt = DateTimeImmutable::createFromFormat('!Y-m-d', $periodDate);
+    if ($dt) {
+        $rangeStartDateTime = $dt->format('Y-m-d 00:00:00');
+        $rangeEndDateTime = $dt->format('Y-m-d 23:59:59');
+        $usageWhere[] = 'b.booking_date = ?';
+        $usageTypes .= 's';
+        $usageParams[] = $dt->format('Y-m-d');
+    } else {
+        $periodType = 'all';
+    }
+} elseif ($periodType === 'month') {
+    $dt = DateTimeImmutable::createFromFormat('!Y-m', $periodMonth);
+    if ($dt) {
+        $rangeStartDateTime = $dt->format('Y-m-01 00:00:00');
+        $rangeEndDateTime = $dt->modify('last day of this month')->format('Y-m-d 23:59:59');
+        $usageWhere[] = 'YEAR(b.booking_date) = ?';
+        $usageTypes .= 'i';
+        $usageParams[] = (int)$dt->format('Y');
+        $usageWhere[] = 'MONTH(b.booking_date) = ?';
+        $usageTypes .= 'i';
+        $usageParams[] = (int)$dt->format('n');
+    } else {
+        $periodType = 'all';
+    }
+} elseif ($periodType === 'year') {
+    $dt = DateTimeImmutable::createFromFormat('!Y', $periodYear);
+    if ($dt) {
+        $rangeStartDateTime = $dt->format('Y-01-01 00:00:00');
+        $rangeEndDateTime = $dt->format('Y-12-31 23:59:59');
+        $usageWhere[] = 'YEAR(b.booking_date) = ?';
+        $usageTypes .= 'i';
+        $usageParams[] = (int)$dt->format('Y');
+    } else {
+        $periodType = 'all';
+    }
 }
-if ($usageStart !== '') {
-    $usageWhere[] = 'b.booking_date >= ?';
-    $usageTypes .= 's';
-    $usageParams[] = $usageStart;
+
+if ($rangeStartDateTime !== null && $rangeEndDateTime !== null) {
+    $promoWhere[] = '((p.pm_start_date IS NULL OR p.pm_start_date <= ?) AND (p.pm_end_date IS NULL OR p.pm_end_date >= ?))';
+    $promoTypes .= 'ss';
+    $promoParams[] = $rangeEndDateTime;
+    $promoParams[] = $rangeStartDateTime;
 }
-if ($usageEnd !== '') {
-    $usageWhere[] = 'b.booking_date <= ?';
-    $usageTypes .= 's';
-    $usageParams[] = $usageEnd;
-}
-if ($serviceFilter > 0) {
-    $usageWhere[] = 'pso.service_id = ?';
-    $usageTypes .= 'i';
-    $usageParams[] = $serviceFilter;
-}
+
 $usageWhereSql = implode(' AND ', $usageWhere);
 
 $promotionColumns = getPromotionColumns($conn);
@@ -375,29 +583,17 @@ if (in_array('discount', $promotionColumns, true)) {
 
 $listSelectFields = array_merge($listSelectFields, [
     'COALESCE(svc.service_count, 0) AS service_count',
-    'COALESCE(opt.option_count, 0) AS option_count',
-    'COALESCE(opt.max_percent, 0) AS max_percent',
-    'COALESCE(opt.max_amount, 0) AS max_amount',
     'COALESCE(usage_stat.booking_count, 0) AS booking_count',
-    'COALESCE(usage_stat.gross_sum, 0) AS gross_sum',
     'COALESCE(usage_stat.discount_sum, 0) AS discount_sum',
-    'COALESCE(usage_stat.net_sum, 0) AS net_sum',
 ]);
 
 $listSelect = implode(",\n        ", $listSelectFields);
 
 $sortMap = [
     'name' => 'p.pm_name ' . $dir,
-    'start' => 'p.pm_start_date ' . $dir,
-    'end' => 'p.pm_end_date ' . $dir,
-    'services' => 'COALESCE(svc.service_count,0) ' . $dir,
-    'options' => 'COALESCE(opt.option_count,0) ' . $dir,
-    'bookings' => 'COALESCE(usage_stat.booking_count,0) ' . $dir,
-    'discount' => 'COALESCE(usage_stat.discount_sum,0) ' . $dir,
-    'net' => 'COALESCE(usage_stat.net_sum,0) ' . $dir,
-    'status' => "CASE WHEN p.pm_start_date > '{$now}' THEN 1 WHEN p.pm_end_date < '{$now}' THEN 3 ELSE 2 END {$dir}",
+    'popularity' => 'COALESCE(usage_stat.booking_count,0) ' . $dir,
 ];
-$orderBy = $sortMap[$sort] ?? $sortMap['start'];
+$orderBy = $sortMap[$sort] ?? $sortMap['name'];
 
 // Count total rows for pagination
 $countSql = "SELECT COUNT(*) AS c FROM promotion p WHERE {$promoWhereSql}";
@@ -419,9 +615,7 @@ $offset = ($page - 1) * $perPage;
 $usageSubquery = "
     SELECT pso.promotion_id,
            COUNT(DISTINCT b.booking_id)           AS booking_count,
-           COALESCE(SUM(bs.price_booking), 0)     AS gross_sum,
-           COALESCE(SUM(bs.discount_booking), 0)  AS discount_sum,
-           COALESCE(SUM(bs.net_price), 0)         AS net_sum
+           COALESCE(SUM(bs.discount_booking), 0)  AS discount_sum
     FROM booking_seviceop bs
     JOIN booking b ON b.booking_id = bs.booking_id
     JOIN promotion_service_option pso ON pso.option_id = bs.option_id
@@ -439,14 +633,6 @@ $listSql = "
         FROM promotion_service
         GROUP BY promotion_id
     ) svc ON svc.promotion_id = p.promotion_id
-    LEFT JOIN (
-        SELECT promotion_id,
-               COUNT(*) AS option_count,
-               MAX(discount_percent) AS max_percent,
-               MAX(discount_amount) AS max_amount
-        FROM promotion_service_option
-        GROUP BY promotion_id
-    ) opt ON opt.promotion_id = p.promotion_id
     LEFT JOIN (
         {$usageSubquery}
     ) usage_stat ON usage_stat.promotion_id = p.promotion_id
@@ -484,15 +670,11 @@ $listStmt->close();
 // Totals across filtered dataset (within current page scope)
 $tableTotals = [
     'booking_count' => 0,
-    'gross_sum' => 0.0,
     'discount_sum' => 0.0,
-    'net_sum' => 0.0,
 ];
 foreach ($rows as $row) {
     $tableTotals['booking_count'] += (int)$row['booking_count'];
-    $tableTotals['gross_sum'] += (float)$row['gross_sum'];
     $tableTotals['discount_sum'] += (float)$row['discount_sum'];
-    $tableTotals['net_sum'] += (float)$row['net_sum'];
 }
 
 $baseQuery = $_GET;
@@ -552,13 +734,15 @@ $res->close();
     <!-- TABLE TAB -->
     <div class="tab-pane fade show active" id="tab-table">
       <div class="card mt-3"><div class="card-body">
-        <div class="d-flex flex-wrap tab-toolbar mb-3">
-          <form class="row g-2 align-items-end" method="get">
-            <div class="col-auto">
-              <label class="form-label small-label">ค้นหา</label>
-              <input type="text" class="form-control" name="q" value="<?=esc($search)?>" placeholder="ชื่อโปรโมชั่น">
+        <div id="table-view">
+          <div class="d-flex flex-wrap tab-toolbar mb-3">
+          <form class="row g-2 align-items-end flex-grow-1" method="get">
+            <input type="hidden" name="tab" value="table">
+            <div class="col-sm-6 col-lg-3">
+              <label class="form-label small-label">ค้นหา (ID หรือชื่อ)</label>
+              <input type="text" class="form-control" name="q" value="<?=esc($search)?>" placeholder="เช่น 123 หรือ ชื่อโปรโมชั่น">
             </div>
-            <div class="col-auto">
+            <div class="col-sm-4 col-lg-2">
               <label class="form-label small-label">สถานะโปรโมชั่น</label>
               <select class="form-select" name="promo_status">
                 <option value="all" <?= $promoStatus==='all'?'selected':'' ?>>ทั้งหมด</option>
@@ -567,48 +751,37 @@ $res->close();
                 <option value="ended" <?= $promoStatus==='ended'?'selected':'' ?>>สิ้นสุด</option>
               </select>
             </div>
-            <div class="col-auto">
-              <label class="form-label small-label">บริการ</label>
-              <select class="form-select" name="service">
-                <option value="0">ทั้งหมด</option>
-                <?php foreach ($serviceList as $svc): ?>
-                  <option value="<?=$svc['service_id']?>" <?= $serviceFilter==(int)$svc['service_id']?'selected':'' ?>><?=esc($svc['service_name'])?></option>
-                <?php endforeach; ?>
+            <div class="col-sm-4 col-lg-2">
+              <label class="form-label small-label">ช่วงเวลา</label>
+              <select class="form-select" name="period_type" id="period_type">
+                <option value="all" <?= $periodType==='all'?'selected':'' ?>>ทั้งหมด</option>
+                <option value="date" <?= $periodType==='date'?'selected':'' ?>>วันที่</option>
+                <option value="month" <?= $periodType==='month'?'selected':'' ?>>เดือน</option>
+                <option value="year" <?= $periodType==='year'?'selected':'' ?>>ปี</option>
               </select>
             </div>
-            <div class="col-auto">
-              <label class="form-label small-label">สถานะการจอง (ใช้นับสถิติ)</label>
-              <select class="form-select" name="booking_status">
-                <option value="all" <?= $bookingStatusParam==='all'?'selected':'' ?>>ทั้งหมด</option>
-                <?php foreach (booking_status_options() as $code => $label): ?>
-                  <option value="<?=$code?>" <?= (string)$code===(string)$bookingStatusParam?'selected':'' ?>><?=$label?></option>
-                <?php endforeach; ?>
-              </select>
+            <div class="col-sm-6 col-lg-3 period-input <?= $periodType==='date'?'':'d-none' ?>" data-period="date">
+              <label class="form-label small-label">เลือกวันที่</label>
+              <input type="date" class="form-control" name="period_date" value="<?=esc($periodDate)?>">
             </div>
-            <div class="col-auto">
-              <label class="form-label small-label">ช่วงวันที่จอง</label>
+            <div class="col-sm-6 col-lg-3 period-input <?= $periodType==='month'?'':'d-none' ?>" data-period="month">
+              <label class="form-label small-label">เลือกเดือน</label>
+              <input type="month" class="form-control" name="period_month" value="<?=esc($periodMonth)?>">
+            </div>
+            <div class="col-sm-4 col-lg-2 period-input <?= $periodType==='year'?'':'d-none' ?>" data-period="year">
+              <label class="form-label small-label">เลือกปี</label>
+              <input type="number" class="form-control" name="period_year" value="<?=esc($periodYear)?>" min="2000" max="2100" step="1">
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <label class="form-label small-label">Sort by</label>
               <div class="d-flex gap-2">
-                <input type="date" class="form-control" name="usage_start" value="<?=esc($usageStart)?>">
-                <input type="date" class="form-control" name="usage_end" value="<?=esc($usageEnd)?>">
-              </div>
-            </div>
-            <div class="col-auto">
-              <label class="form-label small-label">Sort</label>
-              <div class="input-group">
-                <select class="form-select" name="sort">
-                  <option value="start" <?= $sort==='start'?'selected':'' ?>>เริ่มต้น</option>
-                  <option value="end" <?= $sort==='end'?'selected':'' ?>>สิ้นสุด</option>
+                <select class="form-select" name="sort" id="sort_field">
                   <option value="name" <?= $sort==='name'?'selected':'' ?>>ชื่อ</option>
-                  <option value="services" <?= $sort==='services'?'selected':'' ?>>จำนวนบริการ</option>
-                  <option value="options" <?= $sort==='options'?'selected':'' ?>>ตัวเลือก</option>
-                  <option value="bookings" <?= $sort==='bookings'?'selected':'' ?>>จำนวนการใช้</option>
-                  <option value="discount" <?= $sort==='discount'?'selected':'' ?>>ส่วนลดรวม</option>
-                  <option value="net" <?= $sort==='net'?'selected':'' ?>>รายได้สุทธิ</option>
-                  <option value="status" <?= $sort==='status'?'selected':'' ?>>สถานะ</option>
+                  <option value="popularity" <?= $sort==='popularity'?'selected':'' ?>>ความนิยม</option>
                 </select>
-                <select class="form-select" name="dir">
-                  <option value="ASC" <?= $dir==='ASC'?'selected':'' ?>>ASC</option>
-                  <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>DESC</option>
+                <select class="form-select" name="dir" id="sort_direction">
+                  <option value="ASC" <?= $dir==='ASC'?'selected':'' ?>><?= $sort==='name' ? 'A - Z' : 'น้อยไปมาก' ?></option>
+                  <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>><?= $sort==='name' ? 'Z - A' : 'มากไปน้อย' ?></option>
                 </select>
               </div>
             </div>
@@ -616,10 +789,10 @@ $res->close();
               <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
             </div>
           </form>
-          <div class="ms-auto d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+          <div class="ms-auto d-flex flex-column flex-sm-row align-items-sm-center gap-2 mt-3 mt-sm-0">
             <span class="badge bg-primary">โปรโมชั่น: <?=number_format($totalRows)?></span>
-            <span class="badge bg-success">ส่วนลดรวมหน้า<?=number_format($tableTotals['discount_sum'],2)?></span>
-            <span class="badge bg-secondary">ยอดสุทธิหน้า <?=number_format($tableTotals['net_sum'],2)?></span>
+            <span class="badge bg-info text-dark">จำนวนการใช้รวมหน้านี้ <?=number_format($tableTotals['booking_count'])?></span>
+            <span class="badge bg-danger">ส่วนลดรวมหน้านี้ -<?=number_format($tableTotals['discount_sum'],2)?></span>
           </div>
         </div>
 
@@ -627,70 +800,64 @@ $res->close();
           <table class="table table-striped table-hover align-middle">
             <thead class="table-light">
               <tr>
-                <th>#</th>
+                <th>ID</th>
                 <th>ชื่อโปรโมชั่น</th>
                 <th>สถานะ</th>
                 <th>ช่วงเวลา</th>
                 <th class="text-center">บริการ</th>
-                <th class="text-center">ตัวเลือก</th>
-                <th class="text-end">ส่วนลดสูงสุด</th>
                 <th class="text-end">จำนวนการใช้</th>
                 <th class="text-end">ส่วนลดทั้งหมด</th>
-                <th class="text-end">รายได้สุทธิ</th>
-                <th>จัดการ</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="promotionTableBody">
               <?php if (empty($rows)): ?>
-                <tr><td colspan="11" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
-              <?php else: foreach ($rows as $index => $row):
+                <tr><td colspan="7" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+              <?php else: foreach ($rows as $row):
                 $status = promotionStatus($row['pm_start_date'] ?? '', $row['pm_end_date'] ?? '');
                 $badgeClass = promotion_status_badge_class($status);
                 $statusLabel = promotionStatusLabel($status);
-                $maxPercent = (float)$row['max_percent'];
-                if ($maxPercent <= 0 && isset($row['percent'])) {
-                    $maxPercent = (float)$row['percent'];
-                }
-                if ($maxPercent <= 0 && isset($row['discount'])) {
-                    $maxPercent = (float)$row['discount'];
-                }
+                $serviceCount = (int)$row['service_count'];
+                $bookingCount = (int)$row['booking_count'];
               ?>
               <tr>
-                <td><?= $offset + $index + 1 ?></td>
+                <td><?= number_format((int)$row['promotion_id']) ?></td>
                 <td>
                   <div class="fw-semibold"><?= esc($row['pm_name']) ?></div>
                   <?php if (!empty($row['description'])): ?>
-                    <div class="text-muted small text-wrap" style="max-width:280px;"><?= esc(mb_strimwidth($row['description'],0,70,'…','UTF-8')) ?></div>
+                    <div class="text-muted small text-wrap" style="max-width:320px;">
+                      <?= esc(mb_strimwidth($row['description'], 0, 80, '…', 'UTF-8')) ?>
+                    </div>
                   <?php endif; ?>
                 </td>
                 <td><span class="badge <?=$badgeClass?>"><?= esc($statusLabel) ?></span></td>
                 <td>
                   <div><?= esc(formatDateTimeDisplay($row['pm_start_date'] ?? '')) ?></div>
-                  <div class="text-muted">ถึง <?= esc(formatDateTimeDisplay($row['pm_end_date'] ?? '')) ?></div>
+                  <div class="text-muted small">ถึง <?= esc(formatDateTimeDisplay($row['pm_end_date'] ?? '')) ?></div>
                 </td>
-                <td class="text-center"><?= number_format((int)$row['service_count']) ?></td>
-                <td class="text-center"><?= number_format((int)$row['option_count']) ?></td>
-                <td class="text-end"><?= number_format($maxPercent, 2) ?>%</td>
-                <td class="text-end"><span class="badge bg-info text-dark"><?= number_format((int)$row['booking_count']) ?></span></td>
+                <td class="text-center">
+                  <?php if ($serviceCount > 0): ?>
+                    <button type="button" class="btn btn-link p-0 service-detail-btn" data-promotion-id="<?=$row['promotion_id']?>" data-promotion-name="<?=esc($row['pm_name'])?>">
+                      <?= number_format($serviceCount) ?>
+                    </button>
+                  <?php else: ?>
+                    <span class="text-muted">0</span>
+                  <?php endif; ?>
+                </td>
+                <td class="text-end">
+                  <button type="button" class="btn btn-sm btn-outline-primary usage-chart-btn" data-promotion-id="<?=$row['promotion_id']?>" data-promotion-name="<?=esc($row['pm_name'])?>" data-start="<?=esc($row['pm_start_date'] ?? '')?>" data-end="<?=esc($row['pm_end_date'] ?? '')?>">
+                    <?= number_format($bookingCount) ?>
+                  </button>
+                </td>
                 <td class="text-end text-danger">-<?= number_format((float)$row['discount_sum'], 2) ?></td>
-                <td class="text-end text-success fw-semibold"><?= number_format((float)$row['net_sum'], 2) ?></td>
-                <td>
-                  <div class="btn-group">
-                    <a href="promotion_detail.php?id=<?=$row['promotion_id']?>" class="btn btn-sm btn-outline-primary" title="รายละเอียด"><i class="bi bi-eye"></i></a>
-                    <a href="promotion_update_form.php?id=<?=$row['promotion_id']?>" class="btn btn-sm btn-outline-secondary" title="แก้ไข"><i class="bi bi-pencil"></i></a>
-                  </div>
-                </td>
               </tr>
               <?php endforeach; endif; ?>
             </tbody>
             <?php if (!empty($rows)): ?>
             <tfoot>
               <tr class="table-light">
-                <th colspan="7" class="text-end">รวม (เฉพาะรายการในหน้านี้)</th>
+                <th colspan="5" class="text-end">รวม (เฉพาะรายการในหน้านี้)</th>
                 <th class="text-end"><?= number_format($tableTotals['booking_count']) ?></th>
-                <th class="text-end text-danger">-<?= number_format($tableTotals['discount_sum'],2) ?></th>
-                <th class="text-end text-success"><?= number_format($tableTotals['net_sum'],2) ?></th>
-                <th></th>
+                <th class="text-end text-danger">-<?= number_format($tableTotals['discount_sum'], 2) ?></th>
               </tr>
             </tfoot>
             <?php endif; ?>
@@ -714,6 +881,25 @@ $res->close();
           </div>
         </div>
         <?php endif; ?>
+
+        </div> <!-- /#table-view -->
+
+        <div id="usage-view" class="d-none">
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div>
+              <h5 class="mb-1" id="usageTitle">-</h5>
+              <div class="text-muted small" id="usageRange"></div>
+            </div>
+            <button type="button" class="btn btn-outline-secondary" id="usageBack"><i class="bi bi-arrow-left"></i> กลับไปตาราง</button>
+          </div>
+          <div class="mb-3 d-flex flex-wrap gap-2">
+            <span class="badge bg-primary">จำนวนการใช้ทั้งหมด <span id="usageTotal">0</span></span>
+            <span class="badge bg-danger">ส่วนลดรวม <span id="usageDiscount">0.00</span></span>
+          </div>
+          <div class="ratio ratio-16x9">
+            <canvas id="usageLineChart"></canvas>
+          </div>
+        </div>
 
       </div></div>
     </div>
@@ -853,8 +1039,234 @@ $res->close();
 
 </main>
 
+<div class="modal fade" id="serviceModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="serviceModalLabel">รายละเอียดบริการ</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="serviceModalContent" class="vstack gap-3">
+          <div class="text-center text-muted">กำลังโหลด...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+const periodSelect=document.getElementById('period_type');
+const periodInputs=document.querySelectorAll('.period-input');
+function updatePeriodInputs(){
+  const value=periodSelect?.value||'all';
+  periodInputs.forEach(el=>{
+    const shouldShow=el.dataset.period===value;
+    el.classList.toggle('d-none',!shouldShow);
+  });
+}
+periodSelect?.addEventListener('change',updatePeriodInputs);
+updatePeriodInputs();
+
+const sortField=document.getElementById('sort_field');
+const sortDirection=document.getElementById('sort_direction');
+function updateSortDirectionLabels(){
+  if(!sortDirection) return;
+  const asc=sortDirection.querySelector('option[value="ASC"]');
+  const desc=sortDirection.querySelector('option[value="DESC"]');
+  if(!asc||!desc) return;
+  if((sortField?.value||'name')==='name'){
+    asc.textContent='A - Z';
+    desc.textContent='Z - A';
+  }else{
+    asc.textContent='น้อยไปมาก';
+    desc.textContent='มากไปน้อย';
+  }
+}
+sortField?.addEventListener('change',updateSortDirectionLabels);
+updateSortDirectionLabels();
+
+const tableView=document.getElementById('table-view');
+const usageView=document.getElementById('usage-view');
+const usageBack=document.getElementById('usageBack');
+const usageTitle=document.getElementById('usageTitle');
+const usageRange=document.getElementById('usageRange');
+const usageTotal=document.getElementById('usageTotal');
+const usageDiscount=document.getElementById('usageDiscount');
+const usageCanvas=document.getElementById('usageLineChart');
+let usageChart;
+
+function showTableView(){
+  usageView?.classList.add('d-none');
+  tableView?.classList.remove('d-none');
+  if(usageChart){
+    usageChart.destroy();
+    usageChart=null;
+  }
+}
+
+usageBack?.addEventListener('click',()=>{
+  showTableView();
+});
+
+const serviceModalElement=document.getElementById('serviceModal');
+const serviceModal=serviceModalElement?new bootstrap.Modal(serviceModalElement):null;
+const serviceModalLabel=document.getElementById('serviceModalLabel');
+const serviceModalContent=document.getElementById('serviceModalContent');
+
+const nf0=v=>Number(v||0).toLocaleString();
+const nf2=v=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+function formatThaiDate(str){
+  if(!str) return '-';
+  const match=/^(\d{4})-(\d{2})-(\d{2})/.exec(str);
+  if(!match) return str;
+  const year=parseInt(match[1],10);
+  const month=match[2];
+  const day=match[3];
+  if(Number.isNaN(year)) return str;
+  return `${day}/${month}/${year+543}`;
+}
+
+const tableBody=document.getElementById('promotionTableBody');
+tableBody?.addEventListener('click',async event=>{
+  const serviceBtn=event.target.closest('.service-detail-btn');
+  if(serviceBtn){
+    if(!serviceModal||!serviceModalContent) return;
+    const promotionId=serviceBtn.dataset.promotionId||'';
+    serviceModalLabel.textContent=`รายละเอียดบริการ - ${serviceBtn.dataset.promotionName||''}`;
+    serviceModalContent.innerHTML='<div class="text-center text-muted py-3">กำลังโหลด...</div>';
+    serviceModal.show();
+    try{
+      const url=new URL(location.href);
+      url.search='';
+      url.searchParams.set('action','promotion_services');
+      url.searchParams.set('promotion_id',promotionId);
+      const res=await fetch(url.toString(),{cache:'no-store'});
+      if(!res.ok){
+        throw new Error('network_error');
+      }
+      const data=await res.json();
+      const services=Array.isArray(data.services)?data.services:[];
+      if(services.length===0){
+        serviceModalContent.innerHTML='<div class="text-center text-muted py-3">ไม่มีข้อมูลบริการสำหรับโปรโมชั่นนี้</div>';
+        return;
+      }
+      serviceModalContent.innerHTML='';
+      services.forEach(service=>{
+        const wrapper=document.createElement('div');
+        wrapper.className='border rounded p-3';
+        const title=document.createElement('h6');
+        title.className='mb-2';
+        title.textContent=service.service_name||'ไม่ระบุบริการ';
+        wrapper.appendChild(title);
+        const stack=document.createElement('div');
+        stack.className='vstack gap-2';
+        (service.options||[]).forEach(option=>{
+          const item=document.createElement('div');
+          item.className='border rounded p-2';
+          const duration=option.duration?`${option.duration} นาที`:'ตัวเลือกบริการ';
+          const basePrice=nf2(option.price);
+          const finalPrice=nf2(option.final_price||option.price);
+          const percent=Number(option.discount_percent||0);
+          const amount=Number(option.discount_amount||0);
+          const discountParts=[];
+          if(percent>0){discountParts.push(`${percent}%`);}
+          if(amount>0){discountParts.push(`฿${nf2(amount)}`);}
+          const discountText=discountParts.length>0?discountParts.join(' / '):'ไม่มีส่วนลด';
+          item.innerHTML=
+            `<div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+               <div>
+                 <div class="fw-semibold">${duration}</div>
+                 <div class="text-muted small">ราคาเดิม ฿${basePrice}</div>
+               </div>
+               <div class="text-end">
+                 <div class="text-danger fw-semibold">-${discountText}</div>
+                 <div class="text-success small">ราคาใหม่ ฿${finalPrice}</div>
+               </div>
+             </div>`;
+          stack.appendChild(item);
+        });
+        if(!stack.childElementCount){
+          const empty=document.createElement('div');
+          empty.className='text-muted small';
+          empty.textContent='ไม่มีตัวเลือกบริการที่ร่วมโปรโมชั่น';
+          stack.appendChild(empty);
+        }
+        wrapper.appendChild(stack);
+        serviceModalContent.appendChild(wrapper);
+      });
+    }catch(err){
+      console.error(err);
+      serviceModalContent.innerHTML='<div class="text-center text-danger py-3">ไม่สามารถโหลดข้อมูลบริการได้</div>';
+    }
+    return;
+  }
+
+  const usageBtn=event.target.closest('.usage-chart-btn');
+  if(usageBtn){
+    event.preventDefault();
+    usageTitle.textContent=`การใช้โปรโมชั่น: ${usageBtn.dataset.promotionName||''}`;
+    usageRange.textContent='กำลังโหลดข้อมูล...';
+    usageTotal.textContent='0';
+    usageDiscount.textContent='0.00';
+    usageView?.classList.remove('d-none');
+    tableView?.classList.add('d-none');
+    if(usageChart){
+      usageChart.destroy();
+      usageChart=null;
+    }
+    try{
+      const url=new URL(location.href);
+      url.search='';
+      url.searchParams.set('action','promotion_usage');
+      url.searchParams.set('promotion_id',usageBtn.dataset.promotionId||'');
+      const res=await fetch(url.toString(),{cache:'no-store'});
+      if(!res.ok){
+        throw new Error('network_error');
+      }
+      const data=await res.json();
+      const labels=Array.isArray(data.chart?.labels)?data.chart.labels:[];
+      const usageData=Array.isArray(data.chart?.usage)?data.chart.usage:[];
+      usageRange.textContent=`ช่วง ${formatThaiDate(data.promotion?.start)} - ${formatThaiDate(data.promotion?.end)}`;
+      usageTotal.textContent=nf0(data.summary?.total_usage||0);
+      usageDiscount.textContent=`-${nf2(data.summary?.total_discount||0)}`;
+      if(usageCanvas){
+        const ctx=usageCanvas.getContext('2d');
+        usageChart=new Chart(ctx,{
+          type:'line',
+          data:{
+            labels,
+            datasets:[{
+              label:'จำนวนการใช้',
+              data:usageData,
+              borderColor:'#0d6efd',
+              backgroundColor:'rgba(13,110,253,0.15)',
+              tension:0.3,
+              fill:true,
+              pointRadius:3,
+            }]
+          },
+          options:{
+            responsive:true,
+            maintainAspectRatio:false,
+            scales:{
+              x:{title:{display:true,text:'ช่วงเวลา'}},
+              y:{beginAtZero:true,title:{display:true,text:'จำนวนการใช้'}}
+            },
+            plugins:{
+              legend:{display:true},
+              tooltip:{mode:'index',intersect:false}
+            }
+          }
+        });
+      }
+    }catch(err){
+      console.error(err);
+      usageRange.textContent='ไม่สามารถโหลดกราฟได้';
+    }
+  }
+});
 function updateChartControls(){
   const period=document.querySelector('input[name=chart_period]:checked')?.value||'month';
   document.getElementById('ctl-month').classList.toggle('d-none',period!=='month');

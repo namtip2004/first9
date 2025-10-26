@@ -90,10 +90,10 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       'disc_total'  => round($cardSums['disc'], 2)
     ];
     $cardLabels = [
-      'net_total'   => 'Net รวม (ทั้งหมด)',
-      'net_mtd'     => 'Net เดือนนี้',
-      'gross_total' => 'Gross รวม',
-      'disc_total'  => 'ส่วนลดรวม'
+      'net_total'   => 'Total Net Revenue (All Time)',
+      'net_mtd'     => 'Net Revenue This Month',
+      'gross_total' => 'Total Gross Revenue',
+      'disc_total'  => 'Total Discounts'
     ];
 
     echo json_encode([
@@ -143,10 +143,10 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       'disc_total'  => round($cardSums['disc'], 2)
     ];
     $cardLabels = [
-      'net_total'   => "Net รวมปี $year",
-      'net_mtd'     => "Net เฉลี่ยต่อเดือน (ปี $year)",
-      'gross_total' => "Gross รวมปี $year",
-      'disc_total'  => "ส่วนลดรวมปี $year"
+      'net_total'   => "Total Net Revenue for $year",
+      'net_mtd'     => "Average Monthly Net Revenue ($year)",
+      'gross_total' => "Total Gross Revenue for $year",
+      'disc_total'  => "Total Discounts for $year"
     ];
 
     echo json_encode([
@@ -231,10 +231,10 @@ if(isset($_GET['action']) && $_GET['action']==='stats'){
       'disc_total'  => round($disc, 2)
     ];
     $cardLabels = [
-      'net_total'   => "Net รวมเดือน $label $year",
-      'net_mtd'     => "Net เฉลี่ยต่อรายการ ($count รายการ)",
-      'gross_total' => "Gross รวมเดือน $label $year",
-      'disc_total'  => "ส่วนลดรวมเดือน $label $year"
+      'net_total'   => "Total Net Revenue for $label $year",
+      'net_mtd'     => "Average Net per Booking ($count bookings)",
+      'gross_total' => "Total Gross Revenue for $label $year",
+      'disc_total'  => "Total Discounts for $label $year"
     ];
 
     echo json_encode([
@@ -378,7 +378,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 };
 ?>
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Income Report</title>
@@ -398,12 +398,12 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 <?php include("slidebar.php"); ?>
 <main id="main" class="main">
 
-  <div class="pagetitle"><h1>รายงานรายได้ (Income)</h1></div>
+  <div class="pagetitle"><h1>Income Report</h1></div>
 
   <!-- Tabs -->
   <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button">ตาราง</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" id="chart-tab">กราฟ</button></li>
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button">Table</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" id="chart-tab">Chart</button></li>
   </ul>
 
   <div class="tab-content">
@@ -414,37 +414,37 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <form class="row g-2 align-items-end" method="get">
           <input type="hidden" name="tab" value="table">
           <div class="col-md-auto">
-            <label class="form-label small-label">สถานะ</label>
+            <label class="form-label small-label">Status</label>
             <select class="form-select" name="status">
-              <option value="all" <?= $statusValue==='all'?'selected':'' ?>>ทั้งหมด</option>
+              <option value="all" <?= $statusValue==='all'?'selected':'' ?>>All</option>
               <option value="<?=$confirmedStatus?>" <?= $statusValue===(string)$confirmedStatus?'selected':'' ?>>Confirmed</option>
               <option value="<?=$completedStatus?>" <?= $statusValue===(string)$completedStatus?'selected':'' ?>>Completed</option>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">บริการ</label>
+            <label class="form-label small-label">Service</label>
             <select class="form-select" name="service">
-              <option value="0">ทั้งหมด</option>
+              <option value="0">All</option>
               <?php while($sv=$serviceOps->fetch_assoc()): ?>
                 <option value="<?=$sv['service_id']?>" <?= $serviceF==$sv['service_id']?'selected':'' ?>><?=esc($sv['service_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงเวลา</label>
+            <label class="form-label small-label">Date Range</label>
             <select class="form-select" name="range_type" id="rangeType">
-              <option value="all" <?= $rangeType==='all'?'selected':'' ?>>ทั้งหมด</option>
-              <option value="day" <?= $rangeType==='day'?'selected':'' ?>>รายวัน</option>
-              <option value="month" <?= $rangeType==='month'?'selected':'' ?>>รายเดือน</option>
-              <option value="year" <?= $rangeType==='year'?'selected':'' ?>>รายปี</option>
+              <option value="all" <?= $rangeType==='all'?'selected':'' ?>>All</option>
+              <option value="day" <?= $rangeType==='day'?'selected':'' ?>>Daily</option>
+              <option value="month" <?= $rangeType==='month'?'selected':'' ?>>Monthly</option>
+              <option value="year" <?= $rangeType==='year'?'selected':'' ?>>Yearly</option>
             </select>
           </div>
           <div class="col-md-auto range-extra <?= $rangeType==='day'?'':'d-none' ?>" data-range="day">
-            <label class="form-label small-label">เลือกวันที่</label>
+            <label class="form-label small-label">Select Date</label>
             <input type="date" class="form-control" name="range_day" value="<?=esc($rangeDay)?>" <?= $rangeType==='day'?'':'disabled' ?>>
           </div>
           <div class="col-md-auto range-extra <?= $rangeType==='month'?'':'d-none' ?>" data-range="month">
-            <label class="form-label small-label">เลือกเดือน/ปี</label>
+            <label class="form-label small-label">Select Month/Year</label>
             <div class="d-flex gap-2">
               <select class="form-select" name="range_month" <?= $rangeType==='month'?'':'disabled' ?>>
                 <?php for($m=1;$m<=12;$m++): ?>
@@ -455,27 +455,27 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </div>
           </div>
           <div class="col-md-auto range-extra <?= $rangeType==='year'?'':'d-none' ?>" data-range="year">
-            <label class="form-label small-label">เลือกปี</label>
+            <label class="form-label small-label">Select Year</label>
             <input type="number" class="form-control" name="range_year" value="<?=esc($rangeYear)?>" min="2000" max="2100" <?= $rangeType==='year'?'':'disabled' ?>>
           </div>
           <div class="col-md-auto">
             <label class="form-label small-label">Sort by</label>
             <div class="input-group">
               <select class="form-select" name="sort">
-                <option value="booked_at"  <?= $sort==='booked_at'?'selected':'' ?>>วันเวลาที่ทำการจอง</option>
-                <option value="service_at" <?= $sort==='service_at'?'selected':'' ?>>วันเวลาที่เข้าใช้บริการ</option>
+                <option value="booked_at"  <?= $sort==='booked_at'?'selected':'' ?>>Booking Date/Time</option>
+                <option value="service_at" <?= $sort==='service_at'?'selected':'' ?>>Service Date/Time</option>
               </select>
               <select class="form-select" name="dir">
-                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>เก่า → ใหม่</option>
-                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>ใหม่ → เก่า</option>
+                <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>Oldest → Newest</option>
+                <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>Newest → Oldest</option>
               </select>
             </div>
           </div>
           <div class="col-md-auto">
-            <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
+            <button class="btn btn-primary"><i class="bi bi-search"></i> Apply Filters</button>
           </div>
           <div class="ms-auto col-md-auto d-flex gap-2 align-items-center">
-            <span class="badge bg-primary">รายการ: <?=number_format($total)?></span>
+            <span class="badge bg-primary">Bookings: <?=number_format($total)?></span>
             <span class="badge bg-success">Net (filter): ฿<?=number_format((float)$trow['net_sum'],2)?></span>
           </div>
         </form>
@@ -485,20 +485,20 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <thead class="table-light">
               <tr>
                 <th>ID</th>
-                <th>วันเวลาที่ทำการจอง</th>
-                <th>วันเวลาที่เข้าใช้บริการ</th>
+                <th>Booking Date/Time</th>
+                <th>Service Date/Time</th>
                 <th>Customer</th>
                 <th>Service</th>
                 <th>Staff</th>
-                <th class="text-end">ราคาก่อนหักส่วนลด</th>
-                <th class="text-end">ส่วนลด</th>
-                <th class="text-end">ราคาหลังหักส่วนลด</th>
+                <th class="text-end">Gross Amount</th>
+                <th class="text-end">Discount</th>
+                <th class="text-end">Net Amount</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="10" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="10" class="text-center text-muted">No data found</td></tr>
               <?php else: foreach($rows as $r): ?>
                 <tr>
                   <?php
@@ -531,7 +531,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <?php if(!empty($rows)): ?>
             <tfoot>
               <tr class="table-light">
-                <th colspan="6" class="text-end">รวม (ตามตัวกรองทั้งหมด)</th>
+                <th colspan="6" class="text-end">Total (all filters applied)</th>
                 <th class="text-end"><?=number_format((float)$trow['gross_sum'],2)?></th>
                 <th class="text-end text-danger">-<?=number_format((float)$trow['disc_sum'],2)?></th>
                 <th class="text-end text-success"><?=number_format((float)$trow['net_sum'],2)?></th>
@@ -544,17 +544,17 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
         <?php if($pages > 1): ?>
         <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <span class="text-muted">Page <?=number_format($page)?> / <?=number_format($pages)?></span>
           <div class="btn-group">
             <?php if($page > 1): ?>
-              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> Previous</a>
             <?php else: ?>
-              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> Previous</span>
             <?php endif; ?>
             <?php if($page < $pages): ?>
-              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">Next <i class="bi bi-chevron-right"></i></a>
             <?php else: ?>
-              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+              <span class="btn btn-outline-primary disabled">Next <i class="bi bi-chevron-right"></i></span>
             <?php endif; ?>
           </div>
         </div>
@@ -568,37 +568,37 @@ $pageUrl = function(int $target) use ($baseQuery): string {
       <div class="card mt-3"><div class="card-body">
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-          <h5 class="mb-0" id="chartTitle">รายได้รายปี</h5>
-          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="chartBack"><i class="bi bi-arrow-left"></i> ย้อนกลับ</button>
+          <h5 class="mb-0" id="chartTitle">Yearly Revenue</h5>
+          <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="chartBack"><i class="bi bi-arrow-left"></i> Back</button>
         </div>
-        <div class="text-muted mt-1">ข้อมูลเฉพาะการจองที่ยืนยันแล้วและเสร็จสิ้น</div>
+        <div class="text-muted mt-1">Includes confirmed and completed bookings only.</div>
 
         <!-- KPI (GLOBAL) -->
         <div class="row mt-3">
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-cash-coin card-icon text-success"></i>
-            <div><div class="kpi-value" id="k_net_total">0</div><div class="text-muted" id="k_net_total_label">Net รวม (ยืนยันแล้ว)</div></div>
+            <div><div class="kpi-value" id="k_net_total">0</div><div class="text-muted" id="k_net_total_label">Total Net Revenue (confirmed)</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-graph-up card-icon text-primary"></i>
-            <div><div class="kpi-value" id="k_net_mtd">0</div><div class="text-muted" id="k_net_mtd_label">Net เดือนนี้</div></div>
+            <div><div class="kpi-value" id="k_net_mtd">0</div><div class="text-muted" id="k_net_mtd_label">Net Revenue This Month</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-receipt card-icon text-secondary"></i>
-            <div><div class="kpi-value" id="k_gross_total">0</div><div class="text-muted" id="k_gross_total_label">Gross รวม</div></div>
+            <div><div class="kpi-value" id="k_gross_total">0</div><div class="text-muted" id="k_gross_total_label">Total Gross Revenue</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-tag card-icon text-danger"></i>
-            <div><div class="kpi-value" id="k_disc_total">0</div><div class="text-muted" id="k_disc_total_label">ส่วนลดรวม</div></div>
+            <div><div class="kpi-value" id="k_disc_total">0</div><div class="text-muted" id="k_disc_total_label">Total Discounts</div></div>
           </div></div></div>
         </div>
-        <div class="text-muted">* การ์ดอัปเดตตามข้อมูลที่แสดงในกราฟ</div>
+        <div class="text-muted">* Cards update based on the data displayed in the chart.</div>
 
         <!-- CHART -->
         <div class="mt-3" id="chartWrapper" style="min-height:380px">
           <canvas id="incomeChart" height="120"></canvas>
         </div>
-        <div class="text-muted mt-2" id="chartHint">คลิกแท่งปีเพื่อดูรายเดือน และคลิกแท่งเดือนเพื่อดูตารางของเดือนนั้น</div>
+        <div class="text-muted mt-2" id="chartHint">Click a year bar to view monthly revenue, then click a month bar to see that month's table.</div>
 
         <div id="monthTable" class="mt-4"></div>
 
@@ -729,7 +729,7 @@ function renderChart(data){
     data:{
       labels,
       datasets:[{
-        label:'รายได้หลังหักส่วนลด',
+        label:'Net Revenue After Discounts',
         data:netSeries,
         backgroundColor:'rgba(13,110,253,0.7)',
         borderColor:'rgba(13,110,253,1)',
@@ -748,7 +748,7 @@ function renderChart(data){
       },
       plugins:{
         legend:{display:false},
-        tooltip:{ callbacks:{ label:ctx=>`รายได้: ฿${nf(ctx.parsed.y)}` } }
+        tooltip:{ callbacks:{ label:ctx=>`Revenue: ฿${nf(ctx.parsed.y)}` } }
       },
       onClick:(evt,elements)=>{
         if(!elements.length) return;
@@ -766,10 +766,10 @@ function renderChart(data){
 
   if(chartTitleEl){
     if(data.type==='months'){
-      chartTitleEl.textContent=`รายได้ปี ${data.year}`;
+      chartTitleEl.textContent=`Revenue for ${data.year}`;
       chartBackBtn?.classList.remove('d-none');
     }else{
-      chartTitleEl.textContent='รายได้รายปี';
+      chartTitleEl.textContent='Yearly Revenue';
       chartBackBtn?.classList.add('d-none');
     }
   }
@@ -779,7 +779,7 @@ async function loadMonthTable(year, month){
   if(!monthTableWrap) return;
   chartWrapper?.classList.add('d-none');
   chartHint?.classList.add('d-none');
-  monthTableWrap.innerHTML='<div class="text-muted">กำลังโหลด...</div>';
+  monthTableWrap.innerHTML='<div class="text-muted">Loading...</div>';
   try{
     const url=new URL(location.href);
     url.search='';
@@ -794,15 +794,15 @@ async function loadMonthTable(year, month){
     const label=data.label ?? month;
     const header=`
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h5 class="card-title mb-0">รายการเดือน ${label} ${data.year}</h5>
+  <h5 class="card-title mb-0">Bookings for ${label} ${data.year}</h5>
   <button type="button" class="btn btn-outline-secondary btn-sm" id="monthTableBack">
-    <i class="bi bi-bar-chart"></i> กลับไปที่กราฟ
+    <i class="bi bi-bar-chart"></i> Back to Chart
   </button>
 </div>
 `.trim();
     if(rows.length===0){
       monthTableWrap.innerHTML=`<div class="card"><div class="card-body">${header}
-  <div class="alert alert-info mb-0">ไม่พบข้อมูลในเดือนนี้</div>
+  <div class="alert alert-info mb-0">No data for this month</div>
 </div></div>`;
       attachMonthTableBack();
       return;
@@ -811,12 +811,12 @@ async function loadMonthTable(year, month){
     let html='<div class="card"><div class="card-body">';
     html+=header;
     html+='<div class="table-responsive"><table class="table table-striped table-hover align-middle">';
-    html+='<thead class="table-light"><tr><th>ID</th><th>วันเวลาที่ทำการจอง</th><th>วันเวลาที่เข้าใช้บริการ</th><th>Customer</th><th>Service</th><th>Staff</th><th class="text-end">ราคาก่อนหักส่วนลด</th><th class="text-end">ส่วนลด</th><th class="text-end">ราคาหลังหักส่วนลด</th><th>Status</th></tr></thead><tbody>';
+    html+='<thead class="table-light"><tr><th>ID</th><th>Booking Date/Time</th><th>Service Date/Time</th><th>Customer</th><th>Service</th><th>Staff</th><th class="text-end">Gross Amount</th><th class="text-end">Discount</th><th class="text-end">Net Amount</th><th>Status</th></tr></thead><tbody>';
     rows.forEach(row=>{
       html+=`<tr><td>${row.booking_id}</td><td>${row.booked_at}</td><td>${row.service_at}</td><td>${row.customer}</td><td>${row.services}</td><td>${row.staff}</td><td class="text-end">${fmt.format(row.gross)}</td><td class="text-end text-danger">-${fmt.format(row.discount)}</td><td class="text-end text-success">${fmt.format(row.net)}</td><td><span class="badge ${row.status_badge}">${row.status_label}</span></td></tr>`;
     });
     const totals=data.totals || {gross:0,discount:0,net:0};
-    html+='</tbody><tfoot><tr class="table-light"><th colspan="6" class="text-end">รวม</th>';
+    html+='</tbody><tfoot><tr class="table-light"><th colspan="6" class="text-end">Totals</th>';
     html+=`<th class="text-end">${fmt.format(totals.gross || 0)}</th><th class="text-end text-danger">-${fmt.format(totals.discount || 0)}</th><th class="text-end text-success">${fmt.format(totals.net || 0)}</th><th></th></tr></tfoot>`;
     html+='</table></div></div></div>';
     monthTableWrap.innerHTML=html;
@@ -825,12 +825,12 @@ async function loadMonthTable(year, month){
     console.error(err);
     monthTableWrap.innerHTML=`<div class="card"><div class="card-body">
   <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="card-title mb-0">ไม่สามารถโหลดข้อมูลได้</h5>
+    <h5 class="card-title mb-0">Unable to load data</h5>
     <button type="button" class="btn btn-outline-secondary btn-sm" id="monthTableBack">
-      <i class="bi bi-bar-chart"></i> กลับไปที่กราฟ
+      <i class="bi bi-bar-chart"></i> Back to Chart
     </button>
   </div>
-  <div class="alert alert-danger mb-0">ไม่สามารถโหลดข้อมูลได้</div>
+  <div class="alert alert-danger mb-0">Unable to load data</div>
 </div></div>`;
     attachMonthTableBack();
   }

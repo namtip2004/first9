@@ -498,7 +498,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 };
 ?>
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Staff Report</title>
@@ -522,12 +522,12 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 <?php include("slidebar.php"); ?>
 <main id="main" class="main">
 
-  <div class="pagetitle"><h1>รายงานสตาฟ (Staff)</h1></div>
+  <div class="pagetitle"><h1>Staff Report</h1></div>
 
   <!-- Tabs -->
   <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button">ตาราง</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" id="chart-tab">กราฟ</button></li>
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button">Table</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" id="chart-tab">Chart</button></li>
   </ul>
 
   <div class="tab-content">
@@ -538,40 +538,40 @@ $pageUrl = function(int $target) use ($baseQuery): string {
         <form class="row g-2 align-items-end" method="get" id="staffFilterForm">
           <input type="hidden" name="tab" value="table">
           <div class="col-md-3 col-lg-2">
-            <label class="form-label small-label" for="staffSearch">ค้นหาสตาฟ</label>
-            <input type="text" class="form-control" id="staffSearch" name="q" value="<?=esc($search)?>" placeholder="ชื่อสตาฟ">
+            <label class="form-label small-label" for="staffSearch">Search staff</label>
+            <input type="text" class="form-control" id="staffSearch" name="q" value="<?=esc($search)?>" placeholder="Staff name">
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label" for="serviceFilter">บริการ</label>
+            <label class="form-label small-label" for="serviceFilter">Service</label>
             <select class="form-select" id="serviceFilter" name="service">
-              <option value="0">ทั้งหมด</option>
+              <option value="0">All</option>
               <?php while($sv=$serviceOps->fetch_assoc()): ?>
                 <option value="<?=$sv['service_id']?>" <?= $serviceF==$sv['service_id']?'selected':'' ?>><?=esc($sv['service_name'])?></option>
               <?php endwhile; ?>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label" for="date_filter_type">ช่วงเวลา</label>
+            <label class="form-label small-label" for="date_filter_type">Date range</label>
             <select class="form-select" id="date_filter_type" name="date_filter_type">
-              <option value="range" <?= $filterType==='range'?'selected':'' ?>>ช่วงวันที่</option>
-              <option value="month" <?= $filterType==='month'?'selected':'' ?>>เดือน</option>
-              <option value="year" <?= $filterType==='year'?'selected':'' ?>>ปี</option>
-              <option value="all" <?= $filterType==='all'?'selected':'' ?>>ทั้งหมด</option>
+              <option value="range" <?= $filterType==='range'?'selected':'' ?>>Custom range</option>
+              <option value="month" <?= $filterType==='month'?'selected':'' ?>>Month</option>
+              <option value="year" <?= $filterType==='year'?'selected':'' ?>>Year</option>
+              <option value="all" <?= $filterType==='all'?'selected':'' ?>>All time</option>
             </select>
           </div>
           <div class="col-md-auto <?= $filterType==='range'?'':'d-none' ?>" id="date_range_group">
-            <label class="form-label small-label">วันที่</label>
+            <label class="form-label small-label">Dates</label>
             <div class="d-flex gap-2">
               <input type="date" class="form-control" name="start_date" value="<?=esc($filterType==='range'?$startDate:'')?>">
               <input type="date" class="form-control" name="end_date"   value="<?=esc($filterType==='range'?$endDate:'')?>">
             </div>
           </div>
           <div class="col-md-auto <?= $filterType==='month'?'':'d-none' ?>" id="month_group">
-            <label class="form-label small-label" for="month_value">เดือน</label>
+            <label class="form-label small-label" for="month_value">Month</label>
             <input type="month" class="form-control" id="month_value" name="month_value" value="<?=esc($filterType==='month'?$monthValue:'')?>">
           </div>
           <div class="col-md-auto <?= $filterType==='year'?'':'d-none' ?>" id="year_group">
-            <label class="form-label small-label">ปี</label>
+            <label class="form-label small-label">Years</label>
             <div class="d-flex gap-2">
               <select class="form-select" name="start_year" id="start_year">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
@@ -586,13 +586,13 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </div>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label" for="sort_field">เรียงตาม</label>
+            <label class="form-label small-label" for="sort_field">Sort by</label>
             <div class="input-group">
               <select class="form-select" id="sort_field" name="sort">
-                <option value="name" <?= $sort==='name'?'selected':'' ?>>ชื่อ</option>
-                <option value="popularity" <?= $sort==='popularity'?'selected':'' ?>>ความนิยม</option>
-                <option value="hours" <?= $sort==='hours'?'selected':'' ?>>จำนวนชั่วโมง</option>
-                <option value="revenue" <?= $sort==='revenue'?'selected':'' ?>>รายได้</option>
+                <option value="name" <?= $sort==='name'?'selected':'' ?>>Name</option>
+                <option value="popularity" <?= $sort==='popularity'?'selected':'' ?>>Bookings</option>
+                <option value="hours" <?= $sort==='hours'?'selected':'' ?>>Hours</option>
+                <option value="revenue" <?= $sort==='revenue'?'selected':'' ?>>Revenue</option>
               </select>
               <select class="form-select" id="sort_dir" name="dir">
                 <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>A → Z</option>
@@ -601,13 +601,13 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </div>
           </div>
           <div class="col-md-auto">
-            <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+            <button class="btn btn-primary" type="submit"><i class="bi bi-funnel"></i> Apply filters</button>
           </div>
         </form>
 
         <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
-          <span class="badge bg-secondary">พนักงาน Active ทั้งหมด: <?=number_format($activeStaffTotal)?> คน</span>
-          <span class="badge bg-primary">ผลลัพธ์จากตัวกรอง: <?=number_format($filteredCount)?> คน</span>
+          <span class="badge bg-secondary">Active staff: <?=number_format($activeStaffTotal)?></span>
+          <span class="badge bg-primary">Matched by filters: <?=number_format($filteredCount)?></span>
         </div>
 
         <div class="table-responsive mt-3">
@@ -617,7 +617,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                 <th>Staff</th>
                 <th class="text-end">Bookings</th>
                 <th class="text-end">Confirmed</th>
-                <th class="text-end">Complate</th>
+                <th class="text-end">Completed</th>
                 <th class="text-end">Pending</th>
                 <th class="text-end">Cancelled</th>
                 <th class="text-end">Net Revenue</th>
@@ -632,7 +632,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </thead>
             <tbody>
               <?php if (empty($rows)): ?>
-                <tr><td colspan="13" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="13" class="text-center text-muted">No data found</td></tr>
               <?php else:
                 foreach($rows as $r):
                   $hrs = (float)($r['hrs'] ?? 0);
@@ -672,7 +672,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </tbody>
                         <!-- <tfoot class="table-light">
               <tr>
-                <th>รวม</th>
+                <th>Total</th>
                 <th class="text-end fw-bold"><?=number_format($summary['tx_total'])?></th>
                 <th class="text-end"><span class="badge bg-success"><?=number_format($summary['tx_conf'])?></span></th>
                 <th class="text-end"><span class="badge bg-primary"><?=number_format($summary['tx_comp'])?></span></th>
@@ -693,17 +693,17 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
         <?php if($pages > 1): ?>
         <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <span class="text-muted">Page <?=number_format($page)?> / <?=number_format($pages)?></span>
           <div class="btn-group">
             <?php if($page > 1): ?>
-              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> Previous</a>
             <?php else: ?>
-              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> Previous</span>
             <?php endif; ?>
             <?php if($page < $pages): ?>
-              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">Next <i class="bi bi-chevron-right"></i></a>
             <?php else: ?>
-              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+              <span class="btn btn-outline-primary disabled">Next <i class="bi bi-chevron-right"></i></span>
             <?php endif; ?>
           </div>
         </div>
@@ -716,19 +716,19 @@ $pageUrl = function(int $target) use ($baseQuery): string {
       <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="bookingStatusTitle">รายการจอง</h5>
+            <h5 class="modal-title" id="bookingStatusTitle">Bookings</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
             <div class="table-responsive">
               <table class="table table-sm align-middle">
-                <thead><tr><th>รหัส</th><th>ลูกค้า</th><th>บริการ</th><th>วันที่</th><th>เวลา</th><th class="text-end">ราคา</th></tr></thead>
-                <tbody id="bookingStatusBody"><tr><td colspan="6" class="text-center text-muted">กำลังโหลด...</td></tr></tbody>
+                <thead><tr><th>ID</th><th>Customer</th><th>Services</th><th>Date</th><th>Time</th><th class="text-end">Price</th></tr></thead>
+                <tbody id="bookingStatusBody"><tr><td colspan="6" class="text-center text-muted">Loading...</td></tr></tbody>
               </table>
             </div>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
           </div>
         </div>
       </div>
@@ -740,16 +740,16 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
         <div class="row g-3 align-items-end">
           <div class="col-md-3 col-lg-2">
-            <label class="form-label small-label" for="chart_period">ช่วงเวลา</label>
+            <label class="form-label small-label" for="chart_period">Period</label>
             <select class="form-select" id="chart_period">
-              <option value="all">ทั้งหมด</option>
-              <option value="year">ช่วงปี</option>
-              <option value="month">ช่วงเดือน</option>
-              <option value="day">ช่วงวัน</option>
+              <option value="all">All time</option>
+              <option value="year">Year range</option>
+              <option value="month">Month range</option>
+              <option value="day">Day range</option>
             </select>
           </div>
           <div class="col-md-auto d-none" id="chart_year_group">
-            <label class="form-label small-label">ปี (จาก-ถึง)</label>
+            <label class="form-label small-label">Years (from - to)</label>
             <div class="d-flex gap-2">
               <select class="form-select" id="chart_start_year">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
@@ -764,21 +764,21 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             </div>
           </div>
           <div class="col-md-auto d-none" id="chart_month_group">
-            <label class="form-label small-label">เดือน (จาก-ถึง)</label>
+            <label class="form-label small-label">Months (from - to)</label>
             <div class="d-flex gap-2">
               <input type="month" class="form-control" id="chart_start_month" value="<?=date('Y-m')?>">
               <input type="month" class="form-control" id="chart_end_month" value="<?=date('Y-m')?>">
             </div>
           </div>
           <div class="col-md-auto d-none" id="chart_day_group">
-            <label class="form-label small-label">วันที่ (จาก-ถึง)</label>
+            <label class="form-label small-label">Dates (from - to)</label>
             <div class="d-flex gap-2">
               <input type="date" class="form-control" id="chart_start_day" value="<?=date('Y-m-01')?>">
               <input type="date" class="form-control" id="chart_end_day" value="<?=date('Y-m-d')?>">
             </div>
           </div>
           <div class="col-md-auto">
-            <button class="btn btn-primary" id="chartApply"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+            <button class="btn btn-primary" id="chartApply"><i class="bi bi-funnel"></i> Apply filters</button>
           </div>
         </div>
 
@@ -786,18 +786,18 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           <div class="col-lg-8">
             <div class="card h-100"><div class="card-body">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <h6 class="card-title mb-0" id="chartTitle">ภาพรวมจำนวนการจองของสตาฟ</h6>
-                <button class="btn btn-sm btn-outline-secondary d-none" id="chartBack"><i class="bi bi-arrow-left"></i> กลับ</button>
+                <h6 class="card-title mb-0" id="chartTitle">Staff booking volume overview</h6>
+                <button class="btn btn-sm btn-outline-secondary d-none" id="chartBack"><i class="bi bi-arrow-left"></i> Back</button>
               </div>
               <div class="chart-wrapper">
                 <canvas id="staffMainChart"></canvas>
               </div>
               <div class="mt-3">
                 <div class="d-flex align-items-center gap-2 mb-2">
-                  <strong>เลือกพนักงาน</strong>
-                  <button class="btn btn-sm btn-outline-dark" id="toggleStaffList" type="button">เลือกบางคน</button>
-                  <button class="btn btn-sm btn-outline-primary" id="selectAllStaff" type="button">เลือกทั้งหมด</button>
-                  <button class="btn btn-sm btn-outline-secondary" id="clearAllStaff" type="button">ล้างทั้งหมด</button>
+                  <strong>Select staff</strong>
+                  <button class="btn btn-sm btn-outline-dark" id="toggleStaffList" type="button">Choose specific staff</button>
+                  <button class="btn btn-sm btn-outline-primary" id="selectAllStaff" type="button">Select all</button>
+                  <button class="btn btn-sm btn-outline-secondary" id="clearAllStaff" type="button">Clear all</button>
                 </div>
                 <div id="staffCheckboxes" class="d-flex flex-wrap gap-2 d-none"></div>
               </div>
@@ -811,7 +811,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           </div>
         </div>
 
-        <p class="text-muted mt-3" id="chartHint">* คลิกแท่งกราฟของพนักงานเพื่อดูรายละเอียดแบบกราฟเส้น และกดปุ่ม "กลับ" เพื่อย้อนกลับ</p>
+        <p class="text-muted mt-3" id="chartHint">* Click a staff bar to view the line chart details, then press "Back" to return.</p>
 
       </div></div>
     </div>
@@ -848,8 +848,8 @@ function updateSortLabels() {
     asc.textContent = 'A → Z';
     desc.textContent = 'Z → A';
   } else {
-    asc.textContent = 'น้อย → มาก';
-    desc.textContent = 'มาก → น้อย';
+    asc.textContent = 'Low → High';
+    desc.textContent = 'High → Low';
   }
 }
 updateSortLabels();
@@ -868,9 +868,9 @@ if (searchInput && filterForm) {
 }
 
 const statusNames = {
-  total: 'ทั้งหมด',
+  total: 'All',
   confirmed: 'Confirmed',
-  completed: 'Complate',
+  completed: 'Completed',
   pending: 'Pending',
   cancelled: 'Cancelled'
 };
@@ -886,7 +886,7 @@ function formatCurrency(amount) {
 async function fetchStaffBookings(staffId, statusKey, staffName) {
   if (!bookingBody || !bookingTitle) return;
   bookingTitle.textContent = `${staffName} - ${statusNames[statusKey] || ''}`;
-  bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">กำลังโหลด...</td></tr>';
+  bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
   if (bookingModal) bookingModal.show();
 
   const url = new URL(location.href);
@@ -905,7 +905,7 @@ async function fetchStaffBookings(staffId, statusKey, staffName) {
     const data = await res.json();
     const bookings = data.bookings || [];
     if (!bookings.length) {
-      bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูล</td></tr>';
+      bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No data found</td></tr>';
       return;
     }
     bookingBody.innerHTML = '';
@@ -924,7 +924,7 @@ async function fetchStaffBookings(staffId, statusKey, staffName) {
     });
   } catch (err) {
     console.error(err);
-    bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">เกิดข้อผิดพลาดในการดึงข้อมูล</td></tr>';
+    bookingBody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Unable to fetch data</td></tr>';
   }
 }
 
@@ -967,7 +967,7 @@ function setStaffListVisible(visible) {
     staffCheckboxesEl.classList.toggle('d-none', !staffListVisible);
   }
   if (toggleStaffListBtn) {
-    toggleStaffListBtn.textContent = staffListVisible ? 'ซ่อนรายชื่อ' : 'เลือกบางคน';
+    toggleStaffListBtn.textContent = staffListVisible ? 'Hide list' : 'Choose specific staff';
   }
 }
 
@@ -1021,7 +1021,7 @@ function renderTopList(items) {
   if (!items || !items.length) {
     const li = document.createElement('li');
     li.className = 'list-group-item text-muted';
-    li.textContent = 'ไม่มีข้อมูล';
+    li.textContent = 'No data available';
     topStaffListEl.appendChild(li);
     return;
   }
@@ -1029,7 +1029,7 @@ function renderTopList(items) {
     const li = document.createElement('li');
     li.className = 'list-group-item d-flex justify-content-between align-items-center';
     const total = Number(item.total || 0).toLocaleString();
-    li.innerHTML = `<span>${item.name || '-'}</span><span class="badge bg-primary rounded-pill">${total} ครั้ง</span>`;
+    li.innerHTML = `<span>${item.name || '-'}</span><span class="badge bg-primary rounded-pill">${total} times</span>`;
     topStaffListEl.appendChild(li);
   });
 }
@@ -1038,7 +1038,7 @@ function renderStaffCheckboxes() {
   if (!staffCheckboxesEl) return;
   staffCheckboxesEl.innerHTML = '';
   if (!overviewData.length) {
-    staffCheckboxesEl.innerHTML = '<span class="text-muted">ไม่มีข้อมูล</span>';
+    staffCheckboxesEl.innerHTML = '<span class="text-muted">No staff available</span>';
     return;
   }
   overviewData.forEach((staff) => {
@@ -1062,7 +1062,7 @@ function renderStaffCheckboxes() {
       detailMode = false;
       currentDetail = null;
       chartBackBtn?.classList.add('d-none');
-      chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+      chartTitleEl.textContent = 'Staff booking volume overview';
       renderOverviewChart();
     });
   });
@@ -1082,7 +1082,7 @@ function renderOverviewChart() {
     staffList = overviewData.filter((staff) => selectedStaffIds.has(staff.id));
   }
   if (!staffList.length) {
-    if (chartHintEl) chartHintEl.textContent = 'กรุณาเลือกพนักงานเพื่อแสดงข้อมูล';
+    if (chartHintEl) chartHintEl.textContent = 'Please select staff to display data.';
     return;
   }
   const labels = staffList.map((s) => s.name);
@@ -1098,9 +1098,9 @@ function renderOverviewChart() {
     data: {
       labels,
       datasets: [
-        {label: 'ทั้งหมด', data: staffList.map(s => Number(s.total || 0)), backgroundColor: palette.total},
+        {label: 'All', data: staffList.map(s => Number(s.total || 0)), backgroundColor: palette.total},
         {label: 'Confirmed', data: staffList.map(s => Number(s.confirmed || 0)), backgroundColor: palette.confirmed},
-        {label: 'Complate', data: staffList.map(s => Number(s.completed || 0)), backgroundColor: palette.completed},
+        {label: 'Completed', data: staffList.map(s => Number(s.completed || 0)), backgroundColor: palette.completed},
         {label: 'Pending', data: staffList.map(s => Number(s.pending || 0)), backgroundColor: palette.pending},
         {label: 'Cancelled', data: staffList.map(s => Number(s.cancelled || 0)), backgroundColor: palette.cancelled}
       ]
@@ -1122,7 +1122,7 @@ function renderOverviewChart() {
     }
   });
   if (chartHintEl) {
-    chartHintEl.textContent = '* คลิกแท่งกราฟของพนักงานเพื่อดูรายละเอียดแบบกราฟเส้น และกดปุ่ม "กลับ" เพื่อย้อนกลับ';
+    chartHintEl.textContent = '* Click a staff bar to view the line chart details, then press "Back" to return.';
   }
 }
 
@@ -1135,12 +1135,12 @@ async function loadOverview() {
     detailMode = false;
     currentDetail = null;
     chartBackBtn?.classList.add('d-none');
-    chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+    chartTitleEl.textContent = 'Staff booking volume overview';
     if (!overviewData.length) {
       selectedStaffIds.clear();
       setStaffListVisible(false);
       renderStaffCheckboxes();
-      if (chartHintEl) chartHintEl.textContent = 'ไม่มีข้อมูลพนักงาน';
+      if (chartHintEl) chartHintEl.textContent = 'No staff data available.';
       if (staffChart) { staffChart.destroy(); staffChart = null; }
       renderTopList([]);
       return;
@@ -1152,7 +1152,7 @@ async function loadOverview() {
     renderTopList(data.top || []);
   } catch (err) {
     console.error(err);
-    if (chartHintEl) chartHintEl.textContent = 'ไม่สามารถโหลดข้อมูลกราฟได้';
+    if (chartHintEl) chartHintEl.textContent = 'Unable to load chart data.';
   }
 }
 
@@ -1180,9 +1180,9 @@ async function loadDetail(staffId, staffName) {
       data: {
         labels,
         datasets: [
-          {label: 'ทั้งหมด', data: (series.total || []).map(v => Number(v || 0)), borderColor: palette.total, backgroundColor: palette.total, fill: false, tension: 0.3, pointRadius: 3},
+          {label: 'All', data: (series.total || []).map(v => Number(v || 0)), borderColor: palette.total, backgroundColor: palette.total, fill: false, tension: 0.3, pointRadius: 3},
           {label: 'Confirmed', data: (series.confirmed || []).map(v => Number(v || 0)), borderColor: palette.confirmed, backgroundColor: palette.confirmed, fill: false, tension: 0.3, pointRadius: 3},
-          {label: 'Complate', data: (series.completed || []).map(v => Number(v || 0)), borderColor: palette.completed, backgroundColor: palette.completed, fill: false, tension: 0.3, pointRadius: 3},
+          {label: 'Completed', data: (series.completed || []).map(v => Number(v || 0)), borderColor: palette.completed, backgroundColor: palette.completed, fill: false, tension: 0.3, pointRadius: 3},
           {label: 'Pending', data: (series.pending || []).map(v => Number(v || 0)), borderColor: palette.pending, backgroundColor: palette.pending, fill: false, tension: 0.3, pointRadius: 3},
           {label: 'Cancelled', data: (series.cancelled || []).map(v => Number(v || 0)), borderColor: palette.cancelled, backgroundColor: palette.cancelled, fill: false, tension: 0.3, pointRadius: 3}
         ]
@@ -1200,8 +1200,8 @@ async function loadDetail(staffId, staffName) {
     detailMode = true;
     currentDetail = {staffId, staffName};
     chartBackBtn?.classList.remove('d-none');
-    chartTitleEl.textContent = `รายละเอียดของ ${staffName}`;
-    if (chartHintEl) chartHintEl.textContent = 'กำลังแสดงกราฟเส้นของพนักงานที่เลือก';
+    chartTitleEl.textContent = `Details for ${staffName}`;
+    if (chartHintEl) chartHintEl.textContent = 'Displaying the selected staff line chart.';
   } catch (err) {
     console.error(err);
   }
@@ -1216,7 +1216,7 @@ chartBackBtn?.addEventListener('click', () => {
   detailMode = false;
   currentDetail = null;
   chartBackBtn.classList.add('d-none');
-  chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  chartTitleEl.textContent = 'Staff booking volume overview';
   renderOverviewChart();
 });
 
@@ -1225,7 +1225,7 @@ selectAllBtn?.addEventListener('click', () => {
   detailMode = false;
   currentDetail = null;
   chartBackBtn?.classList.add('d-none');
-  chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  chartTitleEl.textContent = 'Staff booking volume overview';
   setStaffListVisible(false);
   renderStaffCheckboxes();
   renderOverviewChart();
@@ -1236,10 +1236,10 @@ clearAllBtn?.addEventListener('click', () => {
   detailMode = false;
   currentDetail = null;
   chartBackBtn?.classList.add('d-none');
-  chartTitleEl.textContent = 'ภาพรวมจำนวนการจองของสตาฟ';
+  chartTitleEl.textContent = 'Staff booking volume overview';
   setStaffListVisible(true);
   renderStaffCheckboxes();
-  if (chartHintEl) chartHintEl.textContent = 'กรุณาเลือกพนักงานเพื่อแสดงข้อมูล';
+  if (chartHintEl) chartHintEl.textContent = 'Please select staff to display data.';
   if (staffChart) {
     staffChart.destroy();
     staffChart = null;

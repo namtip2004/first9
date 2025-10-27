@@ -35,7 +35,7 @@ $result = $conn->query($sql);
   <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>จัดการโปรโมชั่น</h1>
+      <h1>Manage Promotions</h1>
     </div>
 
     <section class="section">
@@ -46,7 +46,7 @@ $result = $conn->query($sql);
             <div class="card-body pt-4">
 
               <div class="text-end mb-3">
-                <a href="form_promotion.php" class="btn btn-success"><i class="bi bi-plus"></i> เพิ่มโปรโมชั่น</a>
+                <a href="form_promotion.php" class="btn btn-success"><i class="bi bi-plus"></i> Add Promotion</a>
               </div>
 
               <?php if (!empty($message)): ?>
@@ -68,13 +68,13 @@ $result = $conn->query($sql);
                   <thead class="table-light">
                     <tr>
                       <th scope="col">#</th>
-                      <th scope="col">ชื่อโปรโมชั่น</th>
-                      <th scope="col">วัน-เวลาเริ่มต้น</th>
-                      <th scope="col">วัน-เวลาสิ้นสุด</th>
-                      <th scope="col">สถานะ</th>
-                      <th scope="col" class="text-end">บริการที่เข้าร่วม</th>
-                      <th scope="col" class="text-end">ส่วนลดสูงสุด (%)</th>
-                      <th scope="col" class="text-center">การจัดการ</th>
+                      <th scope="col">Promotion Name</th>
+                      <th scope="col">Start Date &amp; Time</th>
+                      <th scope="col">End Date &amp; Time</th>
+                      <th scope="col">Status</th>
+                      <th scope="col" class="text-end">Participating Services</th>
+                      <th scope="col" class="text-end">Maximum Discount (%)</th>
+                      <th scope="col" class="text-center">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -116,38 +116,38 @@ $result = $conn->query($sql);
                               <a
                                 href="promotion_detail.php?id=<?= $promotionId ?>"
                                 class="btn btn-outline-primary btn-sm"
-                                title="รายละเอียด"
-                                aria-label="รายละเอียด"
+                                title="Details"
+                                aria-label="Details"
                               >
                                 <i class="bi bi-eye"></i>
-                                <span class="visually-hidden">รายละเอียด</span>
+                                <span class="visually-hidden">Details</span>
                               </a>
                               <?php if ($status !== 'ended'): ?>
                                 <a
                                   href="promotion_update_form.php?id=<?= $promotionId ?>"
                                   class="btn btn-outline-secondary btn-sm"
-                                  title="แก้ไข"
-                                  aria-label="แก้ไข"
+                                  title="Edit"
+                                  aria-label="Edit"
                                 >
                                   <i class="bi bi-pencil-square"></i>
-                                  <span class="visually-hidden">แก้ไข</span>
+                                  <span class="visually-hidden">Edit</span>
                                 </a>
                               <?php endif; ?>
 
                               <?php if ($status === 'upcoming'): ?>
-                                <form action="promotion_delete.php" method="post" class="d-inline" onsubmit="return confirm('ต้องการลบโปรโมชั่นนี้หรือไม่?');">
+                                <form action="promotion_delete.php" method="post" class="d-inline" onsubmit="return confirm('Do you want to delete this promotion?');">
                                   <input type="hidden" name="promotion_id" value="<?= $promotionId ?>">
-                                  <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ" aria-label="ลบ">
+                                  <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete" aria-label="Delete">
                                     <i class="bi bi-trash"></i>
-                                    <span class="visually-hidden">ลบ</span>
+                                    <span class="visually-hidden">Delete</span>
                                   </button>
                                 </form>
                               <?php elseif ($status === 'running'): ?>
-                                <form action="promotion_end.php" method="post" class="d-inline" onsubmit="return confirm('ต้องการสิ้นสุดโปรโมชั่นนี้ทันทีหรือไม่?');">
+                                <form action="promotion_end.php" method="post" class="d-inline" onsubmit="return confirm('Do you want to end this promotion immediately?');">
                                   <input type="hidden" name="promotion_id" value="<?= $promotionId ?>">
-                                  <button type="submit" class="btn btn-outline-warning btn-sm" title="สิ้นสุดทันที" aria-label="สิ้นสุดทันที">
+                                  <button type="submit" class="btn btn-outline-warning btn-sm" title="End Now" aria-label="End Now">
                                     <i class="bi bi-stop-circle"></i>
-                                    <span class="visually-hidden">สิ้นสุดทันที</span>
+                                    <span class="visually-hidden">End Now</span>
                                   </button>
                                 </form>
                               <?php else: ?>
@@ -159,7 +159,7 @@ $result = $conn->query($sql);
                       <?php endwhile; ?>
                     <?php else: ?>
                       <tr>
-                        <td colspan="8" class="text-center text-muted">ยังไม่มีข้อมูลโปรโมชั่น</td>
+                        <td colspan="8" class="text-center text-muted">No promotions found</td>
                       </tr>
                     <?php endif; ?>
                   </tbody>

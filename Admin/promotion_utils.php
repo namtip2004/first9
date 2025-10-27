@@ -102,10 +102,10 @@ if (!function_exists('promotionStatusLabel')) {
     function promotionStatusLabel(string $status): string
     {
         return match ($status) {
-            'upcoming' => 'ยังไม่เริ่ม',
-            'running' => 'กำลังดำเนินการ',
-            'ended' => 'สิ้นสุด',
-            default => 'ไม่ทราบ',
+            'upcoming' => 'Upcoming',
+            'running' => 'Active',
+            'ended' => 'Ended',
+            default => 'Unknown',
         };
     }
 }

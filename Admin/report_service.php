@@ -193,7 +193,7 @@ if (isset($_GET['action'])) {
       if ($startYear > $endYear) { [$startYear,$endYear] = [$endYear,$startYear]; }
       for($y=$startYear;$y<=$endYear;$y++){ $labels[] = (string)$y; }
       $bucketExpr = "YEAR(b.booking_date)";
-      $axis = 'ปี';
+      $axis = 'Year';
     } elseif ($period === 'year') {
       $start = date_create($rangeStart);
       $start->modify('first day of this month');
@@ -204,7 +204,7 @@ if (isset($_GET['action'])) {
         $start->modify('+1 month');
       }
       $bucketExpr = "DATE_FORMAT(b.booking_date,'%Y-%m')";
-      $axis = 'เดือน';
+      $axis = 'Month';
     } else {
       $start = date_create($rangeStart);
       $end = date_create($rangeEnd);
@@ -214,7 +214,7 @@ if (isset($_GET['action'])) {
         $start->modify('+1 day');
       }
       $bucketExpr = "DATE_FORMAT(b.booking_date,'%Y-%m-%d')";
-      $axis = 'วัน';
+      $axis = 'Day';
     }
 
     $dateCond = " AND b.booking_date >= '".$conn->real_escape_string($rangeStart)."' AND b.booking_date <= '".$conn->real_escape_string($rangeEnd)."'";
@@ -377,7 +377,7 @@ $tableYearStartVal = $tablePeriod === 'year' && $tableRangeStart ? (int)substr($
 $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($tableRangeEnd,0,4)   : $maxYear;
 ?>
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Service Report</title>
@@ -398,12 +398,12 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
 <?php include("slidebar.php"); ?>
 <main id="main" class="main">
 
-  <div class="pagetitle"><h1>รายงานบริการ (Service Report)</h1></div>
+  <div class="pagetitle"><h1>Service Report</h1></div>
 
   <!-- Tabs -->
   <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button">ตาราง</button></li>
-    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" id="chart-tab">กราฟ</button></li>
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#t-table" type="button">Table</button></li>
+    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#t-chart" type="button" id="chart-tab">Chart</button></li>
   </ul>
 
   <div class="tab-content">
@@ -414,36 +414,36 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
         <form class="row g-3 align-items-end" method="get" id="tableFilters">
           <input type="hidden" name="tab" value="table">
           <div class="col-lg-3 col-md-4">
-            <label class="form-label small-label">ค้นหา (ID หรือชื่อบริการ)</label>
-            <input type="text" class="form-control" name="q" value="<?=esc($tableSearch)?>" placeholder="ค้นหาบริการ" data-autosubmit>
+            <label class="form-label small-label">Search (ID or service name)</label>
+            <input type="text" class="form-control" name="q" value="<?=esc($tableSearch)?>" placeholder="Search services" data-autosubmit>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">สถานะบริการ</label>
+            <label class="form-label small-label">Service status</label>
             <select class="form-select" name="service_status">
-              <option value="all" <?= $tableStatus==='all'?'selected':'' ?>>ทั้งหมด</option>
-              <option value="active" <?= $tableStatus==='active'?'selected':'' ?>>เปิดใช้งาน</option>
-              <option value="inactive" <?= $tableStatus==='inactive'?'selected':'' ?>>ปิดใช้งาน</option>
+              <option value="all" <?= $tableStatus==='all'?'selected':'' ?>>All</option>
+              <option value="active" <?= $tableStatus==='active'?'selected':'' ?>>Active</option>
+              <option value="inactive" <?= $tableStatus==='inactive'?'selected':'' ?>>Inactive</option>
             </select>
           </div>
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงข้อมูล</label>
+            <label class="form-label small-label">Data range</label>
             <select class="form-select" name="table_period" id="tablePeriod">
-              <option value="all" <?= $tablePeriod==='all'?'selected':'' ?>>ทั้งหมด</option>
-              <option value="day" <?= $tablePeriod==='day'?'selected':'' ?>>ช่วงวัน</option>
-              <option value="month" <?= $tablePeriod==='month'?'selected':'' ?>>ช่วงเดือน</option>
-              <option value="year" <?= $tablePeriod==='year'?'selected':'' ?>>ช่วงปี</option>
+              <option value="all" <?= $tablePeriod==='all'?'selected':'' ?>>All time</option>
+              <option value="day" <?= $tablePeriod==='day'?'selected':'' ?>>Day range</option>
+              <option value="month" <?= $tablePeriod==='month'?'selected':'' ?>>Month range</option>
+              <option value="year" <?= $tablePeriod==='year'?'selected':'' ?>>Year range</option>
             </select>
           </div>
           <div class="col-lg-4 col-md-6 period-control <?= $tablePeriod==='day'?'':'d-none' ?>" id="tablePeriodDay">
-            <label class="form-label small-label">เลือกวัน</label>
+            <label class="form-label small-label">Select dates</label>
             <div class="d-flex flex-wrap gap-2">
               <input type="date" class="form-control" name="day_start" value="<?=esc($tableDayStartVal)?>">
-              <span class="align-self-center small text-muted">ถึง</span>
+              <span class="align-self-center small text-muted">to</span>
               <input type="date" class="form-control" name="day_end" value="<?=esc($tableDayEndVal)?>">
             </div>
           </div>
           <div class="col-lg-5 col-md-6 period-control <?= $tablePeriod==='month'?'':'d-none' ?>" id="tablePeriodMonth">
-            <label class="form-label small-label">เลือกเดือน</label>
+            <label class="form-label small-label">Select months</label>
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <div class="d-flex gap-2">
                 <select class="form-select" name="month_start">
@@ -457,7 +457,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
                   <?php endfor; ?>
                 </select>
               </div>
-              <span class="small text-muted">ถึง</span>
+              <span class="small text-muted">to</span>
               <div class="d-flex gap-2">
                 <select class="form-select" name="month_end">
                   <?php for($m=1;$m<=12;$m++): ?>
@@ -473,7 +473,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             </div>
           </div>
           <div class="col-md-auto period-control <?= $tablePeriod==='year'?'':'d-none' ?>" id="tablePeriodYear">
-            <label class="form-label small-label">ช่วงปี</label>
+            <label class="form-label small-label">Year span</label>
             <div class="d-flex gap-2">
               <select class="form-select" name="year_start">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
@@ -491,10 +491,10 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             <label class="form-label small-label">Sort by</label>
             <div class="input-group">
               <select class="form-select" name="sort_field" id="sortField">
-                <option value="name" <?= $tableSortField==='name'?'selected':'' ?>>ชื่อ</option>
-                <option value="popularity" <?= $tableSortField==='popularity'?'selected':'' ?>>ความนิยม (จำนวนจอง)</option>
-                <option value="price" <?= $tableSortField==='price'?'selected':'' ?>>ราคาเริ่มต้น</option>
-                <option value="option" <?= $tableSortField==='option'?'selected':'' ?>>จำนวนออปชัน</option>
+                <option value="name" <?= $tableSortField==='name'?'selected':'' ?>>Name</option>
+                <option value="popularity" <?= $tableSortField==='popularity'?'selected':'' ?>>Bookings (popularity)</option>
+                <option value="price" <?= $tableSortField==='price'?'selected':'' ?>>Starting price</option>
+                <option value="option" <?= $tableSortField==='option'?'selected':'' ?>>Options count</option>
               </select>
               <select class="form-select" name="sort_dir" id="sortDir">
                 <option value="ASC" <?= $tableSortDir==='ASC'?'selected':'' ?>>ASC</option>
@@ -503,10 +503,10 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             </div>
           </div>
           <div class="col-md-auto">
-            <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
+            <button class="btn btn-primary"><i class="bi bi-search"></i> Apply filters</button>
           </div>
           <div class="ms-auto col-md-auto d-flex gap-2 align-items-center">
-            <span class="badge bg-primary">บริการที่พบ: <?=number_format($total)?></span>
+            <span class="badge bg-primary">Services found: <?=number_format($total)?></span>
           </div>
         </form>
 
@@ -516,24 +516,24 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
               <tr>
                 <th>ID</th>
                 <th>Service</th>
-                <th>สถานะ</th>
-                <th class="text-center">Option</th>
-                <th class="text-end">ราคาเริ่มต้น</th>
-                <th class="text-end">Total Booking</th>
+                <th>Status</th>
+                <th class="text-center">Options</th>
+                <th class="text-end">Starting price</th>
+                <th class="text-end">Total bookings</th>
               </tr>
             </thead>
             <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="6" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="6" class="text-center text-muted">No data found</td></tr>
               <?php else: foreach($rows as $r): ?>
                 <tr>
                   <td><?=number_format((int)$r['service_id'])?></td>
                   <td><?=esc($r['service_name'])?></td>
                   <td>
                     <?php if ((int)$r['is_active'] === 1): ?>
-                      <span class="badge bg-success-subtle text-success">เปิดใช้งาน</span>
+                      <span class="badge bg-success-subtle text-success">Active</span>
                     <?php else: ?>
-                      <span class="badge bg-secondary-subtle text-secondary">ปิดใช้งาน</span>
+                      <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
                     <?php endif; ?>
                   </td>
                   <td class="text-center"><?=number_format($r['option_count'])?></td>
@@ -544,7 +544,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             </tbody>
             <tfoot class="table-light">
               <tr>
-                <th colspan="5" class="text-end">รวมการจอง</th>
+                <th colspan="5" class="text-end">Total bookings</th>
                 <th class="text-end"><?=number_format($totalBookingSum)?></th>
               </tr>
             </tfoot>
@@ -553,17 +553,17 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
 
         <?php if($pages > 1): ?>
         <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <span class="text-muted">Page <?=number_format($page)?> / <?=number_format($pages)?></span>
           <div class="btn-group">
             <?php if($page > 1): ?>
-              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> Previous</a>
             <?php else: ?>
-              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> Previous</span>
             <?php endif; ?>
             <?php if($page < $pages): ?>
-              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">Next <i class="bi bi-chevron-right"></i></a>
             <?php else: ?>
-              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+              <span class="btn btn-outline-primary disabled">Next <i class="bi bi-chevron-right"></i></span>
             <?php endif; ?>
           </div>
         </div>
@@ -580,7 +580,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
         <div class="row g-3">
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-cash-coin card-icon text-success"></i>
-            <div><div class="kpi-value" id="k_net_total">0</div><div class="text-muted">Net รวม (ยืนยัน)</div></div>
+            <div><div class="kpi-value" id="k_net_total">0</div><div class="text-muted">Net revenue (confirmed)</div></div>
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-cart-check card-icon text-primary"></i>
@@ -592,35 +592,35 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
           </div></div></div>
           <div class="col-md-3"><div class="card"><div class="card-body d-flex align-items-center gap-3">
             <i class="bi bi-stars card-icon text-warning"></i>
-            <div><div class="kpi-value" id="k_services_total">0</div><div class="text-muted">บริการที่ขายแล้ว</div></div>
+            <div><div class="kpi-value" id="k_services_total">0</div><div class="text-muted">Services sold</div></div>
           </div></div></div>
         </div>
         <div class="row g-3 mt-1">
           <div class="col-md-6"><div class="alert alert-light py-2 m-0"><small>Top Service: <b id="k_top_service">-</b> — Net <b id="k_top_service_net">0.00</b></small></div></div>
         </div>
-        <div class="text-muted mb-2">* การ์ดไม่ใช้ตัวกรอง</div>
+        <div class="text-muted mb-2">* Cards ignore the chart filters.</div>
 
         <!-- Chart Filters -->
         <div class="row g-3 align-items-end" id="chartFilters">
           <div class="col-md-auto">
-            <label class="form-label small-label">ช่วงข้อมูล</label>
+            <label class="form-label small-label">Data range</label>
             <select class="form-select" id="chartPeriod">
-              <option value="all">ทั้งหมด</option>
-              <option value="year">ช่วงปี</option>
-              <option value="month">ช่วงเดือน</option>
-              <option value="day">ช่วงวัน</option>
+              <option value="all">All time</option>
+              <option value="year">Year range</option>
+              <option value="month">Month range</option>
+              <option value="day">Day range</option>
             </select>
           </div>
           <div class="col-lg-4 col-md-6 chart-period-control d-none" id="chartPeriodDay">
-            <label class="form-label small-label">เลือกวัน</label>
+            <label class="form-label small-label">Select dates</label>
             <div class="d-flex flex-wrap gap-2">
               <input type="date" class="form-control" id="chartDayStart">
-              <span class="align-self-center small text-muted">ถึง</span>
+              <span class="align-self-center small text-muted">to</span>
               <input type="date" class="form-control" id="chartDayEnd">
             </div>
           </div>
           <div class="col-lg-5 col-md-6 chart-period-control d-none" id="chartPeriodMonth">
-            <label class="form-label small-label">เลือกเดือน</label>
+            <label class="form-label small-label">Select months</label>
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <div class="d-flex gap-2">
                 <select class="form-select" id="chartMonthStart">
@@ -634,7 +634,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
                   <?php endfor; ?>
                 </select>
               </div>
-              <span class="small text-muted">ถึง</span>
+              <span class="small text-muted">to</span>
               <div class="d-flex gap-2">
                 <select class="form-select" id="chartMonthEnd">
                   <?php for($m=1;$m<=12;$m++): ?>
@@ -650,7 +650,7 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             </div>
           </div>
           <div class="col-md-auto chart-period-control d-none" id="chartPeriodYear">
-            <label class="form-label small-label">ช่วงปี</label>
+            <label class="form-label small-label">Year span</label>
             <div class="d-flex gap-2">
               <select class="form-select" id="chartYearStart">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
@@ -665,14 +665,14 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
             </div>
           </div>
           <div class="col-md-auto">
-            <button id="applyChart" class="btn btn-primary"><i class="bi bi-funnel"></i> ใช้ตัวกรอง</button>
+            <button id="applyChart" class="btn btn-primary"><i class="bi bi-funnel"></i> Apply filters</button>
           </div>
         </div>
 
         <div class="mt-4">
           <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h6 class="mb-0">เลือกบริการที่ต้องการเปรียบเทียบ</h6>
-            <button class="btn btn-outline-secondary btn-sm" type="button" id="chartSelectAll">เลือกทั้งหมด</button>
+            <h6 class="mb-0">Select services to compare</h6>
+            <button class="btn btn-outline-secondary btn-sm" type="button" id="chartSelectAll">Select all</button>
           </div>
           <div class="mt-2 d-flex flex-wrap gap-2" id="chartServiceCheckboxes"></div>
         </div>
@@ -681,18 +681,18 @@ $tableYearEndVal   = $tablePeriod === 'year' && $tableRangeEnd   ? (int)substr($
         <div class="row mt-4 g-4">
           <div class="col-lg-9">
             <div class="d-flex justify-content-between align-items-center mb-2">
-              <h5 class="mb-0" id="chartDetailTitle">กราฟจำนวนการจองต่อบริการ</h5>
-              <button class="btn btn-sm btn-outline-secondary d-none" type="button" id="chartBackButton"><i class="bi bi-arrow-left"></i> ย้อนกลับ</button>
+              <h5 class="mb-0" id="chartDetailTitle">Bookings per service</h5>
+              <button class="btn btn-sm btn-outline-secondary d-none" type="button" id="chartBackButton"><i class="bi bi-arrow-left"></i> Back</button>
             </div>
             <div class="bg-light rounded p-2" style="min-height:420px">
               <canvas id="svcChart" height="140"></canvas>
             </div>
-            <div class="text-muted mt-2 small">* คลิกแท่งกราฟเพื่อดูรายละเอียดแบบกราฟเส้นของบริการนั้น ๆ</div>
+            <div class="text-muted mt-2 small">* Click a bar to open the line chart for that service.</div>
           </div>
           <div class="col-lg-3">
             <div class="card h-100">
               <div class="card-body">
-                <h6 class="card-title">Top 10 Service</h6>
+                <h6 class="card-title">Top 10 services</h6>
                 <ol class="list-group list-group-numbered" id="topServiceList"></ol>
               </div>
             </div>
@@ -741,8 +741,8 @@ function updateSortDirLabels(){
     ascOpt.textContent = 'A - Z';
     descOpt.textContent = 'Z - A';
   } else {
-    ascOpt.textContent = 'น้อยไปมาก';
-    descOpt.textContent = 'มากไปน้อย';
+    ascOpt.textContent = 'Low to High';
+    descOpt.textContent = 'High to Low';
   }
 }
 sortField?.addEventListener('change', updateSortDirLabels);
@@ -829,7 +829,7 @@ function populateTopList(items){
   if (!items || items.length === 0) {
     const li = document.createElement('li');
     li.className = 'list-group-item text-muted';
-    li.textContent = 'ไม่มีข้อมูล';
+    li.textContent = 'No data available';
     list.appendChild(li);
     return;
   }
@@ -864,7 +864,7 @@ function renderBarChart(){
     data: {
       labels: dataset.map(d => d.service_name),
       datasets: [{
-        label: 'จำนวนการจอง',
+        label: 'Bookings',
         data: dataset.map(d => d.total_booking),
         backgroundColor: 'rgba(13,110,253,0.6)',
         borderColor: '#0d6efd'
@@ -880,7 +880,7 @@ function renderBarChart(){
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => `จำนวนการจอง: ${(ctx.parsed.y||0).toLocaleString()}`
+            label: ctx => `Bookings: ${(ctx.parsed.y||0).toLocaleString()}`
           }
         }
       },
@@ -894,7 +894,7 @@ function renderBarChart(){
       }
     }
   });
-  titleEl.textContent = 'กราฟจำนวนการจองต่อบริการ';
+  titleEl.textContent = 'Bookings per service';
 }
 
 async function loadServiceTimeline(serviceId, serviceName){
@@ -909,7 +909,7 @@ async function loadServiceTimeline(serviceId, serviceName){
     data: {
       labels: data.labels || [],
       datasets: [{
-        label: `จำนวนการจอง (${serviceName})`,
+        label: `Bookings (${serviceName})`,
         data: (data.data || []),
         borderColor: '#0d6efd',
         backgroundColor: 'rgba(13,110,253,0.15)',
@@ -929,7 +929,7 @@ async function loadServiceTimeline(serviceId, serviceName){
     }
   });
   document.getElementById('chartBackButton')?.classList.remove('d-none');
-  document.getElementById('chartDetailTitle').textContent = `กราฟบริการ: ${serviceName}`;
+  document.getElementById('chartDetailTitle').textContent = `Service chart: ${serviceName}`;
 }
 
 async function loadChartData(){

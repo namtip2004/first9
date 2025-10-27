@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-// ถ้ายังไม่ได้ล็อกอิน
+// Redirect to login page when the staff member is not authenticated
 if (!isset($_SESSION['staff_id'])) {
     header("Location: loginadmin.php");
     exit;
@@ -150,7 +150,7 @@ for ($i = 6; $i >= 0; $i--) {
 ?>
 
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -215,7 +215,7 @@ for ($i = 6; $i >= 0; $i--) {
             <!-- Main content -->
             <!-- <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4"> -->
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">แดชบอร์ด</h1>
+                    <h1 class="h2">Dashboard</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <div class="btn-group me-2">
                             <a href="?period=today" class="btn btn-sm btn-outline-secondary <?= $period == 'today' ? 'active' : '' ?>">Today</a>
@@ -233,7 +233,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">การจอง</div>
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Bookings</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $kpiData['total_bookings'] ?></div>
                                     </div>
                                     <div class="col-auto">
@@ -249,7 +249,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">รายได้สุทธิ</div>
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Net Revenue</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800">฿<?= number_format($kpiData['net_revenue'], 2) ?></div>
                                     </div>
                                     <div class="col-auto">
@@ -265,7 +265,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">ลูกค้าทั้งหมด</div>
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Customers</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $kpiData['total_customers'] ?></div>
                                     </div>
                                     <div class="col-auto">
@@ -281,7 +281,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">บริการที่เปิดใช้งาน</div>
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Active Services</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $kpiData['active_services'] ?></div>
                                     </div>
                                     <div class="col-auto">
@@ -300,7 +300,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">พนักงาน Active</div>
+                                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Active Staff</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $kpiData['active_staff'] ?></div>
                                     </div>
                                     <div class="col-auto">
@@ -317,7 +317,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">อัตราการยกเลิก</div>
+                                        <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Cancellation Rate</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800"><?= $kpiData['cancellation_rate'] ?>%</div>
                                     </div>
                                     <div class="col-auto">
@@ -333,7 +333,7 @@ for ($i = 6; $i >= 0; $i--) {
                             <div class="card-body">
                                 <div class="row no-gutters align-items-center">
                                     <div class="col mr-2">
-                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">ส่วนลดรวม</div>
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Discount</div>
                                         <div class="h5 mb-0 font-weight-bold text-gray-800">฿<?= number_format($kpiData['total_discount'], 2) ?></div>
                                     </div>
                                     <div class="col-auto">
@@ -351,7 +351,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-lg-8">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-graph-up me-2"></i>แนวโน้มรายได้ (7 วันล่าสุด)</h5>
+                                <h5><i class="bi bi-graph-up me-2"></i>Revenue Trend (Last 7 Days)</h5>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container">
@@ -365,7 +365,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-lg-4">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-pie-chart me-2"></i>บริการยอดนิยม</h5>
+                                <h5><i class="bi bi-pie-chart me-2"></i>Top Services</h5>
                             </div>
                             <div class="card-body">
                                 <div class="chart-container">
@@ -382,23 +382,23 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-12">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-list-ul me-2"></i>การจองล่าสุด</h5>
+                                <h5><i class="bi bi-list-ul me-2"></i>Recent Bookings</h5>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-striped table-hover">
                                         <thead>
                                             <tr>
-                                                <th>รหัสจอง</th>
-                                                <th>ลูกค้า</th>
-                                                <th>พนักงาน</th>
-                                                <th>วันที่จอง</th>
-                                                <th>เวลา</th>
-                                                <th>บริการ</th>
-                                                <th>ราคารวม</th>
-                                                <th>ส่วนลด</th>
-                                                <th>สุทธิ</th>
-                                                <th>สถานะ</th>
+                                                <th>Booking ID</th>
+                                                <th>Customer</th>
+                                                <th>Staff</th>
+                                                <th>Booking Date</th>
+                                                <th>Time</th>
+                                                <th>Services</th>
+                                                <th>Total Price</th>
+                                                <th>Discount</th>
+                                                <th>Net</th>
+                                                <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -421,10 +421,10 @@ for ($i = 6; $i >= 0; $i--) {
                                                     <?php
                                                     $statusCode = booking_status_code($booking['status']);
                                                     $statusTexts = [
-                                                        BOOKING_STATUS_CONFIRMED => 'ยืนยันแล้ว',
-                                                        BOOKING_STATUS_PENDING => 'รอยืนยัน',
-                                                        BOOKING_STATUS_CANCELLED => 'ยกเลิก',
-                                                        BOOKING_STATUS_COMPLATE => 'เสร็จสิ้น'
+                                                        BOOKING_STATUS_CONFIRMED => 'Confirmed',
+                                                        BOOKING_STATUS_PENDING => 'Pending',
+                                                        BOOKING_STATUS_CANCELLED => 'Cancelled',
+                                                        BOOKING_STATUS_COMPLATE => 'Completed'
                                                     ];
                                                     $statusClass = booking_status_badge_class($statusCode);
                                                     $statusText = $statusTexts[$statusCode] ?? booking_status_label($statusCode);
@@ -447,7 +447,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-lg-6 mb-4">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-bar-chart me-2"></i>ประสิทธิภาพบริการ</h5>
+                                <h5><i class="bi bi-bar-chart me-2"></i>Service Performance</h5>
                             </div>
                             <div class="card-body">
                                 <?php 
@@ -458,7 +458,7 @@ for ($i = 6; $i >= 0; $i--) {
                                 <div class="mb-3">
                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                         <span><?= htmlspecialchars($service['service_name']) ?></span>
-                                        <span class="text-muted"><?= $percentage ?>% (<?= $service['booking_count'] ?> ครั้ง)</span>
+                                        <span class="text-muted"><?= $percentage ?>% (<?= $service['booking_count'] ?> bookings)</span>
                                     </div>
                                     <div class="progress" style="height: 8px;">
                                         <div class="progress-bar" style="width: <?= $percentage ?>%"></div>
@@ -473,7 +473,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-lg-6 mb-4">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-person-check me-2"></i>ประสิทธิภาพพนักงาน</h5>
+                                <h5><i class="bi bi-person-check me-2"></i>Staff Performance</h5>
                             </div>
                             <div class="card-body">
                                 <?php foreach ($staffPerformance as $staff): ?>
@@ -485,12 +485,12 @@ for ($i = 6; $i >= 0; $i--) {
                                         </div>
                                         <div>
                                             <h6 class="mb-0"><?= htmlspecialchars($staff['staff_name']) ?></h6>
-                                            <small class="text-muted">นักบำบัด</small>
+                                            <small class="text-muted">Therapist</small>
                                         </div>
                                     </div>
                                     <div class="text-end">
-                                        <div class="fw-bold text-primary"><?= $staff['booking_count'] ?> การจอง</div>
-                                        <small class="text-muted">฿<?= number_format($staff['total_revenue'], 0) ?> รายได้</small>
+                                        <div class="fw-bold text-primary"><?= $staff['booking_count'] ?> bookings</div>
+                                        <small class="text-muted">฿<?= number_format($staff['total_revenue'], 0) ?> revenue</small>
                                     </div>
                                 </div>
                                 <?php endforeach; ?>
@@ -505,24 +505,24 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-lg-4 mb-4">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-cash-stack me-2"></i>สรุปการเงิน</h5>
+                                <h5><i class="bi bi-cash-stack me-2"></i>Financial Summary</h5>
                             </div>
                             <div class="card-body">
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">รายได้รวม</span>
+                                        <span class="text-muted">Gross Revenue</span>
                                         <span class="fw-bold">฿<?= number_format($kpiData['total_revenue'], 2) ?></span>
                                     </div>
                                 </div>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">ส่วนลดรวม</span>
+                                        <span class="text-muted">Total Discount</span>
                                         <span class="text-danger">-฿<?= number_format($kpiData['total_discount'], 2) ?></span>
                                     </div>
                                 </div>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">รายได้สุทธิ</span>
+                                        <span class="text-muted">Net Revenue</span>
                                         <span class="fw-bold text-success fs-5">฿<?= number_format($kpiData['net_revenue'], 2) ?></span>
                                     </div>
                                 </div>
@@ -542,13 +542,13 @@ for ($i = 6; $i >= 0; $i--) {
                                 ?>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">ชำระแล้ว</span>
+                                        <span class="text-muted">Paid</span>
                                         <span class="text-success">฿<?= number_format($paymentData['paid'], 2) ?></span>
                                     </div>
                                 </div>
                                 <div>
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">รอชำระ</span>
+                                        <span class="text-muted">Pending Payment</span>
                                         <span class="text-warning">฿<?= number_format($paymentData['pending_payment'], 2) ?></span>
                                     </div>
                                 </div>
@@ -561,7 +561,7 @@ for ($i = 6; $i >= 0; $i--) {
                     <div class="col-lg-4 mb-4">
                         <div class="card">
                             <div class="card-header">
-                                <h5><i class="bi bi-person-hearts me-2"></i>ข้อมูลลูกค้า</h5>
+                                <h5><i class="bi bi-person-hearts me-2"></i>Customer Insights</h5>
                             </div>
                             <div class="card-body">
                                 <?php
@@ -587,31 +587,31 @@ for ($i = 6; $i >= 0; $i--) {
                                 ?>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">ลูกค้าใหม่ (30 วัน)</span>
-                                        <span class="fw-bold text-success"><?= $customerInsights['new_customers'] ?> คน</span>
+                                        <span class="text-muted">New Customers (30 days)</span>
+                                        <span class="fw-bold text-success"><?= $customerInsights['new_customers'] ?> customers</span>
                                     </div>
                                 </div>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">ลูกค้าทั้งหมด</span>
-                                        <span class="fw-bold"><?= $customerInsights['total_customers'] ?> คน</span>
+                                        <span class="text-muted">Total Customers</span>
+                                        <span class="fw-bold"><?= $customerInsights['total_customers'] ?> customers</span>
                                     </div>
                                 </div>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">มูลค่าเฉลี่ย/คน</span>
+                                        <span class="text-muted">Average Spend per Customer</span>
                                         <span class="fw-bold">฿<?= number_format($customerInsights['avg_order_value'] ?? 0, 2) ?></span>
                                     </div>
                                 </div>
                                 <div class="mb-3 pb-3 border-bottom">
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">อัตราลูกค้ากลับมา</span>
+                                        <span class="text-muted">Return Rate</span>
                                         <span class="fw-bold text-success"><?= $returnRate ?>%</span>
                                     </div>
                                 </div>
                                 <div>
                                     <div class="d-flex justify-content-between">
-                                        <span class="text-muted">คะแนนเฉลี่ย</span>
+                                        <span class="text-muted">Average Rating</span>
                                         <span class="fw-bold text-warning">4.8/5.0</span>
                                     </div>
                                 </div>
@@ -632,13 +632,13 @@ for ($i = 6; $i >= 0; $i--) {
             </button>
             <ul class="dropdown-menu">
                 <li><a class="dropdown-item" href="add_booking.php">
-                    <i class="bi bi-calendar-plus me-2"></i>เพิ่มการจอง
+                    <i class="bi bi-calendar-plus me-2"></i>New Booking
                 </a></li>
                 <li><a class="dropdown-item" href="add_customer.php">
-                    <i class="bi bi-person-plus me-2"></i>เพิ่มลูกค้า
+                    <i class="bi bi-person-plus me-2"></i>New Customer
                 </a></li>
                 <li><a class="dropdown-item" href="add_service.php">
-                    <i class="bi bi-spa me-2"></i>เพิ่มบริการ
+                    <i class="bi bi-spa me-2"></i>New Service
                 </a></li>
             </ul>
         </div>
@@ -658,7 +658,7 @@ for ($i = 6; $i >= 0; $i--) {
                 labels: revenueData.map(d => d.date),
                 datasets: [
                     {
-                        label: 'รายได้รวม (฿)',
+                        label: 'Gross Revenue (฿)',
                         data: revenueData.map(d => d.revenue),
                         borderColor: '#0d6efd',
                         backgroundColor: 'rgba(13, 110, 253, 0.1)',
@@ -667,7 +667,7 @@ for ($i = 6; $i >= 0; $i--) {
                         tension: 0.4
                     },
                     {
-                        label: 'รายได้สุทธิ (฿)',
+                        label: 'Net Revenue (฿)',
                         data: revenueData.map(d => d.net_revenue),
                         borderColor: '#198754',
                         backgroundColor: 'rgba(25, 135, 84, 0.1)',

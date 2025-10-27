@@ -171,9 +171,9 @@ if ($statusCode === BOOKING_STATUS_PENDING) {
         <tr>
           <th>Service</th>
           <th class="text-center" style="width:120px;">Minutes</th>
-          <th class="text-end" style="width:140px;">Price (฿)</th>
-          <th class="text-end" style="width:140px;">Discount (฿)</th>
-          <th class="text-end" style="width:140px;">Net (฿)</th>
+          <th class="text-end" style="width:140px;">Price (€)</th>
+          <th class="text-end" style="width:140px;">Discount (€)</th>
+          <th class="text-end" style="width:140px;">Net (€)</th>
         </tr>
       </thead>
       <tbody>
@@ -191,9 +191,9 @@ if ($statusCode === BOOKING_STATUS_PENDING) {
         <tr class="fw-semibold">
           <td class="text-end">Total</td>
           <td class="text-center"><?= (int)$totalMinutes ?></td>
-          <td class="text-end">฿<?= number_format($totalPrice, 2) ?></td>
-          <td class="text-end">฿<?= number_format($totalDiscount, 2) ?></td>
-          <td class="text-end">฿<?= number_format($totalNet, 2) ?></td>
+          <td class="text-end"><?= number_format($totalPrice, 2) ?></td>
+          <td class="text-end"><?= number_format($totalDiscount, 2) ?></td>
+          <td class="text-end"><?= number_format($totalNet, 2) ?></td>
         </tr>
       </tfoot>
     </table>
@@ -206,7 +206,7 @@ if ($statusCode === BOOKING_STATUS_PENDING) {
       <table class="table table-bordered summary-table mb-4">
         <tr>
           <th>Total Discount</th>
-          <td>฿<?= number_format((float)($booking['total_discount'] ?? $totalDiscount), 2) ?></td>
+          <td>€<?= number_format((float)($booking['total_discount'] ?? $totalDiscount), 2) ?></td>
         </tr>
         <tr>
           <th>Discount Detail</th>

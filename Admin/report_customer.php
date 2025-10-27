@@ -47,19 +47,19 @@ if (isset($_GET['action']) && $_GET['action']==='stats') {
     $bucketExpr = "DATE_FORMAT(c_created_at,'%d')";
     $whereRange = "YEAR(c_created_at)=$year AND MONTH(c_created_at)=$month";
     $baseCutoff = sprintf('%04d-%02d-01', $year, $month);
-    $axis = 'วัน';
+    $axis = 'Days';
   } elseif ($period==='year') {
     $labels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
     $bucketExpr = "DATE_FORMAT(c_created_at,'%m')";
     $whereRange = "YEAR(c_created_at)=$year";
     $baseCutoff = sprintf('%04d-01-01', $year);
-    $axis = 'เดือน';
+    $axis = 'Months';
   } else { // all
     for ($y=$start_year; $y<=$end_year; $y++) $labels[]=(string)$y;
     $bucketExpr = "YEAR(c_created_at)";
     $whereRange = "YEAR(c_created_at) BETWEEN $start_year AND $end_year";
     $baseCutoff = sprintf('%04d-01-01', $start_year);
-    $axis = 'ปี';
+    $axis = 'Years';
   }
 
   // counts per bucket by gender
@@ -235,7 +235,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 };
 ?>
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Customer Report</title>
@@ -264,18 +264,18 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 <main id="main" class="main">
 
   <div class="pagetitle">
-    <h1>รายงานลูกค้า (Customer Report)</h1>
+    <h1>Customer Report</h1>
   </div>
 
   <!-- Tabs -->
   <ul class="nav nav-tabs nav-tabs-bordered" id="custTabs" role="tablist">
     <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="table-tab" data-bs-toggle="tab" data-bs-target="#tab-table" type="button" role="tab">ตาราง</button>
+      <button class="nav-link active" id="table-tab" data-bs-toggle="tab" data-bs-target="#tab-table" type="button" role="tab">Table</button>
     </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="chart-tab" data-bs-toggle="tab" data-bs-target="#tab-chart" type="button" role="tab">กราฟ</button>
+    <!-- <li class="nav-item" role="presentation">
+      <button class="nav-link" id="chart-tab" data-bs-toggle="tab" data-bs-target="#tab-chart" type="button" role="tab">Chart</button>
     </li>
-  </ul>
+  </ul> -->
 
   <div class="tab-content" id="custTabsContent">
     <!-- TAB: TABLE (AGGREGATED) -->
@@ -286,35 +286,35 @@ $pageUrl = function(int $target) use ($baseQuery): string {
             <form class="row g-2 align-items-end" method="get">
               <input type="hidden" name="tab" value="table">
               <div class="col-auto">
-                <label class="form-label small-label">ค้นหา</label>
-                <input type="text" class="form-control" name="q" value="<?= safe($search) ?>" placeholder="ID / ชื่อลูกค้า">
+                <label class="form-label small-label">Search</label>
+                <input type="text" class="form-control" name="q" value="<?= safe($search) ?>" placeholder="ID / Customer name">
               </div>
               <div class="col-auto">
-                <label class="form-label small-label">สถานะ</label>
+                <label class="form-label small-label">Status</label>
                 <select class="form-select" name="status">
-                  <option value="all"      <?= $status==='all'?'selected':'' ?>>ทั้งหมด</option>
+                  <option value="all"      <?= $status==='all'?'selected':'' ?>>All</option>
                   <option value="active"   <?= $status==='active'?'selected':'' ?>>Active</option>
                   <option value="inactive" <?= $status==='inactive'?'selected':'' ?>>Inactive</option>
                 </select>
               </div>
               <div class="col-auto">
-                <label class="form-label small-label">เพศ</label>
+                <label class="form-label small-label">Gender</label>
                 <select class="form-select" name="gender">
-                  <option value="all"    <?= $genderTable==='all'?'selected':'' ?>>ทั้งหมด</option>
+                  <option value="all"    <?= $genderTable==='all'?'selected':'' ?>>All</option>
                   <option value="male"   <?= $genderTable==='male'?'selected':'' ?>>male</option>
                   <option value="female" <?= $genderTable==='female'?'selected':'' ?>>female</option>
-                  <option value="other"  <?= $genderTable==='other'?'selected':'' ?>>other/ไม่ระบุ</option>
+                  <option value="other"  <?= $genderTable==='other'?'selected':'' ?>>other/unspecified</option>
                 </select>
               </div>
               <div class="col-auto">
-                <label class="form-label small-label">ช่วงอายุ</label>
+                <label class="form-label small-label">Age range</label>
                 <select class="form-select" name="age_range">
-                  <option value="all"     <?= $ageRange==='all'?'selected':'' ?>>ทั้งหมด</option>
-                  <option value="under20" <?= $ageRange==='under20'?'selected':'' ?>>ต่ำกว่า 20</option>
+                  <option value="all"     <?= $ageRange==='all'?'selected':'' ?>>All</option>
+                  <option value="under20" <?= $ageRange==='under20'?'selected':'' ?>>Under 20</option>
                   <option value="20_29"   <?= $ageRange==='20_29'?'selected':'' ?>>20-29</option>
                   <option value="30_39"   <?= $ageRange==='30_39'?'selected':'' ?>>30-39</option>
                   <option value="40_49"   <?= $ageRange==='40_49'?'selected':'' ?>>40-49</option>
-                  <option value="50plus"  <?= $ageRange==='50plus'?'selected':'' ?>>50 ขึ้นไป</option>
+                  <option value="50plus"  <?= $ageRange==='50plus'?'selected':'' ?>>50 and above</option>
                 </select>
               </div>
               <div class="col-auto">
@@ -322,20 +322,20 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                 <div class="input-group">
                   <select class="form-select" name="sort">
                     <option value="customer_id"   <?= $sort==='customer_id'?'selected':'' ?>>ID</option>
-                    <option value="customer_name" <?= $sort==='customer_name'?'selected':'' ?>>ชื่อ</option>
+                    <option value="customer_name" <?= $sort==='customer_name'?'selected':'' ?>>Name</option>
                   </select>
                   <select class="form-select" name="dir">
-                    <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>น้อย-มาก / A-Z</option>
-                    <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>มาก-น้อย / Z-A</option>
+                    <option value="ASC"  <?= $dir==='ASC'?'selected':'' ?>>Ascending / A-Z</option>
+                    <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>Descending / Z-A</option>
                   </select>
                 </div>
               </div>
               <div class="col-auto">
-                <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
+                <button class="btn btn-primary"><i class="bi bi-search"></i> Apply filters</button>
               </div>
             </form>
             <div class="ms-auto">
-              <span class="badge bg-primary">จำนวนทั้งหมด: <?= number_format($totalRows) ?> ราย</span>
+              <span class="badge bg-primary">Total records: <?= number_format($totalRows) ?></span>
             </div>
           </div>
 
@@ -356,7 +356,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               </thead>
               <tbody>
               <?php if(empty($rows)): ?>
-                <tr><td colspan="9" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="9" class="text-center text-muted">No data found</td></tr>
               <?php else: foreach($rows as $r):
                 $ageText = '-';
                 if ($r['age_years'] !== null) {
@@ -382,7 +382,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   <td class="text-end"><span class="badge bg-primary"><?= number_format((int)$r['total_bookings']) ?></span></td>
                   <td class="text-end text-success fw-bold">฿<?= number_format((float)$r['total_spent'], 2) ?></td>
                   <td>
-                    <a href="customer_bookings.php?id=<?= (int)$r['customer_id'] ?>" class="btn btn-sm btn-outline-primary">ดูการจอง</a>
+                    <a href="customer_bookings.php?id=<?= (int)$r['customer_id'] ?>" class="btn btn-sm btn-outline-primary">View bookings</a>
                   </td>
                 </tr>
               <?php endforeach; endif; ?>
@@ -392,17 +392,17 @@ $pageUrl = function(int $target) use ($baseQuery): string {
 
           <?php if ($pages > 1): ?>
           <div class="d-flex justify-content-between align-items-center mt-3">
-            <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+            <span class="text-muted">Page <?=number_format($page)?> / <?=number_format($pages)?></span>
             <div class="btn-group">
               <?php if ($page > 1): ?>
-                <a class="btn btn-outline-secondary" href="<?=safe($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+                <a class="btn btn-outline-secondary" href="<?=safe($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> Previous</a>
               <?php else: ?>
-                <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+                <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> Previous</span>
               <?php endif; ?>
               <?php if ($page < $pages): ?>
-                <a class="btn btn-outline-primary" href="<?=safe($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+                <a class="btn btn-outline-primary" href="<?=safe($pageUrl($page+1))?>">Next <i class="bi bi-chevron-right"></i></a>
               <?php else: ?>
-                <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+                <span class="btn btn-outline-primary disabled">Next <i class="bi bi-chevron-right"></i></span>
               <?php endif; ?>
             </div>
           </div>
@@ -419,7 +419,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           <!-- Filters (legend toggles gender lines; keep series selector) -->
           <div class="row g-3 align-items-end">
             <div class="col-12 col-md-auto">
-              <label class="form-label small-label">ช่วงเวลา</label>
+              <label class="form-label small-label">Time range</label>
               <div class="btn-group" role="group">
                 <input type="radio" class="btn-check" name="period" id="p_all" value="all">
                 <label class="btn btn-outline-primary" for="p_all">All</label>
@@ -430,16 +430,16 @@ $pageUrl = function(int $target) use ($baseQuery): string {
               </div>
             </div>
             <div class="col-12 col-md-auto">
-              <label class="form-label small-label">ซี่รี่ส์ข้อมูล</label>
+              <label class="form-label small-label">Data series</label>
               <select id="series" class="form-select">
-                <option value="new" selected>สมัครใหม่</option>
-                <option value="total">ทั้งหมด (สะสม)</option>
+                <option value="new" selected>New sign-ups</option>
+                <option value="total">Total (cumulative)</option>
               </select>
             </div>
 
             <!-- Period-specific controls -->
             <div class="col-12 col-md-auto period-control" id="ctl-month">
-              <label class="form-label small-label">เดือน/ปี</label>
+              <label class="form-label small-label">Month / Year</label>
               <div class="d-flex gap-2">
                 <select id="month" class="form-select">
                   <?php for($m=1;$m<=12;$m++): ?>
@@ -452,21 +452,21 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   <?php endfor; ?>
                 </select>
               </div>
-              <!-- <div class="form-text">แสดงรายวันของเดือนที่เลือก</div> -->
+              <!-- <div class="form-text">Shows daily totals for the selected month</div> -->
             </div>
 
             <div class="col-12 col-md-auto period-control d-none" id="ctl-year">
-              <label class="form-label small-label">ปี</label>
+              <label class="form-label small-label">Year</label>
               <select id="year_y" class="form-select">
                 <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
                 <option value="<?= $y ?>" <?= $y==(int)date('Y')?'selected':'' ?>><?= $y ?></option>
                 <?php endfor; ?>
               </select>
-              <!-- <div class="form-text">แสดงรายเดือนของปีที่เลือก</div> -->
+              <!-- <div class="form-text">Shows monthly totals for the selected year</div> -->
             </div>
 
             <div class="col-12 col-md-auto period-control d-none" id="ctl-all">
-              <label class="form-label small-label">ช่วงปี</label>
+              <label class="form-label small-label">Year range</label>
               <div class="d-flex gap-2">
                 <select id="start_year" class="form-select">
                   <?php for($y=$minYear;$y<=$maxYear;$y++): ?>
@@ -479,11 +479,11 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   <?php endfor; ?>
                 </select>
               </div>
-              <!-- <div class="form-text">แสดงรายปีตามช่วงที่เลือก</div> -->
+              <!-- <div class="form-text">Shows yearly totals for the selected range</div> -->
             </div>
 
             <div class="col-12 col-md-auto">
-              <button id="applyFilters" class="btn btn-primary"><i class="bi bi-filter"></i> ใช้ตัวกรอง</button>
+              <button id="applyFilters" class="btn btn-primary"><i class="bi bi-filter"></i> Apply filters</button>
             </div>
           </div>
 
@@ -495,7 +495,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   <div class="card-icon bg-primary-light"><i class="bi bi-people fs-3 text-primary"></i></div>
                   <div>
                     <p class="kpi-value" id="kpi_total">0</p>
-                    <p class="kpi-label">จำนวนรวมทั้งหมด</p>
+                    <p class="kpi-label">Total customers</p>
                   </div>
                 </div>
               </div>
@@ -506,7 +506,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   <div class="card-icon bg-success-light"><i class="bi bi-person-check fs-3 text-success"></i></div>
                   <div>
                     <p class="kpi-value" id="kpi_active">0</p>
-                    <p class="kpi-label">เฉพาะ Active</p>
+                    <p class="kpi-label">Active customers</p>
                   </div>
                 </div>
               </div>
@@ -517,7 +517,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   <div class="card-icon bg-warning-light"><i class="bi bi-person-plus fs-3"></i></div>
                   <div>
                     <p class="kpi-value" id="kpi_new">0</p>
-                    <p class="kpi-label">New เดือนนี้</p>
+                    <p class="kpi-label">New this month</p>
                   </div>
                 </div>
               </div>
@@ -528,7 +528,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
           <div class="mt-3" style="min-height:360px">
             <canvas id="custLineChart" height="120"></canvas>
           </div>
-          <!-- <div class="legend-note mt-2">* คลิกสี่เหลี่ยมสีใน Legend เพื่อเปิด–ปิดเส้น (ทั้งหมด/ชาย/หญิง)</div> -->
+          <!-- <div class="legend-note mt-2">* Click a legend item to toggle the line (All/Male/Female)</div> -->
 
         </div>
       </div>
@@ -591,9 +591,9 @@ async function loadStats(){
     data:{
       labels,
       datasets:[
-        { label:'ทั้งหมด', data:seriesAll,    tension:.3, pointRadius:3, borderWidth:2 },
-        { label:'ชาย',     data:seriesMale,   tension:.3, pointRadius:3, borderWidth:2 },
-        { label:'หญิง',    data:seriesFemale, tension:.3, pointRadius:3, borderWidth:2 }
+        { label:'All',    data:seriesAll,    tension:.3, pointRadius:3, borderWidth:2 },
+        { label:'Male',   data:seriesMale,   tension:.3, pointRadius:3, borderWidth:2 },
+        { label:'Female', data:seriesFemale, tension:.3, pointRadius:3, borderWidth:2 }
       ]
     },
     options:{

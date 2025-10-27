@@ -111,10 +111,10 @@ if ($maxPercent === 0.0) {
                             <?php foreach ($service['options'] as $option): ?>
                               <tr>
                                 <td class="text-center"><?= (int) $option['duration'] ?></td>
-                                <td class="text-end">฿<?= number_format((float) $option['price'], 2) ?></td>
+                                <td class="text-end">€<?= number_format((float) $option['price'], 2) ?></td>
                                 <td class="text-center"><?= number_format((float) $option['discount_percent'], 2) ?></td>
-                                <td class="text-end">฿<?= number_format((float) $option['discount_amount'], 2) ?></td>
-                                <td class="text-end">฿<?= number_format((float) $option['final_price'], 2) ?></td>
+                                <td class="text-end">€<?= number_format((float) $option['discount_amount'], 2) ?></td>
+                                <td class="text-end">€<?= number_format((float) $option['final_price'], 2) ?></td>
                               </tr>
                             <?php endforeach; ?>
                           </tbody>

@@ -53,7 +53,7 @@ if ($action === 'stats') {
             $labels[] = str_pad((string)$d, 2, '0', STR_PAD_LEFT);
         }
         $bucketExpr = "DATE_FORMAT(b.booking_date,'%d')";
-        $axisLabel = 'วัน';
+        $axisLabel = 'Day';
         $rangeWhere[] = 'YEAR(b.booking_date) = ?';
         $typesRange .= 'i';
         $paramsRange[] = $year;
@@ -65,7 +65,7 @@ if ($action === 'stats') {
     } elseif ($period === 'year') {
         $labels = ['01','02','03','04','05','06','07','08','09','10','11','12'];
         $bucketExpr = "DATE_FORMAT(b.booking_date,'%m')";
-        $axisLabel = 'เดือน';
+        $axisLabel = 'Month';
         $rangeWhere[] = 'YEAR(b.booking_date) = ?';
         $typesRange .= 'i';
         $paramsRange[] = $year;
@@ -79,7 +79,7 @@ if ($action === 'stats') {
             $labels[] = (string)$y;
         }
         $bucketExpr = 'YEAR(b.booking_date)';
-        $axisLabel = 'ปี';
+        $axisLabel = 'Year';
         $rangeWhere[] = 'YEAR(b.booking_date) BETWEEN ? AND ?';
         $typesRange .= 'ii';
         $paramsRange[] = $startYear;
@@ -702,7 +702,7 @@ while ($pr = $res->fetch_assoc()) {
 $res->close();
 ?>
 <!doctype html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Promotion Report</title>
@@ -723,10 +723,10 @@ $res->close();
 <?php include('slidebar.php'); ?>
 <main id="main" class="main">
 
-  <div class="pagetitle"><h1>รายงานโปรโมชั่น (Promotion)</h1></div>
+  <div class="pagetitle"><h1>Promotion Report</h1></div>
 
   <ul class="nav nav-tabs" role="tablist">
-    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-table" type="button">ตาราง</button></li>
+    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-table" type="button">Table</button></li>
   </ul>
 
   <div class="tab-content">
@@ -738,60 +738,60 @@ $res->close();
           <form class="row g-2 align-items-end flex-grow-1" method="get">
             <input type="hidden" name="tab" value="table">
             <div class="col-sm-6 col-lg-3">
-              <label class="form-label small-label">ค้นหา (ID หรือชื่อ)</label>
-              <input type="text" class="form-control" name="q" value="<?=esc($search)?>" placeholder="เช่น 123 หรือ ชื่อโปรโมชั่น">
+              <label class="form-label small-label">Search (ID or name)</label>
+              <input type="text" class="form-control" name="q" value="<?=esc($search)?>" placeholder="e.g. 123 or promotion name">
             </div>
             <div class="col-sm-4 col-lg-2">
-              <label class="form-label small-label">สถานะโปรโมชั่น</label>
+              <label class="form-label small-label">Promotion status</label>
               <select class="form-select" name="promo_status">
-                <option value="all" <?= $promoStatus==='all'?'selected':'' ?>>ทั้งหมด</option>
-                <option value="running" <?= $promoStatus==='running'?'selected':'' ?>>กำลังใช้งาน</option>
-                <option value="upcoming" <?= $promoStatus==='upcoming'?'selected':'' ?>>รอเริ่ม</option>
-                <option value="ended" <?= $promoStatus==='ended'?'selected':'' ?>>สิ้นสุด</option>
+                <option value="all" <?= $promoStatus==='all'?'selected':'' ?>>All</option>
+                <option value="running" <?= $promoStatus==='running'?'selected':'' ?>>Running</option>
+                <option value="upcoming" <?= $promoStatus==='upcoming'?'selected':'' ?>>Upcoming</option>
+                <option value="ended" <?= $promoStatus==='ended'?'selected':'' ?>>Ended</option>
               </select>
             </div>
             <div class="col-sm-4 col-lg-2">
-              <label class="form-label small-label">ช่วงเวลา</label>
+              <label class="form-label small-label">Date range</label>
               <select class="form-select" name="period_type" id="period_type">
-                <option value="all" <?= $periodType==='all'?'selected':'' ?>>ทั้งหมด</option>
-                <option value="date" <?= $periodType==='date'?'selected':'' ?>>วันที่</option>
-                <option value="month" <?= $periodType==='month'?'selected':'' ?>>เดือน</option>
-                <option value="year" <?= $periodType==='year'?'selected':'' ?>>ปี</option>
+                <option value="all" <?= $periodType==='all'?'selected':'' ?>>All time</option>
+                <option value="date" <?= $periodType==='date'?'selected':'' ?>>Specific dates</option>
+                <option value="month" <?= $periodType==='month'?'selected':'' ?>>Month</option>
+                <option value="year" <?= $periodType==='year'?'selected':'' ?>>Year</option>
               </select>
             </div>
             <div class="col-sm-6 col-lg-3 period-input <?= $periodType==='date'?'':'d-none' ?>" data-period="date">
-              <label class="form-label small-label">เลือกวันที่</label>
+              <label class="form-label small-label">Choose date</label>
               <input type="date" class="form-control" name="period_date" value="<?=esc($periodDate)?>">
             </div>
             <div class="col-sm-6 col-lg-3 period-input <?= $periodType==='month'?'':'d-none' ?>" data-period="month">
-              <label class="form-label small-label">เลือกเดือน</label>
+              <label class="form-label small-label">Choose month</label>
               <input type="month" class="form-control" name="period_month" value="<?=esc($periodMonth)?>">
             </div>
             <div class="col-sm-4 col-lg-2 period-input <?= $periodType==='year'?'':'d-none' ?>" data-period="year">
-              <label class="form-label small-label">เลือกปี</label>
+              <label class="form-label small-label">Choose year</label>
               <input type="number" class="form-control" name="period_year" value="<?=esc($periodYear)?>" min="2000" max="2100" step="1">
             </div>
             <div class="col-sm-6 col-lg-3">
               <label class="form-label small-label">Sort by</label>
               <div class="d-flex gap-2">
                 <select class="form-select" name="sort" id="sort_field">
-                  <option value="name" <?= $sort==='name'?'selected':'' ?>>ชื่อ</option>
-                  <option value="popularity" <?= $sort==='popularity'?'selected':'' ?>>ความนิยม</option>
+                  <option value="name" <?= $sort==='name'?'selected':'' ?>>Name</option>
+                  <option value="popularity" <?= $sort==='popularity'?'selected':'' ?>>Popularity</option>
                 </select>
                 <select class="form-select" name="dir" id="sort_direction">
-                  <option value="ASC" <?= $dir==='ASC'?'selected':'' ?>><?= $sort==='name' ? 'A - Z' : 'น้อยไปมาก' ?></option>
-                  <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>><?= $sort==='name' ? 'Z - A' : 'มากไปน้อย' ?></option>
+                  <option value="ASC" <?= $dir==='ASC'?'selected':'' ?>><?= $sort==='name' ? 'A - Z' : 'Low to High' ?></option>
+                  <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>><?= $sort==='name' ? 'Z - A' : 'High to Low' ?></option>
                 </select>
               </div>
             </div>
             <div class="col-auto">
-              <button class="btn btn-primary"><i class="bi bi-search"></i> ใช้ตัวกรอง</button>
+              <button class="btn btn-primary"><i class="bi bi-search"></i> Apply filters</button>
             </div>
           </form>
           <div class="ms-auto d-flex flex-column flex-sm-row align-items-sm-center gap-2 mt-3 mt-sm-0">
-            <span class="badge bg-primary">โปรโมชั่น: <?=number_format($totalRows)?></span>
-            <span class="badge bg-info text-dark">จำนวนการใช้รวมหน้านี้ <?=number_format($tableTotals['booking_count'])?></span>
-            <span class="badge bg-danger">ส่วนลดรวมหน้านี้ -<?=number_format($tableTotals['discount_sum'],2)?></span>
+            <span class="badge bg-primary">Promotions: <?=number_format($totalRows)?></span>
+            <span class="badge bg-info text-dark">Usage (this page) <?=number_format($tableTotals['booking_count'])?></span>
+            <span class="badge bg-danger">Discount total (this page) -<?=number_format($tableTotals['discount_sum'],2)?></span>
           </div>
         </div>
 
@@ -800,17 +800,17 @@ $res->close();
             <thead class="table-light">
               <tr>
                 <th>ID</th>
-                <th>ชื่อโปรโมชั่น</th>
-                <th>สถานะ</th>
-                <th>ช่วงเวลา</th>
-                <th class="text-center">บริการ</th>
-                <th class="text-end">จำนวนการใช้</th>
-                <th class="text-end">ส่วนลดทั้งหมด</th>
+                <th>Promotion name</th>
+                <th>Status</th>
+                <th>Period</th>
+                <th class="text-center">Services</th>
+                <th class="text-end">Usage count</th>
+                <th class="text-end">Total discount</th>
               </tr>
             </thead>
             <tbody id="promotionTableBody">
               <?php if (empty($rows)): ?>
-                <tr><td colspan="7" class="text-center text-muted">ไม่พบข้อมูล</td></tr>
+                <tr><td colspan="7" class="text-center text-muted">No data found</td></tr>
               <?php else: foreach ($rows as $row):
                 $status = promotionStatus($row['pm_start_date'] ?? '', $row['pm_end_date'] ?? '');
                 $badgeClass = promotion_status_badge_class($status);
@@ -831,7 +831,7 @@ $res->close();
                 <td><span class="badge <?=$badgeClass?>"><?= esc($statusLabel) ?></span></td>
                 <td>
                   <div><?= esc(formatDateTimeDisplay($row['pm_start_date'] ?? '')) ?></div>
-                  <div class="text-muted small">ถึง <?= esc(formatDateTimeDisplay($row['pm_end_date'] ?? '')) ?></div>
+                  <div class="text-muted small">to <?= esc(formatDateTimeDisplay($row['pm_end_date'] ?? '')) ?></div>
                 </td>
                 <td class="text-center">
                   <?php if ($serviceCount > 0): ?>
@@ -854,7 +854,7 @@ $res->close();
             <?php if (!empty($rows)): ?>
             <tfoot>
               <tr class="table-light">
-                <th colspan="5" class="text-end">รวม (เฉพาะรายการในหน้านี้)</th>
+                <th colspan="5" class="text-end">Total (this page)</th>
                 <th class="text-end"><?= number_format($tableTotals['booking_count']) ?></th>
                 <th class="text-end text-danger">-<?= number_format($tableTotals['discount_sum'], 2) ?></th>
               </tr>
@@ -865,17 +865,17 @@ $res->close();
 
         <?php if ($pages > 1): ?>
         <div class="d-flex justify-content-between align-items-center mt-3">
-          <span class="text-muted">หน้า <?=number_format($page)?> / <?=number_format($pages)?></span>
+          <span class="text-muted">Page <?=number_format($page)?> / <?=number_format($pages)?></span>
           <div class="btn-group">
             <?php if ($page > 1): ?>
-              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> ก่อนหน้า</a>
+              <a class="btn btn-outline-secondary" href="<?=esc($pageUrl($page-1))?>"><i class="bi bi-chevron-left"></i> Previous</a>
             <?php else: ?>
-              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> ก่อนหน้า</span>
+              <span class="btn btn-outline-secondary disabled"><i class="bi bi-chevron-left"></i> Previous</span>
             <?php endif; ?>
             <?php if ($page < $pages): ?>
-              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">ถัดไป <i class="bi bi-chevron-right"></i></a>
+              <a class="btn btn-outline-primary" href="<?=esc($pageUrl($page+1))?>">Next <i class="bi bi-chevron-right"></i></a>
             <?php else: ?>
-              <span class="btn btn-outline-primary disabled">ถัดไป <i class="bi bi-chevron-right"></i></span>
+              <span class="btn btn-outline-primary disabled">Next <i class="bi bi-chevron-right"></i></span>
             <?php endif; ?>
           </div>
         </div>
@@ -889,11 +889,11 @@ $res->close();
               <h5 class="mb-1" id="usageTitle">-</h5>
               <div class="text-muted small" id="usageRange"></div>
             </div>
-            <button type="button" class="btn btn-outline-secondary" id="usageBack"><i class="bi bi-arrow-left"></i> กลับไปตาราง</button>
+            <button type="button" class="btn btn-outline-secondary" id="usageBack"><i class="bi bi-arrow-left"></i> Back to table</button>
           </div>
           <div class="mb-3 d-flex flex-wrap gap-2">
-            <span class="badge bg-primary">จำนวนการใช้ทั้งหมด <span id="usageTotal">0</span></span>
-            <span class="badge bg-danger">ส่วนลดรวม <span id="usageDiscount">0.00</span></span>
+            <span class="badge bg-primary">Total usage <span id="usageTotal">0</span></span>
+            <span class="badge bg-danger">Total discount <span id="usageDiscount">0.00</span></span>
           </div>
           <div class="ratio ratio-16x9">
             <canvas id="usageLineChart"></canvas>
@@ -911,12 +911,12 @@ $res->close();
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="serviceModalLabel">รายละเอียดบริการ</h5>
+        <h5 class="modal-title" id="serviceModalLabel">Service details</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <div id="serviceModalContent" class="vstack gap-3">
-          <div class="text-center text-muted">กำลังโหลด...</div>
+          <div class="text-center text-muted">Loading...</div>
         </div>
       </div>
     </div>
@@ -948,8 +948,8 @@ function updateSortDirectionLabels(){
     asc.textContent='A - Z';
     desc.textContent='Z - A';
   }else{
-    asc.textContent='น้อยไปมาก';
-    desc.textContent='มากไปน้อย';
+    asc.textContent='Low to High';
+    desc.textContent='High to Low';
   }
 }
 sortField?.addEventListener('change',updateSortDirectionLabels);
@@ -985,15 +985,15 @@ const serviceModalContent=document.getElementById('serviceModalContent');
 
 const nf0=v=>Number(v||0).toLocaleString();
 const nf2=v=>Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-function formatThaiDate(str){
+function formatDisplayDate(str){
   if(!str) return '-';
   const match=/^(\d{4})-(\d{2})-(\d{2})/.exec(str);
   if(!match) return str;
   const year=parseInt(match[1],10);
-  const month=match[2];
-  const day=match[3];
-  if(Number.isNaN(year)) return str;
-  return `${day}/${month}/${year+543}`;
+  const month=parseInt(match[2],10);
+  const day=parseInt(match[3],10);
+  if(Number.isNaN(year)||Number.isNaN(month)||Number.isNaN(day)) return str;
+  return new Date(year,month-1,day).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'2-digit'});
 }
 
 const tableBody=document.getElementById('promotionTableBody');
@@ -1002,8 +1002,8 @@ tableBody?.addEventListener('click',async event=>{
   if(serviceBtn){
     if(!serviceModal||!serviceModalContent) return;
     const promotionId=serviceBtn.dataset.promotionId||'';
-    serviceModalLabel.textContent=`รายละเอียดบริการ - ${serviceBtn.dataset.promotionName||''}`;
-    serviceModalContent.innerHTML='<div class="text-center text-muted py-3">กำลังโหลด...</div>';
+    serviceModalLabel.textContent=`Service details - ${serviceBtn.dataset.promotionName||''}`;
+    serviceModalContent.innerHTML='<div class="text-center text-muted py-3">Loading...</div>';
     serviceModal.show();
     try{
       const url=new URL(location.href);
@@ -1017,7 +1017,7 @@ tableBody?.addEventListener('click',async event=>{
       const data=await res.json();
       const services=Array.isArray(data.services)?data.services:[];
       if(services.length===0){
-        serviceModalContent.innerHTML='<div class="text-center text-muted py-3">ไม่มีข้อมูลบริการสำหรับโปรโมชั่นนี้</div>';
+        serviceModalContent.innerHTML='<div class="text-center text-muted py-3">No services are linked to this promotion.</div>';
         return;
       }
       serviceModalContent.innerHTML='';
@@ -1026,14 +1026,14 @@ tableBody?.addEventListener('click',async event=>{
         wrapper.className='border rounded p-3';
         const title=document.createElement('h6');
         title.className='mb-2';
-        title.textContent=service.service_name||'ไม่ระบุบริการ';
+        title.textContent=service.service_name||'Unnamed service';
         wrapper.appendChild(title);
         const stack=document.createElement('div');
         stack.className='vstack gap-2';
         (service.options||[]).forEach(option=>{
           const item=document.createElement('div');
           item.className='border rounded p-2';
-          const duration=option.duration?`${option.duration} นาที`:'ตัวเลือกบริการ';
+          const duration=option.duration?`${option.duration} minutes`:'Service option';
           const basePrice=nf2(option.price);
           const finalPrice=nf2(option.final_price||option.price);
           const percent=Number(option.discount_percent||0);
@@ -1041,16 +1041,16 @@ tableBody?.addEventListener('click',async event=>{
           const discountParts=[];
           if(percent>0){discountParts.push(`${percent}%`);}
           if(amount>0){discountParts.push(`฿${nf2(amount)}`);}
-          const discountText=discountParts.length>0?discountParts.join(' / '):'ไม่มีส่วนลด';
+          const discountText=discountParts.length>0?discountParts.join(' / '):'No discount';
           item.innerHTML=
             `<div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
                <div>
                  <div class="fw-semibold">${duration}</div>
-                 <div class="text-muted small">ราคาเดิม ฿${basePrice}</div>
+                 <div class="text-muted small">Base price ฿${basePrice}</div>
                </div>
                <div class="text-end">
                  <div class="text-danger fw-semibold">-${discountText}</div>
-                 <div class="text-success small">ราคาใหม่ ฿${finalPrice}</div>
+                 <div class="text-success small">New price ฿${finalPrice}</div>
                </div>
              </div>`;
           stack.appendChild(item);
@@ -1058,7 +1058,7 @@ tableBody?.addEventListener('click',async event=>{
         if(!stack.childElementCount){
           const empty=document.createElement('div');
           empty.className='text-muted small';
-          empty.textContent='ไม่มีตัวเลือกบริการที่ร่วมโปรโมชั่น';
+          empty.textContent='No service options are linked to this promotion.';
           stack.appendChild(empty);
         }
         wrapper.appendChild(stack);
@@ -1066,7 +1066,7 @@ tableBody?.addEventListener('click',async event=>{
       });
     }catch(err){
       console.error(err);
-      serviceModalContent.innerHTML='<div class="text-center text-danger py-3">ไม่สามารถโหลดข้อมูลบริการได้</div>';
+      serviceModalContent.innerHTML='<div class="text-center text-danger py-3">Unable to load service data.</div>';
     }
     return;
   }
@@ -1074,8 +1074,8 @@ tableBody?.addEventListener('click',async event=>{
   const usageBtn=event.target.closest('.usage-chart-btn');
   if(usageBtn){
     event.preventDefault();
-    usageTitle.textContent=`การใช้โปรโมชั่น: ${usageBtn.dataset.promotionName||''}`;
-    usageRange.textContent='กำลังโหลดข้อมูล...';
+    usageTitle.textContent=`Promotion usage: ${usageBtn.dataset.promotionName||''}`;
+    usageRange.textContent='Loading data...';
     usageTotal.textContent='0';
     usageDiscount.textContent='0.00';
     usageView?.classList.remove('d-none');
@@ -1096,7 +1096,7 @@ tableBody?.addEventListener('click',async event=>{
       const data=await res.json();
       const labels=Array.isArray(data.chart?.labels)?data.chart.labels:[];
       const usageData=Array.isArray(data.chart?.usage)?data.chart.usage:[];
-      usageRange.textContent=`ช่วง ${formatThaiDate(data.promotion?.start)} - ${formatThaiDate(data.promotion?.end)}`;
+      usageRange.textContent=`Range ${formatDisplayDate(data.promotion?.start)} - ${formatDisplayDate(data.promotion?.end)}`;
       usageTotal.textContent=nf0(data.summary?.total_usage||0);
       usageDiscount.textContent=`-${nf2(data.summary?.total_discount||0)}`;
       if(usageCanvas){
@@ -1106,7 +1106,7 @@ tableBody?.addEventListener('click',async event=>{
           data:{
             labels,
             datasets:[{
-              label:'จำนวนการใช้',
+              label:'Usage count',
               data:usageData,
               borderColor:'#0d6efd',
               backgroundColor:'rgba(13,110,253,0.15)',
@@ -1119,8 +1119,8 @@ tableBody?.addEventListener('click',async event=>{
             responsive:true,
             maintainAspectRatio:false,
             scales:{
-              x:{title:{display:true,text:'ช่วงเวลา'}},
-              y:{beginAtZero:true,title:{display:true,text:'จำนวนการใช้'}}
+              x:{title:{display:true,text:'Timeline'}},
+              y:{beginAtZero:true,title:{display:true,text:'Usage count'}}
             },
             plugins:{
               legend:{display:true},
@@ -1131,7 +1131,7 @@ tableBody?.addEventListener('click',async event=>{
       }
     }catch(err){
       console.error(err);
-      usageRange.textContent='ไม่สามารถโหลดกราฟได้';
+      usageRange.textContent='Unable to load the chart.';
     }
   }
 });

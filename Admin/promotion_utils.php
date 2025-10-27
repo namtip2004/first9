@@ -105,7 +105,7 @@ if (!function_exists('promotionStatusLabel')) {
             'upcoming' => 'upcoming',
             'running' => 'running',
             'ended' => 'ended',
-            default => 'ไม่ทราบ',
+            default => 'unknown',
         };
     }
 }

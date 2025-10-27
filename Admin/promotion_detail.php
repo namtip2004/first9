@@ -4,7 +4,7 @@ require_once 'promotion_utils.php';
 
 $promotionId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($promotionId <= 0) {
-    echo 'ไม่พบข้อมูลโปรโมชั่น';
+    echo 'Promotion not found.';
     exit;
 }
 
@@ -15,7 +15,7 @@ $promotion = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$promotion) {
-    echo 'ไม่พบข้อมูลโปรโมชั่น';
+    echo 'Promotion not found.';
     exit;
 }
 
@@ -47,7 +47,7 @@ if ($maxPercent === 0.0) {
 
   <main id="main" class="main">
     <div class="pagetitle">
-      <h1>รายละเอียดโปรโมชั่น</h1>
+      <h1>Promotion Details</h1>
     </div>
 
     <section class="section">
@@ -58,37 +58,37 @@ if ($maxPercent === 0.0) {
 
               <div class="row mb-3">
                 <div class="col-md-6">
-                  <h5>ข้อมูลทั่วไป</h5>
+                  <h5>General Information</h5>
                   <dl class="row mb-0">
-                    <dt class="col-sm-4">ชื่อโปรโมชั่น</dt>
+                    <dt class="col-sm-4">Promotion Name</dt>
                     <dd class="col-sm-8"><?= htmlspecialchars($promotion['pm_name'] ?? '-') ?></dd>
-                    <dt class="col-sm-4">วัน-เวลาเริ่มต้น</dt>
+                    <dt class="col-sm-4">Start Date &amp; Time</dt>
                     <dd class="col-sm-8"><?= htmlspecialchars(formatDateTimeDisplay($promotion['pm_start_date'] ?? '')) ?></dd>
-                    <dt class="col-sm-4">วัน-เวลาสิ้นสุด</dt>
+                    <dt class="col-sm-4">End Date &amp; Time</dt>
                     <dd class="col-sm-8"><?= htmlspecialchars(formatDateTimeDisplay($promotion['pm_end_date'] ?? '')) ?></dd>
-                    <dt class="col-sm-4">สถานะ</dt>
+                    <dt class="col-sm-4">Status</dt>
                     <dd class="col-sm-8"><?= htmlspecialchars(promotionStatusLabel($status)) ?></dd>
-                    <dt class="col-sm-4">ส่วนลดสูงสุด</dt>
+                    <dt class="col-sm-4">Maximum Discount</dt>
                     <dd class="col-sm-8"><?= number_format($maxPercent, 2) ?>%</dd>
                     <?php if (in_array('pm_created_at', $columns, true) && !empty($promotion['pm_created_at'])): ?>
-                      <dt class="col-sm-4">สร้างเมื่อ</dt>
+                      <dt class="col-sm-4">Created At</dt>
                       <dd class="col-sm-8"><?= htmlspecialchars(formatDateTimeDisplay($promotion['pm_created_at'])) ?></dd>
                     <?php endif; ?>
                   </dl>
                 </div>
                 <div class="col-md-6">
-                  <h5>หมายเหตุ</h5>
+                  <h5>Notes</h5>
                   <?php if (!empty($promotion['description'])): ?>
                     <p><?= nl2br(htmlspecialchars($promotion['description'])) ?></p>
                   <?php else: ?>
-                    <p class="text-muted">ไม่มีรายละเอียดเพิ่มเติม</p>
+                    <p class="text-muted">No additional details.</p>
                   <?php endif; ?>
                 </div>
               </div>
 
-              <h5>บริการและส่วนลด</h5>
+              <h5>Services &amp; Discounts</h5>
               <?php if (empty($services)): ?>
-                <p class="text-muted">ไม่พบบริการในโปรโมชั่นนี้</p>
+                <p class="text-muted">No services in this promotion.</p>
               <?php else: ?>
                 <?php foreach ($services as $service): ?>
                   <div class="card border mb-3">
@@ -100,11 +100,11 @@ if ($maxPercent === 0.0) {
                         <table class="table table-bordered table-sm mb-0">
                           <thead class="table-light">
                             <tr>
-                              <th class="text-center" style="width: 120px;">ระยะเวลา (นาที)</th>
-                              <th class="text-end" style="width: 140px;">ราคาปกติ</th>
-                              <th class="text-center" style="width: 120px;">ส่วนลด (%)</th>
-                              <th class="text-end" style="width: 140px;">จำนวนส่วนลด</th>
-                              <th class="text-end" style="width: 140px;">ราคาหลังหัก</th>
+                              <th class="text-center" style="width: 120px;">Duration (minutes)</th>
+                              <th class="text-end" style="width: 140px;">Regular Price</th>
+                              <th class="text-center" style="width: 120px;">Discount (%)</th>
+                              <th class="text-end" style="width: 140px;">Discount Amount</th>
+                              <th class="text-end" style="width: 140px;">Final Price</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -126,8 +126,8 @@ if ($maxPercent === 0.0) {
               <?php endif; ?>
 
               <div class="mt-3 text-center">
-                <a href="promotion_update_form.php?id=<?= $promotionId ?>" class="btn btn-primary">แก้ไข</a>
-                <a href="table_promotion.php" class="btn btn-secondary">ย้อนกลับ</a>
+                <a href="promotion_update_form.php?id=<?= $promotionId ?>" class="btn btn-primary">Edit</a>
+                <a href="table_promotion.php" class="btn btn-secondary">Back</a>
               </div>
 
             </div>

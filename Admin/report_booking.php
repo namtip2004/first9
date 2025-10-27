@@ -564,7 +564,7 @@ $pageUrl = function(int $target) use ($baseQuery): string {
                   </td>
                   <td><?=esc($bk['services']?:'N/A')?></td>
                   <td><?=esc($bk['staff_name']?:'N/A')?></td>
-                  <td class="text-end">฿<?=number_format((float)($bk['total_price'] ?? 0),2)?></td>
+                  <td class="text-end">€<?=number_format((float)($bk['total_price'] ?? 0),2)?></td>
                   <td class="text-end text-danger">฿<?=number_format((float)($bk['total_discount'] ?? 0),2)?></td>
                   <td class="text-end text-success fw-bold">฿<?=number_format((float)$bk['final_price'],2)?></td>
                   <td>

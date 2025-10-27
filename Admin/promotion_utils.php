@@ -102,9 +102,9 @@ if (!function_exists('promotionStatusLabel')) {
     function promotionStatusLabel(string $status): string
     {
         return match ($status) {
-            'upcoming' => 'ยังไม่เริ่ม',
-            'running' => 'กำลังดำเนินการ',
-            'ended' => 'สิ้นสุด',
+            'upcoming' => 'upcoming',
+            'running' => 'running',
+            'ended' => 'ended',
             default => 'ไม่ทราบ',
         };
     }
@@ -581,7 +581,7 @@ if (!function_exists('summarizePromotionDiscountDetail')) {
                 foreach ($promotion['options'] as $option) {
                     $label = ($option['service_name'] ?? 'Service') . ' ' . ($option['duration'] ?? '-') . ' นาที';
                     $discount = number_format((float) ($option['discount_amount'] ?? 0), 2);
-                    $lines[] = "- {$label} ลด ฿{$discount}";
+                    $lines[] = "- {$label} ลด €{$discount}";
                 }
             }
         }

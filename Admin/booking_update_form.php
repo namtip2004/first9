@@ -131,7 +131,7 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
       </tr>
       <tr>
         <th>ราคารวมโดยประมาณ</th>
-        <td>฿<?= number_format($totalPrice,2) ?></td>
+        <td>€<?= number_format($totalPrice,2) ?></td>
       </tr>
     </table>
 
@@ -145,7 +145,7 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
           <tr>
             <th>บริการ</th>
             <th class="text-center" style="width:120px;">นาที</th>
-            <th class="text-end" style="width:140px;">ราคา (฿)</th>
+            <th class="text-end" style="width:140px;">ราคา (€)</th>
           </tr>
         </thead>
         <tbody>
@@ -161,7 +161,7 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
           <tr class="fw-semibold">
             <td class="text-end">รวม</td>
             <td class="text-center"><?= (int)$totalMinutes ?></td>
-            <td class="text-end">฿<?= number_format($totalPrice,2) ?></td>
+            <td class="text-end">€<?= number_format($totalPrice,2) ?></td>
           </tr>
         </tfoot>
       </table>

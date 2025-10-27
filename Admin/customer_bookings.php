@@ -214,7 +214,7 @@ $statusOptions = [
                 <i class="bi bi-currency-baht"></i>
               </div>
               <div class="ps-3">
-                <h6>฿<?= number_format((float)($stats['total_spent'] ?? 0), 2) ?></h6>
+                <h6>€<?= number_format((float)($stats['total_spent'] ?? 0), 2) ?></h6>
                 <span class="text-muted small">ยอดใช้จ่ายทั้งหมด</span>
               </div>
             </div>
@@ -361,9 +361,9 @@ $statusOptions = [
                       <?php endif; ?>
                     </td>
                     <td><?= safe($booking['staff_name'] ?? '-') ?></td>
-                    <td class="text-end">฿<?= number_format((float)$booking['total_price'], 2) ?></td>
-                    <td class="text-end">฿<?= number_format((float)$booking['total_discount'], 2) ?></td>
-                    <td class="text-end text-success fw-bold">฿<?= number_format((float)$booking['final_price'], 2) ?></td>
+                    <td class="text-end">€<?= number_format((float)$booking['total_price'], 2) ?></td>
+                    <td class="text-end">€<?= number_format((float)$booking['total_discount'], 2) ?></td>
+                    <td class="text-end text-success fw-bold">€<?= number_format((float)$booking['final_price'], 2) ?></td>
                     <td><span class="badge <?= safe($badgeClass) ?>"><?= safe($statusText) ?></span></td>
                   </tr>
                   <?php endforeach; endif; ?>

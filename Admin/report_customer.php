@@ -272,10 +272,10 @@ $pageUrl = function(int $target) use ($baseQuery): string {
     <li class="nav-item" role="presentation">
       <button class="nav-link active" id="table-tab" data-bs-toggle="tab" data-bs-target="#tab-table" type="button" role="tab">Table</button>
     </li>
-    <li class="nav-item" role="presentation">
+    <!-- <li class="nav-item" role="presentation">
       <button class="nav-link" id="chart-tab" data-bs-toggle="tab" data-bs-target="#tab-chart" type="button" role="tab">Chart</button>
     </li>
-  </ul>
+  </ul> -->
 
   <div class="tab-content" id="custTabsContent">
     <!-- TAB: TABLE (AGGREGATED) -->

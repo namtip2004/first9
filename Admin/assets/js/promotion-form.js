@@ -102,15 +102,15 @@ function createOptionRow(option, enabled = true) {
   const isInitiallyEnabled = Boolean(enabled && (option.included !== false));
   const percentValue = clampPercent(option.discount_percent ?? 0);
 
-  // 1 แถว = 5 คอลัมน์ (ระยะเวลา, ราคาเดิม, % ส่วนลด, ราคาสุทธิ, เปิดใช้งาน)
-  // ใช้ inline style ทั้งหมด เพื่อตัดเส้นน้ำเงินตอน focus + ทำให้ดูเป็นตาราง
+  // One row renders five columns (Duration, Original Price, % Discount, Final Price, Enabled)
+  // Use inline styles to prevent blue focus outlines and maintain a table-like layout
  wrapper.innerHTML = `
   <div style="display:grid;grid-template-columns:1.2fr .8fr .9fr .9fr .7fr;
               gap:12px;align-items:center;
               padding:10px 12px;border-top:1px solid #eee;">
     <div style="min-width:0;">
       <div style="font-weight:600;color:#2b2b2b;">
-        ${option.duration ?? '-'} นาที
+        ${option.duration ?? '-'} minutes
       </div>
     </div>
 
@@ -136,13 +136,13 @@ function createOptionRow(option, enabled = true) {
         ${formatCurrency(option.final_price ?? option.price)}
       </span>
       <div style="font-size:12px;color:#7a7a7a;">
-        ส่วนลด <span data-discount-amount>
+        Discount <span data-discount-amount>
           ${formatCurrency(option.discount_amount ?? 0)}
         </span>
       </div>
     </div>
 
-    <!-- ช่องสวิตช์ เปิด/ปิด -->
+    <!-- Toggle switch column -->
     <div style="text-align:center;display:flex;justify-content:center;align-items:center;">
       <div class="form-check form-switch mb-0">
         <input class="form-check-input promotion-option-toggle shadow-none"
@@ -155,7 +155,7 @@ function createOptionRow(option, enabled = true) {
   </div>
 `;
 
-// ทำปุ่มสวิตช์มีปุ่มกลมเลื่อน
+// Style the switch with a rounded knob
 const toggle = wrapper.querySelector('.promotion-option-toggle');
 
 // events
@@ -165,10 +165,10 @@ percentInput.addEventListener('input', handlePercentInput);
 toggle.addEventListener('change', (e) => {
   const on = e.target.checked;
 
-  // ✅ ปิด/เปิดการกรอกเปอร์เซ็นต์เมื่อสวิตช์เปลี่ยน
+  // Toggle the percentage input when the switch changes
   percentInput.disabled = !on;
 
-  // ถ้าปิดให้รีเซ็ตส่วนลดเป็น 0 และคำนวณราคาใหม่
+  // When disabled, reset the discount to 0 and recalculate the price
   if (!on) {
     percentInput.value = 0;
     recalcOptionRow(wrapper);
@@ -197,14 +197,14 @@ function createServiceCard(service) {
       <button type="button" class="btn btn-sm btn-outline-danger" data-remove-service>&times;</button>
     </div>
     <div class="card-body p-0" style="border:1px solid #e0e0e0;border-top:none;border-bottom-left-radius:8px;border-bottom-right-radius:8px;overflow:hidden;">
-      <!-- หัวตาราง -->
+      <!-- Table header -->
       <div style="display:grid;grid-template-columns:1.2fr .8fr .9fr .9fr .7fr;gap:12px;align-items:center;
                   padding:10px 12px;background:#f8f9fa;font-weight:600;">
-        <div>ระยะเวลา</div>
-        <div style="text-align:center;">ราคาเดิม</div>
-        <div style="text-align:center;">ส่วนลด (%)</div>
-        <div style="text-align:center;">ราคาสุทธิ</div>
-        <div style="text-align:center;">เปิดใช้งาน</div>
+        <div>Duration</div>
+        <div style="text-align:center;">Original Price</div>
+        <div style="text-align:center;">Discount (%)</div>
+        <div style="text-align:center;">Final Price</div>
+        <div style="text-align:center;">Enabled</div>
       </div>
       <div data-option-container></div>
     </div>
@@ -380,14 +380,14 @@ function createServiceCard(service) {
   form.addEventListener('submit', function (event) {
     if (!validateDates()) {
       event.preventDefault();
-      alert('กรุณาระบุวันและเวลาที่ถูกต้อง');
+      alert('Please specify a valid start and end date/time.');
       return;
     }
 
     const payload = collectPayload();
     if (!payload.length) {
       event.preventDefault();
-      alert('กรุณาเลือกบริการและ option ที่ต้องการจัดโปรโมชั่น');
+      alert('Please select at least one service and option to include in the promotion.');
       return;
     }
 

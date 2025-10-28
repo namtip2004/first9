@@ -624,7 +624,7 @@ for ($i = 6; $i >= 0; $i--) {
     </div>
 
     <!-- Floating Action Button -->
-    <div class="position-fixed bottom-0 end-0 p-3">
+    <!-- <div class="position-fixed bottom-0 end-0 p-3">
         <div class="dropdown dropup">
             <button class="btn btn-primary rounded-circle" type="button" data-bs-toggle="dropdown" 
                     style="width: 60px; height: 60px;">
@@ -642,7 +642,7 @@ for ($i = 6; $i >= 0; $i--) {
                 </a></li>
             </ul>
         </div>
-    </div>
+    </div> -->
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

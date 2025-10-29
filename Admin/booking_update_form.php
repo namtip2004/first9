@@ -16,10 +16,10 @@ $stmt = $conn->prepare("
 $stmt->bind_param("i", $booking_id);
 $stmt->execute();
 $booking = $stmt->get_result()->fetch_assoc();
-if (!$booking) { echo "ไม่พบข้อมูลการจอง"; exit; }
+if (!$booking) { echo "Booking information not found."; exit; }
 $stmt->close();
 
-// รายการบริการ
+// Service list
 $svc = $conn->prepare("
   SELECT s.service_name, o.duration, o.price
   FROM booking_seviceop bs
@@ -38,10 +38,10 @@ $totalPrice   = array_sum(array_map(fn($r)=> (float)$r['price'], $selected));
 $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='active' ORDER BY staff_name");
 ?>
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>แก้ไขการจอง</title>
+  <title>Edit Booking</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <style>
@@ -61,20 +61,20 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
         <div class="col-lg-12">
           <div class="card">
             <div class="card-body">
-  <h1 class="mb-3">แก้ไขการจอง #<?= htmlspecialchars($booking['booking_id']) ?></h1>
+  <h1 class="mb-3">Edit Booking #<?= htmlspecialchars($booking['booking_id']) ?></h1>
 
   <form action="booking_update_process.php" method="POST" id="editForm">
     <input type="hidden" name="booking_id" value="<?= $booking['booking_id'] ?>">
 
-    <!-- ส่วนแก้ไข -->
+    <!-- Editable details -->
 
-    <h5 class="section-title">ข้อมูลที่สามารถแก้ไขได้</h5>
+    <h5 class="section-title">Editable Information</h5>
     <div class="row mb-3">
     <div class="col-md-6">
   <label class="form-label">
-    วันที่จอง
+    Booking Date
     <small class="text-muted ms-2">
-      วันที่เดิม: <?= htmlspecialchars(substr($booking['booking_date'], 0, 10)) ?>
+      Current date: <?= htmlspecialchars(substr($booking['booking_date'], 0, 10)) ?>
     </small>
   </label>
   <input type="text"
@@ -83,18 +83,18 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
          class="form-control"
          value=""  
          required>
-  <div class="form-text">เลือกได้ไม่เกิน 3 เดือนนับจากวันนี้</div>
+  <div class="form-text">Select no more than three months from today.</div>
 </div>
       <div class="col-md-3">
-        <label class="form-label">เวลาเริ่ม</label>
+        <label class="form-label">Start Time</label>
         <select name="start_time" id="start_time" class="form-select" required>
-          <option value="">เลือกเวลา</option>
+          <option value="">Choose a time</option>
         </select>
       </div>
       <div class="col-md-3">
-        <label class="form-label">ผู้ให้บริการ</label>
+        <label class="form-label">Service Provider</label>
         <select name="staff_id" id="staff_id" class="form-select" required>
-          <option value="">เลือกผู้ให้บริการ</option>
+          <option value="">Choose a provider</option>
           <?php while($s = $staffs->fetch_assoc()): ?>
             <option value="<?= $s['staff_id'] ?>"><?= htmlspecialchars($s['staff_name']) ?></option>
           <?php endwhile; ?>
@@ -102,50 +102,50 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
       </div>
     </div>
 
-    <!-- ส่วนสรุป -->
-    <h5 class="section-title">สรุปข้อมูลการจอง</h5>
+    <!-- Summary section -->
+    <h5 class="section-title">Booking Summary</h5>
     <table class="table table-bordered summary-table mb-4">
       <tr>
-        <th style="width:30%">หมายเลขการจอง</th>
+        <th style="width:30%">Booking Number</th>
         <td>#<?= htmlspecialchars($booking['booking_id']) ?></td>
       </tr>
       <tr>
-        <th>ลูกค้า</th>
+        <th>Customer</th>
         <td>
           <?= htmlspecialchars($booking['customer_name'] ?? '—') ?><br>
-          <?php if(!empty($booking['tel'])): ?>โทร. <?= htmlspecialchars($booking['tel']) ?><br><?php endif; ?>
-          <?php if(!empty($booking['email'])): ?><?= htmlspecialchars($booking['email']) ?><?php endif; ?>
+          <?php if(!empty($booking['tel'])): ?>Tel. <?= htmlspecialchars($booking['tel']) ?><br><?php endif; ?>
+          <?php if(!empty($booking['gmail'])): ?><?= htmlspecialchars($booking['gmail']) ?><?php endif; ?>
         </td>
       </tr>
       <tr>
-        <th>วัน–เวลา (เดิม)</th>
+        <th>Original Date &amp; Time</th>
         <td><?= htmlspecialchars($booking['booking_date']) ?>, <?= htmlspecialchars($booking['time_start']) ?>–<?= htmlspecialchars($booking['time_end']) ?></td>
       </tr>
       <tr>
-        <th>ผู้ให้บริการ (เดิม)</th>
+        <th>Original Provider</th>
         <td><?= htmlspecialchars($booking['staff_name'] ?? '—') ?></td>
       </tr>
       <tr>
-        <th>ระยะเวลารวม</th>
-        <td><?= (int)$totalMinutes ?> นาที</td>
+        <th>Total Duration</th>
+        <td><?= (int)$totalMinutes ?> minutes</td>
       </tr>
       <tr>
-        <th>ราคารวมโดยประมาณ</th>
+        <th>Estimated Total Price</th>
         <td>€<?= number_format($totalPrice,2) ?></td>
       </tr>
     </table>
 
-    <!-- รายการบริการ -->
-    <h5 class="section-title">รายละเอียดบริการ</h5>
+    <!-- Selected services -->
+    <h5 class="section-title">Service Details</h5>
     <?php if (empty($selected)): ?>
-      <p class="text-muted">ไม่มีรายการบริการ</p>
+      <p class="text-muted">No services selected.</p>
     <?php else: ?>
       <table class="table table-bordered table-sm">
         <thead class="table-light">
           <tr>
-            <th>บริการ</th>
-            <th class="text-center" style="width:120px;">นาที</th>
-            <th class="text-end" style="width:140px;">ราคา (€)</th>
+            <th>Service</th>
+            <th class="text-center" style="width:120px;">Minutes</th>
+            <th class="text-end" style="width:140px;">Price (€)</th>
           </tr>
         </thead>
         <tbody>
@@ -159,7 +159,7 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
         </tbody>
         <tfoot>
           <tr class="fw-semibold">
-            <td class="text-end">รวม</td>
+            <td class="text-end">Total</td>
             <td class="text-center"><?= (int)$totalMinutes ?></td>
             <td class="text-end">€<?= number_format($totalPrice,2) ?></td>
           </tr>
@@ -168,8 +168,8 @@ $staffs = $conn->query("SELECT staff_id, staff_name FROM staff WHERE st_status='
     <?php endif; ?>
 
     <div class="mt-4">
-      <button type="submit" class="btn btn-primary">บันทึกการแก้ไข</button>
-      <a href="booking_detail.php?id=<?= $booking_id ?>" class="btn btn-outline-secondary">ยกเลิก</a>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="booking_detail.php?id=<?= $booking_id ?>" class="btn btn-outline-secondary">Cancel</a>
     </div>
   </form>
   
@@ -195,13 +195,13 @@ function loadTimes(dateStr) {
     .then(r => r.json())
     .then(list => {
       const sel = document.getElementById('start_time');
-      // ตัดวินาทีออกให้เหลือ HH:MM เพื่อให้เทียบกับลิสต์ได้
+      // Remove seconds so we only compare HH:MM with the fetched list
       const current = "<?= htmlspecialchars(substr($booking['time_start'], 0, 5)) ?>";
 
-      // 1) แก้ placeholder: ห้ามใช้ value="current"
-      sel.innerHTML = '<option value="">เลือกเวลา</option>';
+      // 1) Update placeholder: never use value="current"
+      sel.innerHTML = '<option value="">Choose a time</option>';
 
-      // เติมเวลาที่ว่าง + เช็คว่าเจอเวลาเดิมไหม
+      // Populate available times and check if the original slot is still present
       let found = false;
       list.forEach(t => {
         const opt = document.createElement('option');
@@ -214,17 +214,17 @@ function loadTimes(dateStr) {
         sel.appendChild(opt);
       });
 
-      // ถ้าเวลาเดิมไม่อยู่ในลิสต์ → ใส่รายการแจ้งเตือน (disabled) ให้ผู้ใช้เห็นว่า “เวลาเดิมไม่ว่าง”
+      // If the original time is missing, insert a disabled notice so users know the original time is unavailable
       if (current && !found) {
         const cur = document.createElement('option');
         cur.value = '';
-        cur.textContent = `เวลาปัจจุบัน: ${current} (ไม่ว่าง)`;
+        cur.textContent = `Current time: ${current} (unavailable)`;
         cur.selected = true;
         cur.disabled = true;
-        sel.insertBefore(cur, sel.firstChild.nextSibling); // วางถัดจาก placeholder
+        sel.insertBefore(cur, sel.firstChild.nextSibling); // Insert right after the placeholder option
       }
 
-      // เรียกโหลด staff เฉพาะกรณีที่มีเวลาเลือกได้จริงแล้ว
+      // Only fetch staff when there are valid time slots
       if (found) loadStaff();
     })
     .catch(console.error);
@@ -232,7 +232,7 @@ function loadTimes(dateStr) {
 
 function loadStaff() {
   const d = document.getElementById('booking_date').value;
-  const t = document.getElementById('start_time').value; // จะเป็น '' ถ้ายังไม่ได้เลือก
+  const t = document.getElementById('start_time').value; // Will be '' if no time has been chosen
   if (!d || !t || !TOTAL_MINUTES) return;
 
   fetch(`get_available_staff.php?date=${d}&start_time=${t}&duration=${TOTAL_MINUTES}`)
@@ -240,7 +240,7 @@ function loadStaff() {
     .then(list => {
       const sel = document.getElementById('staff_id');
       const currentStaff = "<?= (int)$booking['staff_id'] ?>";
-      sel.innerHTML = '<option value="">เลือกผู้ให้บริการ</option>';
+      sel.innerHTML = '<option value="">Choose a provider</option>';
       list.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.staff_id;
@@ -255,7 +255,7 @@ function loadStaff() {
 document.addEventListener('DOMContentLoaded', function() {
   const dbDateStr = "<?= htmlspecialchars(substr($booking['booking_date'], 0, 10)) ?>";
 
-  // สร้าง today / +3 เดือน แบบ local (ไม่ใช้ new Date("YYYY-MM-DD"))
+  // Build today and +3 month ranges in local time (avoid new Date("YYYY-MM-DD"))
   const now = new Date();
   const todayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const maxLocal   = new Date(now.getFullYear(), now.getMonth() + 3, now.getDate());
@@ -264,20 +264,20 @@ document.addEventListener('DOMContentLoaded', function() {
   const todayStr = fmt(todayLocal);
   const maxStr   = fmt(maxLocal);
 
-  // เลือกค่าเริ่มต้นที่ใช้งานได้ในช่วง
+  // Determine the initial value that is within the allowed range
   const initialStr = (dbDateStr && dbDateStr >= todayStr && dbDateStr <= maxStr) ? dbDateStr : todayStr;
 
   flatpickr("#booking_date", {
     dateFormat: "Y-m-d",
-    defaultDate: initialStr,   // ใช้สตริงเท่านั้น
+    defaultDate: initialStr,   // Must be a string
     minDate: todayStr,
     maxDate: maxStr,
     disableMobile: true,
-    // inline: true, // ถ้าอยากให้ปฏิทินโชว์ตลอด
+    // inline: true, // Enable to display the calendar at all times
     onChange: (_, dateStr) => { if (dateStr) loadTimes(dateStr); }
   });
 
-  // โหลดช่วงเวลาเริ่มต้นตาม initialStr
+  // Load the initial available time slots based on the initial date
   loadTimes(initialStr);
   document.getElementById('start_time').addEventListener('change', loadStaff);
 });

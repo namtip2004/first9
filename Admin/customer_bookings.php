@@ -9,13 +9,13 @@ $confirmedStatus = BOOKING_STATUS_CONFIRMED;
 $completedStatus  = BOOKING_STATUS_COMPLATE;
 
 if (!isset($_GET['id']) || !ctype_digit((string)$_GET['id'])) {
-    echo "ไม่พบ Customer ID";
+    echo "Customer ID not found";
     exit;
 }
 
 $customer_id = (int)$_GET['id'];
 
-// ดึงข้อมูลลูกค้า
+// Fetch customer details
 $sql_customer = "SELECT customer_name FROM customer WHERE customer_id = ?";
 $stmt_customer = $conn->prepare($sql_customer);
 $stmt_customer->bind_param("i", $customer_id);
@@ -25,7 +25,7 @@ $customer = $customer_result->fetch_assoc();
 $stmt_customer->close();
 
 if (!$customer) {
-    echo "ไม่พบข้อมูลลูกค้า";
+    echo "Customer information not found";
     exit;
 }
 
@@ -38,7 +38,7 @@ $sort         = $_GET['sort'] ?? 'created_at';
 $dir          = strtoupper($_GET['dir'] ?? 'DESC');
 $dir          = $dir === 'ASC' ? 'ASC' : 'DESC';
 
-// ดึงสถิติการ์ด
+// Fetch statistics for summary cards
 $stats_sql = "SELECT
     COUNT(*) AS total_bookings,
     COALESCE(SUM(final_price), 0) AS total_spent,
@@ -58,7 +58,7 @@ $stats = $stats_result->fetch_assoc() ?: [
 ];
 $stmt_stats->close();
 
-// ตัวกรองการค้นหา
+// Build search filters
 $whereParts = ["b.customer_id = ?"];
 $types      = "i";
 $params     = [$customer_id];
@@ -162,7 +162,7 @@ if (!empty($bookings)) {
 }
 
 $statusOptions = [
-    'all'      => 'ทั้งหมด',
+    'all'      => 'All',
     'pending'  => 'Pending',
     'confirmed'=> 'Confirmed',
     'complate' => 'Completed',
@@ -171,7 +171,7 @@ $statusOptions = [
 
 ?>
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <?php include("header.php"); ?>
 <?php include("slidebar.php"); ?>
 
@@ -192,14 +192,14 @@ $statusOptions = [
       <div class="col-xxl-3 col-md-6">
         <div class="card info-card sales-card">
           <div class="card-body">
-            <h5 class="card-title">Total Book</h5>
+            <h5 class="card-title">Total Bookings</h5>
             <div class="d-flex align-items-center">
               <div class="card-icon rounded-circle d-flex align-items-center justify-content-center">
                 <i class="bi bi-calendar-check"></i>
               </div>
               <div class="ps-3">
                 <h6><?= number_format((int)($stats['total_bookings'] ?? 0)) ?></h6>
-                <span class="text-muted small">จำนวนการจองทั้งหมด</span>
+                <span class="text-muted small">Total bookings</span>
               </div>
             </div>
           </div>
@@ -215,7 +215,7 @@ $statusOptions = [
               </div>
               <div class="ps-3">
                 <h6>€<?= number_format((float)($stats['total_spent'] ?? 0), 2) ?></h6>
-                <span class="text-muted small">ยอดใช้จ่ายทั้งหมด</span>
+                <span class="text-muted small">Total spending</span>
               </div>
             </div>
           </div>
@@ -231,7 +231,7 @@ $statusOptions = [
               </div>
               <div class="ps-3">
                 <h6><?= number_format((int)($stats['confirmed_bookings'] ?? 0)) ?></h6>
-                <span class="text-muted small">ยืนยันแล้ว</span>
+                <span class="text-muted small">Confirmed</span>
               </div>
             </div>
           </div>
@@ -247,7 +247,7 @@ $statusOptions = [
               </div>
               <div class="ps-3">
                 <h6><?= number_format((int)($stats['completed_bookings'] ?? 0)) ?></h6>
-                <span class="text-muted small">เสร็จสมบูรณ์</span>
+                <span class="text-muted small">Completed</span>
               </div>
             </div>
           </div>
@@ -260,14 +260,14 @@ $statusOptions = [
         <div class="card">
           <div class="card-body">
             <div class="d-flex flex-wrap align-items-center justify-content-between">
-              <h5 class="card-title mb-0">รายละเอียดการจอง</h5>
-              <span class="badge bg-primary">ทั้งหมด <?= number_format(count($bookings)) ?> รายการ</span>
+              <h5 class="card-title mb-0">Booking Details</h5>
+              <span class="badge bg-primary">Total <?= number_format(count($bookings)) ?> records</span>
             </div>
 
             <form class="row g-3 align-items-end mt-2" method="get">
               <input type="hidden" name="id" value="<?= (int)$customer_id ?>">
               <div class="col-md-3">
-                <label class="form-label">สถานะ</label>
+                <label class="form-label">Status</label>
                 <select class="form-select" name="status">
                   <?php foreach ($statusOptions as $value => $label): ?>
                   <option value="<?= safe($value) ?>" <?= $statusFilter === $value ? 'selected' : '' ?>><?= safe($label) ?></option>
@@ -275,42 +275,42 @@ $statusOptions = [
                 </select>
               </div>
               <div class="col-md-3">
-                <label class="form-label">ช่วงเวลา</label>
+                <label class="form-label">Period</label>
                 <select class="form-select" name="period" id="periodSelect">
-                  <option value="all" <?= $period==='all'?'selected':'' ?>>ทั้งหมด</option>
-                  <option value="day" <?= $period==='day'?'selected':'' ?>>รายวัน</option>
-                  <option value="month" <?= $period==='month'?'selected':'' ?>>รายเดือน</option>
-                  <option value="year" <?= $period==='year'?'selected':'' ?>>รายปี</option>
+                  <option value="all" <?= $period==='all'?'selected':'' ?>>All</option>
+                  <option value="day" <?= $period==='day'?'selected':'' ?>>Daily</option>
+                  <option value="month" <?= $period==='month'?'selected':'' ?>>Monthly</option>
+                  <option value="year" <?= $period==='year'?'selected':'' ?>>Yearly</option>
                 </select>
               </div>
               <div class="col-md-3 period-input <?= $period==='day'?'':'d-none' ?>" id="period-day">
-                <label class="form-label">เลือกวันที่</label>
+                <label class="form-label">Select date</label>
                 <input type="date" class="form-control" name="day" value="<?= safe($dayValue) ?>">
               </div>
               <div class="col-md-3 period-input <?= $period==='month'?'':'d-none' ?>" id="period-month">
-                <label class="form-label">เลือกเดือน</label>
+                <label class="form-label">Select month</label>
                 <input type="month" class="form-control" name="month_value" value="<?= safe($monthValue) ?>">
               </div>
               <div class="col-md-3 period-input <?= $period==='year'?'':'d-none' ?>" id="period-year">
-                <label class="form-label">เลือกปี</label>
+                <label class="form-label">Select year</label>
                 <input type="number" class="form-control" name="year_value" value="<?= safe($yearValue) ?>" min="2000" max="2100">
               </div>
               <div class="col-md-3">
                 <label class="form-label">Sort by</label>
                 <select class="form-select" name="sort">
-                  <option value="created_at" <?= $sort==='created_at'?'selected':'' ?>>วันเวลาที่ทำการจอง</option>
-                  <option value="service_time" <?= $sort==='service_time'?'selected':'' ?>>วันเวลาที่เข้าใช้บริการ</option>
+                  <option value="created_at" <?= $sort==='created_at'?'selected':'' ?>>Booking created</option>
+                  <option value="service_time" <?= $sort==='service_time'?'selected':'' ?>>Service appointment</option>
                 </select>
               </div>
               <div class="col-md-3">
-                <label class="form-label">ลำดับ</label>
+                <label class="form-label">Order</label>
                 <select class="form-select" name="dir">
-                  <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>ใหม่-เก่า</option>
-                  <option value="ASC" <?= $dir==='ASC'?'selected':'' ?>>เก่า-ใหม่</option>
+                  <option value="DESC" <?= $dir==='DESC'?'selected':'' ?>>Newest to oldest</option>
+                  <option value="ASC" <?= $dir==='ASC'?'selected':'' ?>>Oldest to newest</option>
                 </select>
               </div>
               <div class="col-md-auto">
-                <button class="btn btn-primary"><i class="bi bi-filter"></i> ใช้ตัวกรอง</button>
+                <button class="btn btn-primary"><i class="bi bi-filter"></i> Apply filters</button>
               </div>
             </form>
 
@@ -319,20 +319,20 @@ $statusOptions = [
                 <thead class="table-light">
                   <tr>
                     <th>ID</th>
-                    <th>วันเวลาที่ทำการจอง</th>
-                    <th>วันเวลาที่เข้าใช้บริการ</th>
+                    <th>Booking created</th>
+                    <th>Service appointment</th>
                     <th>Service</th>
                     <th>Staff</th>
-                    <th class="text-end">ราคาก่อนหักส่วนลด</th>
-                    <th class="text-end">ส่วนลด</th>
-                    <th class="text-end">ราคาหลังหักส่วนลด</th>
-                    <th>สถานะ</th>
+                    <th class="text-end">Price before discount</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Final price</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   <?php if (empty($bookings)): ?>
                   <tr>
-                    <td colspan="9" class="text-center text-muted">ไม่พบการจอง</td>
+                    <td colspan="9" class="text-center text-muted">No bookings found</td>
                   </tr>
                   <?php else: foreach ($bookings as $booking):
                     $createdAt = $booking['b_created_at'] ? date('d/m/Y H:i', strtotime($booking['b_created_at'])) : '-';
